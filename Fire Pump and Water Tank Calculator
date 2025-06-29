@@ -688,7 +688,7 @@
                 }
             };
 
-            // 1. Performance Curve (Teal line) - order 1 (Drawn first)
+            // 1. Performance Curve (Teal line) - order 5 (Drawn last)
             if (pumpRatedFlow > 0 && ratedHeadForCurve > 0) {
                 chartData.datasets.push({
                     label: 'Performance Curve จำลอง (Pump)',
@@ -701,7 +701,7 @@
                     pointRadius: 0, // Hide default points on the curve itself
                     hoverBorderWidth: 0,
                     showLine: true,
-                    order: 1 // Drawn first
+                    order: 5 // Drawn last, so it's on top
                 });
             }
 
@@ -893,9 +893,9 @@
                     order: 4, 
                     datalabels: {
                         display: true,
-                        align: 'end', // Changed align to 'end' for top-right placement
+                        align: 'bottom', // Changed to 'bottom'
                         anchor: 'center',
-                        offset: 10,
+                        offset: 5, // Set offset to 5
                         color: 'red',
                         font: { weight: 'bold' },
                         formatter: function(value, context) {
