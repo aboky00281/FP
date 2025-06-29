@@ -979,15 +979,18 @@
             // 3. Total Required Flow Rate (Fire Pump Size in GPM)
             const totalFlowGPM = sprinklerFlowGPM + hoseAllowanceGPM;
 
-            // 4. Calculate Required Tank Volume (US Gallons) using pumpRatedFlow
-            // Use pumpRatedFlow for tank volume calculation as requested. If pumpRatedFlow is not valid or 0, default to totalFlowGPM.
-            const flowForTankCalculation = (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) ? pumpRatedFlow : totalFlowGPM;
-            const requiredTankVolumeGallons = flowForTankCalculation * durationInput; // Volume = Flow Rate * Time
+            // 4. Calculate Required Tank Volume for MAIN DISPLAY (US Gallons)
+            // This will ALWAYS use totalFlowGPM as per user's latest request
+            const mainDisplayTankVolumeGallons = totalFlowGPM * durationInput;
+            const mainDisplayTankVolumeCubicMeters = mainDisplayTankVolumeGallons * US_GALLONS_TO_CUBIC_METERS;
 
-            // Convert tank volume from US Gallons to Cubic Meters
-            const requiredTankVolumeCubicMeters = requiredTankVolumeGallons * US_GALLONS_TO_CUBIC_METERS;
+            // 5. Calculate Required Tank Volume for SUMMARY TABLE (US Gallons)
+            // This prefers pumpRatedFlow if valid, otherwise falls back to totalFlowGPM
+            const flowForTankCalculationForSummary = (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) ? pumpRatedFlow : totalFlowGPM;
+            const summaryTankVolumeGallons = flowForTankCalculationForSummary * durationInput;
+            const summaryTankVolumeCubicMeters = summaryTankVolumeGallons * US_GALLONS_TO_CUBIC_METERS;
 
-            // 5. Actual Duration - This is simply the input duration based on the calculation
+            // 6. Actual Duration - This is simply the input duration based on the calculation
             const actualDurationMinutes = durationInput; 
 
             // Display Results (these are the ones that stay visible in the main section)
@@ -995,8 +998,8 @@
             document.getElementById('hose_allowance').textContent = hoseAllowanceGPM.toFixed(2);
             document.getElementById('total_flow').textContent = totalFlowGPM.toFixed(2);
             
-            // These results should now be visible again
-            document.getElementById('tank_volume').textContent = requiredTankVolumeCubicMeters.toFixed(2);
+            // Update main display for tank volume and actual duration
+            document.getElementById('tank_volume').textContent = mainDisplayTankVolumeCubicMeters.toFixed(2);
             document.getElementById('actual_duration').textContent = actualDurationMinutes;
             
             // Ensure they are visible in the main display
@@ -1008,7 +1011,7 @@
             document.getElementById('summary_sprinkler_flow').textContent = sprinklerFlowGPM.toFixed(2);
             document.getElementById('summary_hose_allowance').textContent = hoseAllowanceGPM.toFixed(2);
             document.getElementById('summary_total_flow').textContent = totalFlowGPM.toFixed(2);
-            document.getElementById('summary_tank_volume').textContent = requiredTankVolumeCubicMeters.toFixed(2);
+            document.getElementById('summary_tank_volume').textContent = summaryTankVolumeCubicMeters.toFixed(2); // Use summary specific value
             document.getElementById('summary_actual_duration').textContent = actualDurationMinutes;
             
             // Set the recommended pump flow from the pump_rated_flow input
@@ -1030,20 +1033,10 @@
             sprinklerFlowCalculationElement.textContent = `วิธีการคำนวณ: พื้นที่ป้องกัน ${designAreaSqM.toFixed(2)} ตร.ม. (${designAreaSqFt.toFixed(2)} ตร.ฟุต) x อัตราหนาแน่นน้ำ ${data.density_gpm_sqft.toFixed(2)} GPM/ตร.ฟุต = ${sprinklerFlowGPM.toFixed(2)} GPM`;
             // Note: class 'hidden' is managed by toggleSprinklerCalculation()
 
-            // Set tank volume calculation explanation (hidden by default)
-            let flowSourceTextForExplanationLong;
-            let flowValueUsedForTankCalc;
+            // Set tank volume calculation explanation for MAIN DISPLAY (now fixed to totalFlowGPM)
+            tankVolumeCalculationElement.textContent = `วิธีการคำนวณ: ใช้อัตราการไหลรวมที่ต้องการ (ขนาดปั๊มดับเพลิง): ${totalFlowGPM.toFixed(2)} GPM x ระยะเวลา ${durationInput} นาที = ${mainDisplayTankVolumeGallons.toFixed(2)} แกลลอน (${mainDisplayTankVolumeCubicMeters.toFixed(2)} ลบ.ม.)`;
 
-            if (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) {
-                flowSourceTextForExplanationLong = `อัตราไหลของปั๊มที่ควรเลือก (โดยประมาณ)`;
-                flowValueUsedForTankCalc = pumpRatedFlow;
-            } else {
-                flowSourceTextForExplanationLong = `อัตราการไหลรวมที่ต้องการ (ขนาดปั๊มดับเพลิง)`;
-                flowValueUsedForTankCalc = totalFlowGPM;
-            }
-            tankVolumeCalculationElement.textContent = `วิธีการคำนวณ: ใช้ ${flowSourceTextForExplanationLong}: ${flowValueUsedForTankCalc.toFixed(2)} GPM x ระยะเวลา ${durationInput} นาที = ${requiredTankVolumeGallons.toFixed(2)} แกลลอน (${requiredTankVolumeCubicMeters.toFixed(2)} ลบ.ม.)`;
-
-            // Update dynamic label in summary table
+            // Update dynamic label in summary table (logic remains the same for summary)
             let summaryTankVolumeLabelText;
             if (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) {
                 summaryTankVolumeLabelText = `ขนาดถังเก็บน้ำที่ต้องการ (ใช้ปั๊ม: ${pumpRatedFlow.toFixed(2)} GPM)`;
