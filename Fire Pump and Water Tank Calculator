@@ -390,11 +390,11 @@
             <label for="duration">ระยะเวลาการจ่ายน้ำขั้นต่ำ (นาที):</label>
             <select id="duration" class="rounded-lg shadow-sm">
                 <option value="30">30 นาที (สำหรับ Light Hazard)</option>
-                <option value="60">60 นาที (สำหรับ Ordinary Hazard Group 1)</option>
-                <option value="90">90 นาที (สำหรับ Ordinary Hazard Group 2, Extra Hazard Group 1)</option>
+                <option value="60">60 นาที (สำหรับ Ordinary Hazard Group 1, Ordinary Hazard Group 2)</option>
+                <option value="90">90 นาที (สำหรับ Extra Hazard Group 1)</option>
                 <option value="120">120 นาที (สำหรับ Extra Hazard Group 2)</option>
             </select>
-            <small class="small-text">อ้างอิง NFPA 13 Table 11.2.1.2</small>
+            <small class="small-text">อ้างอิง NFPA 13 (2025) Table 19.2.3.1.2</small>
         </div>
 
         <div class="flex flex-col gap-y-4">
@@ -415,7 +415,7 @@
                 <p id="sprinkler_flow_calculation" class="hidden small-text"></p>
                 <p><strong>อัตราการไหลสำหรับท่อยืน (Hose Stream Allowance):</strong> <span id="hose_allowance">0.00</span> GPM</p>
                 <p>
-                    <span>อัตราการไหลรวมที่ต้องการ (ขนาดปั๊มดับเพลิง):</span> <span id="total_flow" class="text-red-600 font-normal">0.00</span> GPM
+                    <span>อัตราการไหลรวมที่ต้องการ:</span> <span id="total_flow" class="text-red-600 font-normal">0.00</span> GPM
                 </p>
                 <p id="demand_head_display_container" class="hidden">
                     <span>แรงดันที่จุดต้องการ:</span> <span id="demand_head_display" class="font-normal">0.00</span> PSI
@@ -492,35 +492,39 @@
                 <tbody>
                     <tr>
                         <td class="py-2 px-4 border-b border-gray-300">อัตราการไหลของน้ำดับเพลิง (สปริงเกลอร์)</td>
-                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_sprinkler_flow">0.00</span> GPM</td>
+                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_sprinkler_flow" class="text-base">0.00</span> GPM</td>
                     </tr>
                     <tr>
                         <td class="py-2 px-4 border-b border-gray-300">อัตราการไหลสำหรับท่อยืน (Hose Stream Allowance)</td>
-                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_hose_allowance">0.00</span> GPM</td>
+                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_hose_allowance" class="text-base">0.00</span> GPM</td>
                     </tr>
                     <tr>
-                        <td class="py-2 px-4 border-b border-gray-300 font-bold">อัตราการไหลรวมที่ต้องการ (ขนาดปั๊มดับเพลิง)</td>
-                        <td class="py-2 px-4 border-b border-gray-300 text-red-600 font-normal"><span id="summary_total_flow">0.00</span> GPM</td>
+                        <td class="py-2 px-4 border-b border-gray-300 font-bold">อัตราการไหลรวมที่ต้องการ </td>
+                        <td class="py-2 px-4 border-b border-gray-300 text-red-600 font-normal"><span id="summary_total_flow" class="text-lg">0.00</span> GPM</td>
                     </tr>
                     <tr>
                         <td class="py-2 px-4 border-b border-gray-300 font-bold">แรงดันที่จุดต้องการ</td>
-                        <td class="py-2 px-4 border-b border-gray-300 font-normal"><span id="summary_demand_head">0.00</span> PSI</td>
+                        <td class="py-2 px-4 border-b border-gray-300 font-normal"><span id="summary_demand_head" class="text-base">0.00</span> PSI</td>
                     </tr>
                     <tr>
                         <td class="py-2 px-4 border-b border-gray-300">เวลากักเก็บน้ำที่คำนวณ</td>
-                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_actual_duration">0</span> นาที</td>
+                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_actual_duration" class="text-base">0</span> นาที</td>
                     </tr>
                     <tr>
                         <td class="py-2 px-4 border-b border-gray-300" id="summary_tank_volume_label">ขนาดถังเก็บน้ำที่ต้องการ</td>
-                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_tank_volume">0.00</span> ลบ.ม.</td>
+                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_tank_volume" class="text-base">0.00</span> ลบ.ม.</td>
                     </tr>
                     <tr>
                         <td class="py-2 px-4 border-b border-gray-300 font-bold">อัตราไหลของปั๊มที่ควรเลือก (โดยประมาณ)</td>
-                        <td class="py-2 px-4 border-b border-gray-300 font-bold text-green-600"><span id="summary_recommended_pump_flow">0.00</span> GPM</td>
+                        <td class="py-2 px-4 border-b border-gray-300 font-bold text-green-600"><span id="summary_recommended_pump_flow" class="text-base">0.00</span> GPM</td>
                     </tr>
                     <tr>
-                        <td class="py-2 px-4 border-b border-gray-300 font-bold">แรงดันโดยประมาณ</td>
-                        <td class="py-2 px-4 border-b border-gray-300 font-bold text-green-600"><span id="summary_estimated_pressure">0.00</span> PSI</td>
+                        <td class="py-2 px-4 border-b border-gray-300 font-bold">แรงดันปั้ม (โดยประมาณ)</td>
+                        <td class="py-2 px-4 border-b border-gray-300 font-bold text-green-600"><span id="summary_estimated_pressure" class="text-lg">0.00</span> PSI</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 px-4 border-b border-gray-300 font-bold">เลือกแรงดันปั้มไม่ควรเกิน (Max. churn)</td>
+                        <td class="py-2 px-4 border-b border-gray-300 font-bold text-green-600"><span id="summary_max_pressure" class="text-lg">0.00</span> PSI</td>
                     </tr>
                 </tbody>
             </table>
@@ -539,7 +543,7 @@
         const NFPA_DATA = {
             'light': { density_gpm_sqft: 0.10, hose_allowance_gpm: 100, min_duration: 30 },
             'ordinary1': { density_gpm_sqft: 0.15, hose_allowance_gpm: 250, min_duration: 60 },
-            'ordinary2': { density_gpm_sqft: 0.20, hose_allowance_gpm: 250, min_duration: 90 },
+            'ordinary2': { density_gpm_sqft: 0.20, hose_allowance_gpm: 250, min_duration: 60 }, // Corrected to 60 minutes
             'extra1': { density_gpm_sqft: 0.30, hose_allowance_gpm: 500, min_duration: 90 },
             'extra2': { density_gpm_sqft: 0.40, hose_allowance_gpm: 500, min_duration: 120 }
         };
@@ -559,17 +563,21 @@
 
         // Function to toggle visibility of calculation explanations
         function toggleSprinklerCalculation() {
-            document.getElementById('sprinkler_flow_calculation').classList.toggle('hidden');
+            const el = document.getElementById('sprinkler_flow_calculation');
+            if (el) el.classList.toggle('hidden');
         }
         function toggleTankVolumeCalculation() {
-            document.getElementById('tank_volume_calculation').classList.toggle('hidden');
+            const el = document.getElementById('tank_volume_calculation');
+            if (el) el.classList.toggle('hidden');
         }
         function toggleDemandHeadCalculation() {
-            document.getElementById('demand_head_calculation').classList.toggle('hidden');
+            const el = document.getElementById('demand_head_calculation');
+            if (el) el.classList.toggle('hidden');
         }
         // Function to toggle visibility of graph summary
         function toggleGraphSummary() {
-            document.getElementById('graph_summary_content').classList.toggle('hidden');
+            const el = document.getElementById('graph_summary_content');
+            if (el) el.classList.toggle('hidden');
         }
 
         // Function to interpolate head on the pump curve
@@ -602,14 +610,18 @@
 
         // Function for Pump Curve Chart
         function updatePumpCurveChart(pumpRatedFlow, totalRequiredFlow, systemDemandHeadInput) {
-            const ctx = document.getElementById('pumpCurveChart').getContext('2d');
+            const ctx = document.getElementById('pumpCurveChart');
+            if (!ctx) {
+                console.error("Canvas element 'pumpCurveChart' not found.");
+                return;
+            }
+            const chartContext = ctx.getContext('2d');
 
             // Use systemDemandHeadInput for the pump's "rated head" if valid, otherwise use default
             const ratedHeadForCurve = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : DEFAULT_PUMP_RATED_HEAD_PSI;
             const shutOffHead = ratedHeadForCurve * 1.10;
             const head65Percent = ratedHeadForCurve * 0.65; // Consistent 65% head line
 
-            // The user requested to remove the +65 PSI calculation from estimatedPressureOnGraph
             const estimatedPressureOnGraph = ratedHeadForCurve; 
 
             const maxPumpCurveFlow = pumpRatedFlow * 1.5;
@@ -622,13 +634,11 @@
                 ratedHeadForCurve * 0.65
             ];
 
-            // Corrected: purplePointHead should also be 65% of ratedHeadForCurve for consistency
             let purplePointFlow = pumpRatedFlow * 1.5;
-            let purplePointHead = ratedHeadForCurve * 0.65; // Consistent with 65% rated head line
+            let purplePointHead = ratedHeadForCurve * 0.65; 
             if (purplePointHead < 0) purplePointHead = 0;
 
 
-            // Ensure Y-axis covers systemDemandHeadInput and dynamically calculated shutOffHead
             let maxYValue = Math.max(200, shutOffHead * 1.15, purplePointHead, ratedHeadForCurve, systemDemandHeadInput, estimatedPressureOnGraph) * 1.1; 
             let maxXValue = Math.max(maxPumpCurveFlow, pumpRatedFlow, totalRequiredFlow) * 1.1;
 
@@ -651,7 +661,7 @@
                         ticks: {
                             stepSize: 25,
                             callback: function(value) {
-                                return value.toFixed(0); // Display as whole number
+                                return value.toFixed(0);
                             }
                         }
                     },
@@ -664,7 +674,7 @@
                         ticks: {
                             stepSize: 10,
                             callback: function(value) {
-                                return value.toFixed(0); // Display as whole number
+                                return value.toFixed(0);
                             }
                         }
                     }
@@ -672,15 +682,13 @@
                 plugins: {
                     legend: { display: true, position: 'top', labels: { font: { size: 12 } } },
                     title: { display: true, text: 'กราฟ Flow Rate vs. Head (Performance Curve จำลอง)' },
-                    datalabels: { // Global datalabels configuration (can be overridden per dataset)
-                        display: false // Hide by default
+                    datalabels: {
+                        display: false
                     }
                 }
             };
 
-            // Removed the "ช่วงแรงดันการทำงานที่แนะนำ" (Recommended Operating Pressure Range) highlight dataset.
-
-            // 1. Performance Curve (Teal line) - order 1
+            // 1. Performance Curve (Teal line) - order 1 (Drawn first)
             if (pumpRatedFlow > 0 && ratedHeadForCurve > 0) {
                 chartData.datasets.push({
                     label: 'Performance Curve จำลอง (Pump)',
@@ -690,11 +698,10 @@
                     tension: 0.2,
                     pointBackgroundColor: 'rgba(75, 192, 192, 1)',
                     pointBorderColor: '#fff',
-                    pointHoverRadius: 5,
-                    pointHoverBackgroundColor: 'rgba(75, 192, 192, 1)',
-                    pointHoverBorderColor: '#fff',
+                    pointRadius: 0, // Hide default points on the curve itself
+                    hoverBorderWidth: 0,
                     showLine: true,
-                    order: 1
+                    order: 1 // Drawn first
                 });
             }
 
@@ -708,23 +715,35 @@
                         { x: maxXValue, y: shutOffHead }
                     ],
                     fill: false,
-                    borderColor: 'rgb(128, 0, 0)', // Changed to maroon (เลือดหมู)
+                    borderColor: 'rgb(128, 0, 0)',
                     borderDash: [6, 6],
-                    pointRadius: 0,
+                    pointRadius: 0, 
                     hoverBorderWidth: 0,
                     tension: 0,
                     order: 3,
+                    datalabels: { display: false } // Keep as false for line, point has its own datalabels
+                });
+
+                // Add a separate scatter dataset for the Max. churn point (diamond shape) - order 4
+                chartData.datasets.push({
+                    type: 'scatter',
+                    label: `จุด Shut-off Head (Max. churn)`, // Label remains for legend
+                    data: [{ x: 0, y: shutOffHead }],
+                    backgroundColor: 'rgb(128, 0, 0)',
+                    borderColor: 'rgb(128, 0, 0)',
+                    pointRadius: 7,
+                    pointStyle: 'rectRot', // Diamond shape
+                    hoverBackgroundColor: 'rgb(128, 0, 0)',
+                    hoverBorderColor: '#fff',
+                    hoverBorderWidth: 2,
+                    order: 4, 
                     datalabels: {
-                        display: function(context) { // Display only for the first point (left side)
-                            return context.dataIndex === 0;
-                        },
-                        align: 'top', 
-                        anchor: 'center', 
-                        offset: -5, 
-                        color: 'rgb(128, 0, 0)', // Changed to maroon (เลือดหมู)
-                        font: {
-                            weight: 'bold'
-                        },
+                        display: true, // Set to true to display the label
+                        align: 'end', // Changed from 'center' to 'end'
+                        anchor: 'end', // Changed from 'center' to 'end'
+                        offset: 5, // Set offset to 5 (from 0)
+                        color: 'rgb(128, 0, 0)',
+                        font: { weight: 'bold' },
                         formatter: function(value, context) {
                             return `${value.y.toFixed(0)} PSI (Max. churn)`;
                         }
@@ -736,63 +755,59 @@
             if (pumpRatedFlow > 0 && ratedHeadForCurve > 0) {
                 chartData.datasets.push({
                     type: 'line',
-                    label: 'เส้นแสดง 65% Head (จุดอ้างอิง)', // Updated label to reflect it's a line
+                    label: 'เส้นแสดง 65% Head (จุดอ้างอิง)',
                     data: [
                         { x: 0, y: head65Percent },
                         { x: maxXValue, y: head65Percent }
                     ],
                     fill: false,
-                    borderColor: 'rgba(153, 102, 255, 0.7)', // Purple
+                    borderColor: 'rgba(153, 102, 255, 0.7)',
                     borderDash: [4, 4],
                     pointRadius: 0,
                     hoverBorderWidth: 0,
                     tension: 0,
-                    order: 3, // Keep same order as shut-off head for layering
-                    datalabels: {
-                        display: false // No datalabel for this line by default
-                    }
+                    order: 3, 
+                    datalabels: { display: false }
                 });
             }
 
-            // 4. Rated Point (Yellow circle) and its associated dashed lines - order 2/3
+            // 4. Rated Point (Blue rectRot) and its associated dashed lines - order 4
             if (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0 && !isNaN(ratedHeadForCurve) && ratedHeadForCurve > 0) {
                 // Rated Point itself
                 chartData.datasets.push({
                     type: 'scatter',
                     label: 'จุดกำหนดของปั๊ม (Rated Point)',
                     data: [{ x: pumpRatedFlow, y: ratedHeadForCurve }], 
-                    backgroundColor: 'rgba(255, 206, 86, 1)',
-                    borderColor: 'rgba(255, 206, 86, 1)',
+                    backgroundColor: 'rgba(0, 0, 255, 1)',
+                    borderColor: 'rgba(0, 0, 255, 1)',
                     pointRadius: 7,
-                    pointStyle: 'circle',
-                    hoverBackgroundColor: 'rgba(255, 206, 86, 1)',
+                    pointStyle: 'rectRot', // Changed to rectRot (ข้าวหลามตัด)
+                    hoverBackgroundColor: 'rgba(0, 0, 255, 1)',
                     hoverBorderColor: '#fff',
                     hoverBorderWidth: 2,
-                    order: 2,
+                    order: 4, 
                     datalabels: {
                         display: true,
                         align: 'end',
                         anchor: 'end',
-                        color: 'blue', // Label color for Rated Point
-                        font: {
-                            weight: 'bold'
-                        },
+                        color: 'blue',
+                        font: { weight: 'bold' },
                         formatter: function(value, context) {
                             return `${value.x.toFixed(0)} GPM, ${value.y.toFixed(0)} PSI (Rated)`;
                         }
                     }
                 });
 
-                // Vertical dashed line for Rated GPM (blue and dotted)
+                // Vertical dashed line for Rated GPM (blue and dotted) - order 3
                 chartData.datasets.push({
                     type: 'line',
-                    label: 'เส้นแสดง Rated GPM (สีน้ำเงิน)', // Updated label to reflect color
+                    label: 'เส้นแสดง Rated GPM (สีน้ำเงิน)',
                     data: [
                         { x: pumpRatedFlow, y: 0 },
                         { x: pumpRatedFlow, y: ratedHeadForCurve }
                     ],
                     fill: false,
-                    borderColor: 'rgba(0, 0, 255, 0.7)', // Changed to blue
+                    borderColor: 'rgba(0, 0, 255, 0.7)',
                     borderDash: [5, 5],
                     pointRadius: 0,
                     hoverBorderWidth: 0,
@@ -800,28 +815,25 @@
                     order: 3
                 });
 
-                // Horizontal dashed line from Rated Point to Y-axis (blue and dotted)
+                // Horizontal dashed line from Rated Point to Y-axis (blue and dotted) - order 3
                 chartData.datasets.push({
                     type: 'line',
-                    label: 'เส้นแสดงแรงดันกำหนดจากจุด Rated Point (สีน้ำเงิน)', // Updated label to reflect color
+                    label: 'เส้นแสดงแรงดันกำหนดจากจุด Rated Point (สีน้ำเงิน)',
                     data: [
                         { x: 0, y: ratedHeadForCurve },
                         { x: pumpRatedFlow, y: ratedHeadForCurve }
                     ],
                     fill: false,
-                    borderColor: 'rgba(0, 0, 255, 0.7)', // Changed to blue
+                    borderColor: 'rgba(0, 0, 255, 0.7)',
                     borderDash: [5, 5],
                     pointRadius: 0,
                     hoverBorderWidth: 0,
                     tension: 0,
-                    order: 3,
-                    datalabels: {
-                        display: false // Set display to false to hide the label
-                    }
+                    datalabels: { display: false }
                 });
             }
 
-            // 5. 150% Flow, 65% Head point (Purple rectRot) and its associated purple dashed lines - order 2/3
+            // 5. 150% Flow, 65% Head point (Purple rectRot) and its associated purple dashed lines - order 4
             if (pumpRatedFlow > 0 && ratedHeadForCurve > 0) {
                 chartData.datasets.push({
                     type: 'scatter',
@@ -834,22 +846,20 @@
                     hoverBackgroundColor: 'rgba(153, 102, 255, 1)',
                     hoverBorderColor: '#fff',
                     hoverBorderWidth: 2,
-                    order: 2,
+                    order: 4, 
                     datalabels: {
                         display: true,
                         align: 'end',
                         anchor: 'end',
-                        color: 'rgba(153, 102, 255, 1)', // Changed to match line/point color (purple)
-                        font: {
-                            weight: 'bold'
-                        },
+                        color: 'rgba(153, 102, 255, 1)',
+                        font: { weight: 'bold' },
                         formatter: function(value, context) {
                             return `${value.x.toFixed(0)} GPM, ${value.y.toFixed(0)} PSI`; 
                         }
                     }
                 });
 
-                // Vertical dashed line for 150% Flow (purple)
+                // Vertical dashed line for 150% Flow (purple) - order 3
                 chartData.datasets.push({
                     type: 'line',
                     label: 'เส้นแสดง 150% Flow (จุดอ้างอิง)',
@@ -867,12 +877,12 @@
                 });
             }
 
-            // 6. Add Total Required Flow as a red star point - order 2
+            // 6. Add Total Required Flow as a red star point - order 4 (Highest order for main demand point)
             if (totalRequiredFlow > 0) {
                 chartData.datasets.push({
                     type: 'scatter',
                     label: `อัตราไหลรวมที่ต้องการ (Demand Point - รูปดาวแดง)`,
-                    data: [{ x: totalRequiredFlow, y: systemDemandHeadInput }], // Use systemDemandHeadInput for demand point Y-coordinate
+                    data: [{ x: totalRequiredFlow, y: systemDemandHeadInput }], 
                     backgroundColor: 'rgba(255, 0, 0, 1)',
                     borderColor: 'rgba(255, 0, 0, 1)',
                     pointRadius: 8,
@@ -880,18 +890,16 @@
                     hoverBackgroundColor: 'rgba(255, 0, 0, 1)',
                     hoverBorderColor: '#fff',
                     hoverBorderWidth: 2,
-                    order: 2,
+                    order: 4, 
                     datalabels: {
                         display: true,
-                        align: 'bottom', // Changed to bottom
-                        anchor: 'center', // Changed to center
-                        offset: 10, // Add a small offset to move it further below
+                        align: 'end', // Changed align to 'end' for top-right placement
+                        anchor: 'center',
+                        offset: 10,
                         color: 'red',
-                        font: {
-                            weight: 'bold'
-                        },
+                        font: { weight: 'bold' },
                         formatter: function(value, context) {
-                            return `Demand: ${value.x.toFixed(0)} GPM`; // Display only GPM
+                            return `Demand: ${value.x.toFixed(0)} GPM`;
                         }
                     }
                 });
@@ -903,7 +911,7 @@
                 pumpCurveChart.options = chartOptions;
                 pumpCurveChart.update();
             } else {
-                pumpCurveChart = new Chart(ctx, {
+                pumpCurveChart = new Chart(chartContext, {
                     type: 'line',
                     data: chartData,
                     options: chartOptions
@@ -922,8 +930,9 @@
 
 
             const data = NFPA_DATA[hazardClass];
-            // Re-introduced warningMessage variable and element
             let warningMessage = '';
+
+            // Get all elements at once to avoid re-declaring them or getting null issues
             const warningMessageElement = document.getElementById('warning_message');
             const sprinklerFlowCalculationElement = document.getElementById('sprinkler_flow_calculation');
             const tankVolumeCalculationElement = document.getElementById('tank_volume_calculation'); 
@@ -931,41 +940,62 @@
             const demandHeadDisplayElement = document.getElementById('demand_head_display');
             const demandHeadCalculationElement = document.getElementById('demand_head_calculation'); 
             const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
-
-            // Get elements for hiding/showing in main results section
+            const summaryMaxPressureElement = document.getElementById('summary_max_pressure'); 
             const tankVolumeDisplayContainer = document.getElementById('tank_volume_display_container');
             const actualDurationDisplayContainer = document.getElementById('actual_duration_display_container');
+            const sprinklerFlowEl = document.getElementById('sprinkler_flow');
+            const hoseAllowanceEl = document.getElementById('hose_allowance');
+            const totalFlowEl = document.getElementById('total_flow');
+            const tankVolumeEl = document.getElementById('tank_volume');
+            const actualDurationEl = document.getElementById('actual_duration');
+            const areaNameDisplayEl = document.getElementById('area_name_display');
+            const displayAreaNameElement = document.getElementById('display_area_name');
+            const summarySprinklerFlowEl = document.getElementById('summary_sprinkler_flow');
+            const summaryHoseAllowanceEl = document.getElementById('summary_hose_allowance');
+            const summaryTotalFlowEl = document.getElementById('summary_total_flow');
+            const summaryTankVolumeEl = document.getElementById('summary_tank_volume');
+            const summaryActualDurationEl = document.getElementById('summary_actual_duration');
+            const summaryRecommendedPumpFlowEl = document.getElementById('summary_recommended_pump_flow');
+            const summaryDemandHeadEl = document.getElementById('summary_demand_head');
+            const summaryEstimatedPressureEl = document.getElementById('summary_estimated_pressure');
 
 
             // Input validation for design area
             if (isNaN(designAreaSqM) || designAreaSqM <= 0) {
                 warningMessage = 'ข้อผิดพลาด: กรุณาป้อนพื้นที่ป้องกันที่ถูกต้อง (ต้องมากกว่า 0 และเป็นตัวเลข)';
-                warningMessageElement.textContent = warningMessage;
-                warningMessageElement.classList.remove('hidden');
+                if (warningMessageElement) { 
+                    warningMessageElement.textContent = warningMessage;
+                    warningMessageElement.classList.remove('hidden');
+                }
                 // Reset results
-                document.getElementById('sprinkler_flow').textContent = '0.00';
-                sprinklerFlowCalculationElement.classList.add('hidden'); // Hide explanation on error
-                document.getElementById('hose_allowance').textContent = '0.00';
-                document.getElementById('total_flow').textContent = '0.00';
-                demandHeadDisplayElement.textContent = '0.00'; // Reset head display
-                demandHeadDisplayContainer.classList.add('hidden'); // Hide container
-                demandHeadCalculationElement.classList.add('hidden'); // Hide demand head explanation on error
+                if (sprinklerFlowEl) sprinklerFlowEl.textContent = '0.00';
+                if (sprinklerFlowCalculationElement) sprinklerFlowCalculationElement.classList.add('hidden');
+                if (hoseAllowanceEl) hoseAllowanceEl.textContent = '0.00';
+                if (totalFlowEl) totalFlowEl.textContent = '0.00';
+                if (demandHeadDisplayElement) demandHeadDisplayElement.textContent = '0.00';
+                if (demandHeadDisplayContainer) demandHeadDisplayContainer.classList.add('hidden');
+                if (demandHeadCalculationElement) demandHeadCalculationElement.classList.add('hidden');
                 
                 // Hide these elements in the main display (ensure they are hidden on error)
-                tankVolumeDisplayContainer.classList.add('hidden');
-                actualDurationDisplayContainer.classList.add('hidden');
+                if (tankVolumeDisplayContainer) tankVolumeDisplayContainer.classList.add('hidden');
+                if (actualDurationDisplayContainer) actualDurationDisplayContainer.classList.add('hidden');
                 
-                document.getElementById('tank_volume').textContent = '0.00'; // Still update the value even if hidden
-                tankVolumeCalculationElement.classList.add('hidden'); // Hide tank volume explanation
-                document.getElementById('actual_duration').textContent = '0'; // Still update the value even if hidden
-                document.getElementById('area_name_display').style.display = 'none';
-                updatePumpCurveChart(0, 0, 0); // Also reset chart on error
+                if (tankVolumeEl) tankVolumeEl.textContent = '0.00';
+                if (tankVolumeCalculationElement) tankVolumeCalculationElement.classList.add('hidden');
+                if (actualDurationEl) actualDurationEl.textContent = '0';
+                if (areaNameDisplayEl) areaNameDisplayEl.style.display = 'none';
                 
-                // Reset dynamic label in summary table
-                summaryTankVolumeLabel.textContent = 'ขนาดถังเก็บน้ำที่ต้องการ';
+                if (summaryMaxPressureElement) { 
+                    summaryMaxPressureElement.textContent = '0.00';
+                }
+                updatePumpCurveChart(0, 0, 0);
+                
+                if (summaryTankVolumeLabel) summaryTankVolumeLabel.textContent = 'ขนาดถังเก็บน้ำที่ต้องการ';
                 return;
             } else {
-                warningMessageElement.classList.add('hidden'); // Hide warning if input is valid
+                if (warningMessageElement) {
+                    warningMessageElement.classList.add('hidden');
+                }
             }
 
             // Convert design area from square meters to square feet for calculation
@@ -1002,47 +1032,45 @@
             const actualDurationMinutes = durationInput; 
 
             // Display Results (these are the ones that stay visible in the main section)
-            document.getElementById('sprinkler_flow').textContent = sprinklerFlowGPM.toFixed(2);
-            document.getElementById('hose_allowance').textContent = hoseAllowanceGPM.toFixed(2);
-            document.getElementById('total_flow').textContent = totalFlowGPM.toFixed(2);
+            if (sprinklerFlowEl) sprinklerFlowEl.textContent = sprinklerFlowGPM.toFixed(2);
+            if (hoseAllowanceEl) hoseAllowanceEl.textContent = hoseAllowanceGPM.toFixed(2);
+            if (totalFlowEl) totalFlowEl.textContent = totalFlowGPM.toFixed(2);
             
             // Update main display for tank volume and actual duration
-            document.getElementById('tank_volume').textContent = mainDisplayTankVolumeCubicMeters.toFixed(2);
-            document.getElementById('actual_duration').textContent = actualDurationMinutes;
+            if (tankVolumeEl) tankVolumeEl.textContent = mainDisplayTankVolumeCubicMeters.toFixed(2);
+            if (actualDurationEl) actualDurationEl.textContent = actualDurationMinutes;
             
             // Ensure they are visible in the main display
-            tankVolumeDisplayContainer.classList.remove('hidden');
-            actualDurationDisplayContainer.classList.remove('hidden');
+            if (tankVolumeDisplayContainer) tankVolumeDisplayContainer.classList.remove('hidden');
+            if (actualDurationDisplayContainer) actualDurationDisplayContainer.classList.remove('hidden');
 
 
             // Update summary table (these should always be updated regardless of main display)
-            document.getElementById('summary_sprinkler_flow').textContent = sprinklerFlowGPM.toFixed(2);
-            document.getElementById('summary_hose_allowance').textContent = hoseAllowanceGPM.toFixed(2);
-            document.getElementById('summary_total_flow').textContent = totalFlowGPM.toFixed(2);
-            document.getElementById('summary_tank_volume').textContent = summaryTankVolumeCubicMeters.toFixed(2); // Use summary specific value
-            document.getElementById('summary_actual_duration').textContent = actualDurationMinutes;
+            if (summarySprinklerFlowEl) summarySprinklerFlowEl.textContent = sprinklerFlowGPM.toFixed(2);
+            if (summaryHoseAllowanceEl) summaryHoseAllowanceEl.textContent = hoseAllowanceGPM.toFixed(2);
+            if (summaryTotalFlowEl) summaryTotalFlowEl.textContent = totalFlowGPM.toFixed(2);
+            if (summaryTankVolumeEl) summaryTankVolumeEl.textContent = summaryTankVolumeCubicMeters.toFixed(2); // Use summary specific value
+            if (summaryActualDurationEl) summaryActualDurationEl.textContent = actualDurationMinutes;
             
             // Set the recommended pump flow from the pump_rated_flow input
-            document.getElementById('summary_recommended_pump_flow').textContent = (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) ? pumpRatedFlow.toFixed(2) : '0.00';
+            if (summaryRecommendedPumpFlowEl) summaryRecommendedPumpFlowEl.textContent = (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) ? pumpRatedFlow.toFixed(2) : '0.00';
 
 
             // Display area name if entered
-            const displayAreaNameElement = document.getElementById('display_area_name');
-            const areaNameDisplayContainer = document.getElementById('area_name_display');
             if (areaName.trim() !== '') {
-                displayAreaNameElement.textContent = areaName;
-                areaNameDisplayContainer.style.display = 'block';
+                if (displayAreaNameElement) displayAreaNameElement.textContent = areaName;
+                if (areaNameDisplayEl) areaNameDisplayEl.style.display = 'block';
             } else {
-                displayAreaNameElement.textContent = '';
-                areaNameDisplayContainer.style.display = 'none'; 
+                if (displayAreaNameElement) displayAreaNameElement.textContent = '';
+                if (areaNameDisplayEl) areaNameDisplayEl.style.display = 'none'; 
             }
 
             // Set sprinkler flow calculation explanation (hidden by default)
-            sprinklerFlowCalculationElement.textContent = `วิธีการคำนวณ: พื้นที่ป้องกัน ${designAreaSqM.toFixed(2)} ตร.ม. (${designAreaSqFt.toFixed(2)} ตร.ฟุต) x อัตราหนาแน่นน้ำ ${data.density_gpm_sqft.toFixed(2)} GPM/ตร.ฟุต = ${sprinklerFlowGPM.toFixed(2)} GPM`;
+            if (sprinklerFlowCalculationElement) sprinklerFlowCalculationElement.textContent = `วิธีการคำนวณ: พื้นที่ป้องกัน ${designAreaSqM.toFixed(2)} ตร.ม. (${designAreaSqFt.toFixed(2)} ตร.ฟุต) x อัตราหนาแน่นน้ำ ${data.density_gpm_sqft.toFixed(2)} GPM/ตร.ฟุต = ${sprinklerFlowGPM.toFixed(2)} GPM`;
             // Note: class 'hidden' is managed by toggleSprinklerCalculation()
 
             // Set tank volume calculation explanation for MAIN DISPLAY (now fixed to totalFlowGPM)
-            tankVolumeCalculationElement.textContent = `วิธีการคำนวณ: ใช้อัตราการไหลรวมที่ต้องการ (ขนาดปั๊มดับเพลิง): ${totalFlowGPM.toFixed(2)} GPM x ระยะเวลา ${durationInput} นาที = ${mainDisplayTankVolumeGallons.toFixed(2)} แกลลอน (${mainDisplayTankVolumeCubicMeters.toFixed(2)} ลบ.ม.)`;
+            if (tankVolumeCalculationElement) tankVolumeCalculationElement.textContent = `วิธีการคำนวณ: ใช้อัตราการไหลรวมที่ต้องการ : ${totalFlowGPM.toFixed(2)} GPM x ระยะเวลา ${durationInput} นาที = ${mainDisplayTankVolumeGallons.toFixed(2)} แกลลอน (${mainDisplayTankVolumeCubicMeters.toFixed(2)} ลบ.ม.)`;
 
             // Update dynamic label in summary table (logic remains the same for summary)
             let summaryTankVolumeLabelText;
@@ -1051,89 +1079,141 @@
             } else {
                 summaryTankVolumeLabelText = `ขนาดถังเก็บน้ำที่ต้องการ (ใช้รวม: ${totalFlowGPM.toFixed(2)} GPM)`;
             }
-            summaryTankVolumeLabel.textContent = summaryTankVolumeLabelText;
+            if (summaryTankVolumeLabel) summaryTankVolumeLabel.textContent = summaryTankVolumeLabelText;
 
 
             // Display warning if any
             if (warningMessage) {
-                warningMessageElement.textContent = warningMessage;
-                warningMessageElement.classList.remove('hidden');
+                if (warningMessageElement) {
+                    warningMessageElement.textContent = warningMessage;
+                    warningMessageElement.classList.remove('hidden');
+                }
             } else {
-                warningMessageElement.classList.add('hidden');
+                if (warningMessageElement) {
+                    warningMessageElement.classList.add('hidden');
+                }
             }
 
             // Update display head and estimated pressure
             if (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) {
                 const calculatedRequiredHead = isNaN(systemDemandHeadInput) ? 0 : systemDemandHeadInput; // Set to 0 if invalid
-                // The user requested to remove the +65 PSI calculation from estimatedPressureWithAddition
                 const estimatedPressureWithAddition = calculatedRequiredHead; 
                 const demandHeadCalculationText = `วิธีการคำนวณ: แรงดันที่จุดต้องการถูกกำหนดตามค่าที่กรอกในช่อง "แรงดันต้องการของระบบ" คือ ${calculatedRequiredHead.toFixed(0)} PSI.`; // Changed to toFixed(0)
 
-                demandHeadDisplayElement.textContent = calculatedRequiredHead.toFixed(0); // Changed to toFixed(0)
-                demandHeadDisplayContainer.classList.remove('hidden');
-                demandHeadCalculationElement.textContent = demandHeadCalculationText;
-                document.getElementById('summary_demand_head').textContent = calculatedRequiredHead.toFixed(0); // Changed to toFixed(0)
-                document.getElementById('summary_estimated_pressure').textContent = estimatedPressureWithAddition.toFixed(0); // Changed to toFixed(0)
+                if (demandHeadDisplayElement) demandHeadDisplayElement.textContent = calculatedRequiredHead.toFixed(0); // Changed to toFixed(0)
+                if (demandHeadDisplayContainer) demandHeadDisplayContainer.classList.remove('hidden');
+                if (demandHeadCalculationElement) demandHeadCalculationElement.classList.add('hidden'); // This should be hidden by default
+                if (summaryDemandHeadEl) summaryDemandHeadEl.textContent = calculatedRequiredHead.toFixed(0); // Changed to toFixed(0)
+                if (summaryEstimatedPressureEl) summaryEstimatedPressureEl.textContent = estimatedPressureWithAddition.toFixed(0); // Changed to toFixed(0)
+
+                // Update the new summary_max_pressure field with null check
+                if (summaryMaxPressureElement) {
+                    const ratedHeadForCurve = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : DEFAULT_PUMP_RATED_HEAD_PSI;
+                    const shutOffHead = ratedHeadForCurve * 1.10;
+                    summaryMaxPressureElement.textContent = shutOffHead.toFixed(2);
+                }
 
 
                 // Pass systemDemandHeadInput to updatePumpCurveChart for the demand point
+                // FIX: Pass totalFlowGPM as the second argument to updatePumpCurveChart
                 updatePumpCurveChart(pumpRatedFlow, totalFlowGPM, systemDemandHeadInput); // Re-enable chart update
             } else {
                 // Clear or reset if inputs are invalid
-                demandHeadDisplayElement.textContent = '0.00';
-                demandHeadDisplayContainer.classList.add('hidden');
-                demandHeadCalculationElement.classList.add('hidden');
-                document.getElementById('summary_demand_head').textContent = '0.00';
-                document.getElementById('summary_estimated_pressure').textContent = '0.00'; 
+                if (demandHeadDisplayElement) demandHeadDisplayElement.textContent = '0.00';
+                if (demandHeadDisplayContainer) demandHeadDisplayContainer.classList.add('hidden');
+                if (demandHeadCalculationElement) demandHeadCalculationElement.classList.add('hidden');
+                if (summaryDemandHeadEl) summaryDemandHeadEl.textContent = '0.00';
+                if (summaryEstimatedPressureEl) summaryEstimatedPressureEl.textContent = '0.00'; 
+                // Clear new field on invalid input with null check
+                if (summaryMaxPressureElement) {
+                    summaryMaxPressureElement.textContent = '0.00'; 
+                }
                 updatePumpCurveChart(0, 0, 0); // Clear chart
             }
         }
 
         // Function to clear all input data and results
         function clearData() {
+            // Get all elements at once
+            const areaNameEl = document.getElementById('area_name');
+            const hazardClassEl = document.getElementById('hazard_class');
+            const designAreaEl = document.getElementById('design_area');
+            const durationEl = document.getElementById('duration');
+            const pumpRatedFlowEl = document.getElementById('pump_rated_flow');
+            const systemDemandHeadEl = document.getElementById('system_demand_head');
+            const sprinklerFlowDisplayEl = document.getElementById('sprinkler_flow');
+            const hoseAllowanceDisplayEl = document.getElementById('hose_allowance');
+            const totalFlowDisplayEl = document.getElementById('total_flow');
+            const tankVolumeDisplayEl = document.getElementById('tank_volume');
+            const actualDurationDisplayEl = document.getElementById('actual_duration');
+            const demandHeadDisplayEl = document.getElementById('demand_head_display');
+            const summarySprinklerFlowEl = document.getElementById('summary_sprinkler_flow');
+            const summaryHoseAllowanceEl = document.getElementById('hose_allowance');
+            const summaryTotalFlowEl = document.getElementById('total_flow');
+            const summaryDemandHeadEl = document.getElementById('summary_demand_head');
+            const summaryTankVolumeEl = document.getElementById('summary_tank_volume');
+            const summaryActualDurationEl = document.getElementById('summary_actual_duration');
+            const summaryRecommendedPumpFlowEl = document.getElementById('summary_recommended_pump_flow');
+            const summaryEstimatedPressureEl = document.getElementById('summary_estimated_pressure'); 
+            const summaryMaxPressureElement = document.getElementById('summary_max_pressure');
+            const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
+            const areaNameDisplayContainer = document.getElementById('area_name_display');
+            const demandHeadDisplayContainer = document.getElementById('demand_head_display_container');
+            const warningMessageElement = document.getElementById('warning_message');
+            const sprinklerFlowCalculationElement = document.getElementById('sprinkler_flow_calculation');
+            const tankVolumeCalculationElement = document.getElementById('tank_volume_calculation');
+            const demandHeadCalculationElement = document.getElementById('demand_head_calculation');
+            const tankVolumeDisplayContainer = document.getElementById('tank_volume_display_container');
+            const actualDurationDisplayContainer = document.getElementById('actual_duration_display_container');
+
+
             // Clear input fields
-            document.getElementById('area_name').value = '';
-            document.getElementById('hazard_class').value = 'light';
-            document.getElementById('design_area').value = '';
-            document.getElementById('duration').value = '30';
-            document.getElementById('pump_rated_flow').value = '';
-            document.getElementById('system_demand_head').value = ''; 
+            if (areaNameEl) areaNameEl.value = '';
+            if (hazardClassEl) hazardClassEl.value = 'light';
+            if (designAreaEl) designAreaEl.value = '';
+            if (durationEl) durationEl.value = '30';
+            if (pumpRatedFlowEl) pumpRatedFlowEl.value = '';
+            if (systemDemandHeadEl) systemDemandHeadEl.value = ''; 
 
             // Clear results display
-            document.getElementById('sprinkler_flow').textContent = '0.00';
-            document.getElementById('hose_allowance').textContent = '0.00';
-            document.getElementById('total_flow').textContent = '0.00';
-            document.getElementById('tank_volume').textContent = '0.00';
-            document.getElementById('actual_duration').textContent = '0';
-            document.getElementById('demand_head_display').textContent = '0.00';
+            if (sprinklerFlowDisplayEl) sprinklerFlowDisplayEl.textContent = '0.00';
+            if (hoseAllowanceDisplayEl) hoseAllowanceDisplayEl.textContent = '0.00';
+            if (totalFlowDisplayEl) totalFlowDisplayEl.textContent = '0.00';
+            if (tankVolumeDisplayEl) tankVolumeDisplayEl.textContent = '0.00';
+            if (actualDurationDisplayEl) actualDurationDisplayEl.textContent = '0';
+            if (demandHeadDisplayEl) demandHeadDisplayEl.textContent = '0.00';
 
             // Clear summary table
-            document.getElementById('summary_sprinkler_flow').textContent = '0.00';
-            document.getElementById('summary_hose_allowance').textContent = '0.00';
-            document.getElementById('summary_total_flow').textContent = '0.00';
-            document.getElementById('summary_demand_head').textContent = '0.00';
-            document.getElementById('summary_tank_volume').textContent = '0.00'; // Reset to original label
-            document.getElementById('summary_actual_duration').textContent = '0';
-            document.getElementById('summary_recommended_pump_flow').textContent = '0.00';
-            document.getElementById('summary_estimated_pressure').textContent = '0.00'; 
+            if (summarySprinklerFlowEl) summarySprinklerFlowEl.textContent = '0.00';
+            if (summaryHoseAllowanceEl) summaryHoseAllowanceEl.textContent = '0.00';
+            if (summaryTotalFlowEl) summaryTotalFlowEl.textContent = '0.00';
+            if (summaryDemandHeadEl) summaryDemandHeadEl.textContent = '0.00';
+            if (summaryTankVolumeEl) summaryTankVolumeEl.textContent = '0.00'; // Reset to original label
+            if (summaryActualDurationEl) summaryActualDurationEl.textContent = '0';
+            if (summaryRecommendedPumpFlowEl) summaryRecommendedPumpFlowEl.textContent = '0.00';
+            if (summaryEstimatedPressureEl) summaryEstimatedPressureEl.textContent = '0.00'; 
+            
+            // Clear new field with null check
+            if (summaryMaxPressureElement) {
+                summaryMaxPressureElement.textContent = '0.00'; 
+            }
 
             // Reset dynamic label in summary table
-            document.getElementById('summary_tank_volume_label').textContent = 'ขนาดถังเก็บน้ำที่ต้องการ';
+            if (summaryTankVolumeLabel) summaryTankVolumeLabel.textContent = 'ขนาดถังเก็บน้ำที่ต้องการ';
 
 
             // Hide dynamic result elements and calculation explanations (ensure they are hidden on clear)
-            document.getElementById('area_name_display').style.display = 'none';
-            document.getElementById('demand_head_display_container').classList.add('hidden');
-            // Re-enabled warning message clearing
-            document.getElementById('warning_message').classList.add('hidden');
+            if (areaNameDisplayContainer) areaNameDisplayContainer.style.display = 'none';
+            if (demandHeadDisplayContainer) demandHeadDisplayContainer.classList.add('hidden');
+            if (warningMessageElement) warningMessageElement.classList.add('hidden');
             
-            document.getElementById('sprinkler_flow_calculation').classList.add('hidden');
-            document.getElementById('tank_volume_calculation').classList.add('hidden');
-            document.getElementById('demand_head_calculation').classList.add('hidden');
+            if (sprinklerFlowCalculationElement) sprinklerFlowCalculationElement.classList.add('hidden');
+            if (tankVolumeCalculationElement) tankVolumeCalculationElement.classList.add('hidden');
+            if (demandHeadCalculationElement) demandHeadCalculationElement.classList.add('hidden');
 
             // Set the visibility of these containers back to their initial hidden state
-            document.getElementById('tank_volume_display_container').classList.add('hidden');
-            document.getElementById('actual_duration_display_container').classList.add('hidden');
+            if (tankVolumeDisplayContainer) tankVolumeDisplayContainer.classList.add('hidden');
+            if (actualDurationDisplayContainer) actualDurationDisplayContainer.classList.add('hidden');
 
 
             updatePumpCurveChart(0, 0, 0); // Clear chart when data is cleared
