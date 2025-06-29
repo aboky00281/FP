@@ -1,0 +1,762 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fire Protection Calculator | NFPA Standard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Kanit', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            padding: 20px 0;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            color: white;
+            border: 2px solid #ff9800;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            color: #ff9800;
+            text-shadow: 0 0 10px rgba(255, 152, 0, 0.7);
+        }
+        
+        h2 {
+            font-size: 1.8rem;
+            margin: 20px 0;
+            color: #ff5722;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #ffcc80;
+            max-width: 800px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+        
+        .app-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4);
+            margin-bottom: 30px;
+        }
+        
+        .form-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .input-column {
+            flex: 1;
+            min-width: 300px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .info-column {
+            flex: 1;
+            min-width: 300px;
+            padding: 20px;
+            background: #e3f2fd;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #1a237e;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #5c6bc0;
+            border-radius: 10px;
+            font-size: 1rem;
+            background: white;
+        }
+        
+        button {
+            background: linear-gradient(to right, #ff5722, #ff9800);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            border-radius: 10px;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+            font-weight: 600;
+            letter-spacing: 1px;
+            box-shadow: 0 5px 15px rgba(255, 87, 34, 0.4);
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(255, 87, 34, 0.6);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        .hazard-info {
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-left: 5px solid;
+        }
+        
+        .light-hazard { border-color: #4CAF50; }
+        .ordinary-hazard1 { border-color: #FFC107; }
+        .ordinary-hazard2 { border-color: #FF9800; }
+        .extra-hazard1 { border-color: #F44336; }
+        .extra-hazard2 { border-color: #9C27B0; }
+        
+        .results-container {
+            display: none;
+            margin-top: 30px;
+        }
+        
+        .metrics-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            flex: 1;
+            min-width: 250px;
+            background: linear-gradient(135deg, #1a237e, #283593);
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .metric-title {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: #ffcc80;
+        }
+        
+        .metric-value {
+            font-size: 2.2rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .metric-subvalue {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .details-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .tank-details {
+            flex: 1;
+            min-width: 300px;
+            padding: 25px;
+            background: #e8f5e9;
+            border-radius: 15px;
+        }
+        
+        .pump-recommendation {
+            flex: 1;
+            min-width: 300px;
+            padding: 25px;
+            background: #fff3e0;
+            border-radius: 15px;
+            text-align: center;
+        }
+        
+        .pump-size {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin: 20px 0;
+            text-shadow: 3px 3px 5px rgba(0, 0, 0, 0.2);
+        }
+        
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .table-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        th {
+            background: #1a237e;
+            color: white;
+        }
+        
+        tr:nth-child(even) {
+            background: #f3f3f3;
+        }
+        
+        .warning-box {
+            background: #fff8e1;
+            border-left: 5px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 30px;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            border-left: 5px solid #2196f3;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: white;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+        
+        .instructions {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            margin-bottom: 30px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .instructions h3 {
+            color: #ffcc80;
+            margin-bottom: 15px;
+        }
+        
+        .instructions ol {
+            padding-left: 20px;
+        }
+        
+        .instructions li {
+            margin-bottom: 10px;
+            line-height: 1.6;
+        }
+        
+        @media (max-width: 768px) {
+            .form-container {
+                flex-direction: column;
+            }
+            
+            .metrics-row {
+                flex-direction: column;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-fire-extinguisher"></i> Fire Protection Calculator</h1>
+            <div class="subtitle">คำนวณขนาด Fire Pump, ถังเก็บน้ำ และเวลากักเก็บ ตามมาตรฐาน NFPA 20, NFPA 22 และ NFPA 13</div>
+        </header>
+        
+        <div class="instructions">
+            <h3><i class="fas fa-info-circle"></i> วิธีใช้งาน</h3>
+            <ol>
+                <li>เลือกประเภทอาคารจากรายการด้านล่าง</li>
+                <li>ป้อนพื้นที่รวมของอาคารในหน่วยตารางเมตร</li>
+                <li>ระบบจะแสดงระดับความเสี่ยงและพารามิเตอร์ที่เกี่ยวข้องโดยอัตโนมัติ</li>
+                <li>ปรับค่า Safety Factor ตามความเหมาะสม (ค่าเริ่มต้น 1.3)</li>
+                <li>คลิกปุ่ม "คำนวณ" เพื่อดูผลลัพธ์</li>
+            </ol>
+        </div>
+        
+        <div class="app-container">
+            <h2><i class="fas fa-calculator"></i> ข้อมูลนำเข้า</h2>
+            <div class="form-container">
+                <div class="input-column">
+                    <div class="form-group">
+                        <label for="occupancy"><i class="fas fa-building"></i> ประเภทอาคาร</label>
+                        <select id="occupancy">
+                            <option value="สำนักงาน (Office)">สำนักงาน (Office)</option>
+                            <option value="อาคารพักอาศัย (Residential)">อาคารพักอาศัย (Residential)</option>
+                            <option value="โรงแรม (Hotel)">โรงแรม (Hotel)</option>
+                            <option value="โรงเรียน (School)">โรงเรียน (School)</option>
+                            <option value="ศูนย์การค้า (Shopping Mall)">ศูนย์การค้า (Shopping Mall)</option>
+                            <option value="โรงพยาบาล (Hospital)">โรงพยาบาล (Hospital)</option>
+                            <option value="โรงงานทั่วไป (General Factory)">โรงงานทั่วไป (General Factory)</option>
+                            <option value="คลังสินค้า (Warehouse)">คลังสินค้า (Warehouse)</option>
+                            <option value="โรงงานเคมี (Chemical Plant)">โรงงานเคมี (Chemical Plant)</option>
+                            <option value="โรงงานสี/น้ำมัน (Paint/Oil Plant)">โรงงานสี/น้ำมัน (Paint/Oil Plant)</option>
+                            <option value="โรงงานพลาสติก (Plastics Plant)">โรงงานพลาสติก (Plastics Plant)</option>
+                            <option value="สนามบิน (Airport)">สนามบิน (Airport)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="area"><i class="fas fa-vector-square"></i> พื้นที่รวม (ตร.ม.)</label>
+                        <input type="number" id="area" min="10" max="100000" value="1000">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="safetyFactor"><i class="fas fa-shield-alt"></i> Safety Factor (1.0-2.0)</label>
+                        <input type="range" id="safetyFactor" min="1.0" max="2.0" step="0.1" value="1.3">
+                        <span id="safetyFactorValue">1.3</span>
+                    </div>
+                    
+                    <button id="calculateBtn"><i class="fas fa-bolt"></i> คำนวณ</button>
+                </div>
+                
+                <div class="info-column">
+                    <h3><i class="fas fa-exclamation-triangle"></i> ข้อมูลระดับความเสี่ยง</h3>
+                    <div id="hazardInfo" class="hazard-info light-hazard">
+                        <p><strong>ระดับความเสี่ยง:</strong> <span id="hazardLevel">Light Hazard</span></p>
+                        <p><strong>ความหนาแน่นการไหล:</strong> <span id="flowDensity">0.15</span> GPM/m²</p>
+                        <p><strong>ความดันใช้งาน:</strong> <span id="pressure">65</span> PSI</p>
+                        <p><strong>เวลากักเก็บน้ำ:</strong> <span id="storageTime">45</span> นาที</p>
+                    </div>
+                    
+                    <div class="info-box">
+                        <p><i class="fas fa-lightbulb"></i> ระดับความเสี่ยงจะถูกกำหนดโดยอัตโนมัติตามประเภทอาคารที่เลือก</p>
+                    </div>
+                    
+                    <div class="info-box">
+                        <h4><i class="fas fa-book"></i> มาตรฐานอ้างอิง</h4>
+                        <p>NFPA 20: Fire Pumps</p>
+                        <p>NFPA 22: Water Tanks</p>
+                        <p>NFPA 13: Sprinkler Systems</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="resultsContainer" class="results-container">
+                <h2><i class="fas fa-chart-bar"></i> ผลการคำนวณ</h2>
+                
+                <div class="metrics-row">
+                    <div class="metric-card">
+                        <div class="metric-title">อัตราการไหลที่ต้องการ</div>
+                        <div class="metric-value" id="flowRateResult">0 GPM</div>
+                        <div class="metric-subvalue">Gallons Per Minute</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-title">ขนาด Fire Pump</div>
+                        <div class="metric-value" id="pumpHpResult">0 HP</div>
+                        <div class="metric-subvalue">Horse Power</div>
+                    </div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-title">ความจุถังเก็บน้ำ</div>
+                        <div class="metric-value" id="waterStorageResult">0 Gallons</div>
+                        <div class="metric-subvalue" id="waterStorageM3">0 m³</div>
+                    </div>
+                </div>
+                
+                <div class="details-container">
+                    <div class="tank-details">
+                        <h3><i class="fas fa-water"></i> ข้อมูลถังเก็บน้ำ</h3>
+                        <p><strong>เวลากักเก็บน้ำ:</strong> <span id="storageTimeResult">0</span> นาที</p>
+                        <p><strong>เส้นผ่านศูนย์กลางถัง:</strong> <span id="tankDiameter">0.00</span> เมตร</p>
+                        <p><strong>ความสูงถัง:</strong> <span id="tankHeight">0.00</span> เมตร</p>
+                        <p><strong>ปริมาตรน้ำ:</strong> <span id="waterVolume">0.00</span> m³</p>
+                    </div>
+                    
+                    <div class="pump-recommendation">
+                        <h3><i class="fas fa-tachometer-alt"></i> ขนาด Fire Pump แนะนำ</h3>
+                        <div class="pump-size" id="recommendedPump">0 HP</div>
+                        <p>ขนาดปั๊มมาตรฐานที่เหมาะสมที่สุด</p>
+                    </div>
+                </div>
+                
+                <div class="chart-container">
+                    <h3><i class="fas fa-chart-pie"></i> การกระจายความจุถังเก็บน้ำ</h3>
+                    <canvas id="tankChart"></canvas>
+                </div>
+                
+                <div class="chart-container">
+                    <h3><i class="fas fa-chart-line"></i> ขนาด Fire Pump เทียบกับพื้นที่อาคาร</h3>
+                    <canvas id="comparisonChart"></canvas>
+                </div>
+                
+                <div class="table-container">
+                    <h3><i class="fas fa-table"></i> ตารางขนาด Fire Pump เทียบกับพื้นที่อาคาร</h3>
+                    <table id="comparisonTable">
+                        <thead>
+                            <tr>
+                                <th>พื้นที่ (ตร.ม.)</th>
+                                <th>อัตราการไหล (GPM)</th>
+                                <th>ขนาดปั๊ม (HP)</th>
+                                <th>ความจุถัง (m³)</th>
+                                <th>เวลากักเก็บ (นาที)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Table rows will be generated by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="warning-box">
+                    <h3><i class="fas fa-exclamation-circle"></i> ข้อควรระวัง</h3>
+                    <p>• การคำนวณนี้เป็นค่าประมาณตามมาตรฐาน NFPA เท่านั้น</p>
+                    <p>• โปรดตรวจสอบกับวิศวกรผู้เชี่ยวชาญก่อนการติดตั้งจริง</p>
+                    <p>• ควรเพิ่ม Safety Margin 10-15% สำหรับการใช้งานจริง</p>
+                    <p>• ต้องคำนึงถึงข้อกำหนดท้องถิ่นที่อาจเข้มงวดกว่ามาตรฐาน NFPA</p>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>พัฒนาโดย: ผู้เชี่ยวชาญระบบป้องกันอัคคีภัย | ข้อมูลอ้างอิงมาตรฐาน NFPA 20, NFPA 22 และ NFPA 13</p>
+            <p>© 2023 Fire Protection Calculator</p>
+        </footer>
+    </div>
+
+    <script>
+        // ข้อมูลฐานตามมาตรฐาน NFPA
+        const OCCUPANCY_TYPES = {
+            "สำนักงาน (Office)": "Light Hazard",
+            "อาคารพักอาศัย (Residential)": "Light Hazard",
+            "โรงแรม (Hotel)": "Light Hazard",
+            "โรงเรียน (School)": "Light Hazard",
+            "ศูนย์การค้า (Shopping Mall)": "Ordinary Hazard I",
+            "โรงพยาบาล (Hospital)": "Ordinary Hazard I",
+            "โรงงานทั่วไป (General Factory)": "Ordinary Hazard II",
+            "คลังสินค้า (Warehouse)": "Ordinary Hazard II",
+            "โรงงานเคมี (Chemical Plant)": "Extra Hazard I",
+            "โรงงานสี/น้ำมัน (Paint/Oil Plant)": "Extra Hazard I",
+            "โรงงานพลาสติก (Plastics Plant)": "Extra Hazard II",
+            "สนามบิน (Airport)": "Extra Hazard II"
+        };
+
+        const HAZARD_DATA = {
+            "Light Hazard": {
+                "flow_density": 0.15,
+                "pressure": 65,
+                "storage_time": 45,
+                "color": "#4CAF50",
+                "class": "light-hazard"
+            },
+            "Ordinary Hazard I": {
+                "flow_density": 0.175,
+                "pressure": 87.5,
+                "storage_time": 75,
+                "color": "#FFC107",
+                "class": "ordinary-hazard1"
+            },
+            "Ordinary Hazard II": {
+                "flow_density": 0.25,
+                "pressure": 125,
+                "storage_time": 105,
+                "color": "#FF9800",
+                "class": "ordinary-hazard2"
+            },
+            "Extra Hazard I": {
+                "flow_density": 0.35,
+                "pressure": 150,
+                "storage_time": 135,
+                "color": "#F44336",
+                "class": "extra-hazard1"
+            },
+            "Extra Hazard II": {
+                "flow_density": 0.4,
+                "pressure": 150,
+                "storage_time": 150,
+                "color": "#9C27B0",
+                "class": "extra-hazard2"
+            }
+        };
+
+        // DOM Elements
+        const occupancySelect = document.getElementById('occupancy');
+        const areaInput = document.getElementById('area');
+        const safetyFactorSlider = document.getElementById('safetyFactor');
+        const safetyFactorValue = document.getElementById('safetyFactorValue');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const resultsContainer = document.getElementById('resultsContainer');
+        
+        // Hazard Info Elements
+        const hazardLevelEl = document.getElementById('hazardLevel');
+        const flowDensityEl = document.getElementById('flowDensity');
+        const pressureEl = document.getElementById('pressure');
+        const storageTimeEl = document.getElementById('storageTime');
+        const hazardInfoDiv = document.getElementById('hazardInfo');
+        
+        // Result Elements
+        const flowRateResult = document.getElementById('flowRateResult');
+        const pumpHpResult = document.getElementById('pumpHpResult');
+        const waterStorageResult = document.getElementById('waterStorageResult');
+        const waterStorageM3 = document.getElementById('waterStorageM3');
+        const storageTimeResult = document.getElementById('storageTimeResult');
+        const tankDiameter = document.getElementById('tankDiameter');
+        const tankHeight = document.getElementById('tankHeight');
+        const waterVolume = document.getElementById('waterVolume');
+        const recommendedPump = document.getElementById('recommendedPump');
+
+        // Initialize
+        updateHazardInfo();
+        
+        // Event Listeners
+        occupancySelect.addEventListener('change', updateHazardInfo);
+        safetyFactorSlider.addEventListener('input', function() {
+            safetyFactorValue.textContent = this.value;
+        });
+        calculateBtn.addEventListener('click', calculate);
+
+        // Update Hazard Info based on selected occupancy
+        function updateHazardInfo() {
+            const selectedOccupancy = occupancySelect.value;
+            const hazardLevel = OCCUPANCY_TYPES[selectedOccupancy];
+            const hazardData = HAZARD_DATA[hazardLevel];
+            
+            hazardLevelEl.textContent = hazardLevel;
+            flowDensityEl.textContent = hazardData.flow_density;
+            pressureEl.textContent = hazardData.pressure;
+            storageTimeEl.textContent = hazardData.storage_time;
+            
+            // Update hazard info styling
+            hazardInfoDiv.className = 'hazard-info ' + hazardData.class;
+        }
+
+        // Main Calculation Function
+        function calculate() {
+            // Get input values
+            const area = parseFloat(areaInput.value);
+            const safetyFactor = parseFloat(safetyFactorSlider.value);
+            const hazardLevel = OCCUPANCY_TYPES[occupancySelect.value];
+            const hazard = HAZARD_DATA[hazardLevel];
+            
+            // Perform calculations
+            const flowRate = area * hazard.flow_density * safetyFactor;
+            const pumpHp = (flowRate * hazard.pressure) / (3960 * 0.75);
+            const waterStorage = flowRate * hazard.storage_time;
+            const waterStorageM3Value = waterStorage * 0.00378541;
+            
+            // Calculate tank dimensions (simplified)
+            const tankDiameterValue = Math.sqrt(waterStorageM3Value / (Math.PI * 3)) * 2;
+            const tankHeightValue = 3.0;
+            
+            // Recommended pump size
+            const pumpSizes = [25, 50, 75, 100, 150, 200, 250, 300, 400, 500];
+            const recommendedSize = pumpSizes.reduce((prev, curr) => {
+                return (Math.abs(curr - pumpHp) < Math.abs(prev - pumpHp) ? curr : prev;
+            });
+            
+            // Update UI with results
+            flowRateResult.textContent = flowRate.toFixed(0) + ' GPM';
+            pumpHpResult.textContent = pumpHp.toFixed(1) + ' HP';
+            waterStorageResult.textContent = waterStorage.toFixed(0) + ' Gallons';
+            waterStorageM3.textContent = waterStorageM3Value.toFixed(1) + ' m³';
+            storageTimeResult.textContent = hazard.storage_time;
+            tankDiameter.textContent = tankDiameterValue.toFixed(2);
+            tankHeight.textContent = tankHeightValue.toFixed(2);
+            waterVolume.textContent = waterStorageM3Value.toFixed(1);
+            recommendedPump.textContent = recommendedSize + ' HP';
+            recommendedPump.style.color = hazard.color;
+            
+            // Show results container
+            resultsContainer.style.display = 'block';
+            
+            // Generate charts
+            generateTankChart(hazard);
+            generateComparisonChart(hazard, safetyFactor);
+            generateComparisonTable(hazard, safetyFactor);
+            
+            // Scroll to results
+            resultsContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Generate Tank Chart
+        function generateTankChart(hazard) {
+            const ctx = document.getElementById('tankChart').getContext('2d');
+            
+            // Clear previous chart if exists
+            if (window.tankChart) {
+                window.tankChart.destroy();
+            }
+            
+            window.tankChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['น้ำที่ใช้ดับเพลิง', 'น้ำสำรอง', 'พื้นที่ว่าง'],
+                    datasets: [{
+                        data: [80, 15, 5],
+                        backgroundColor: [
+                            '#2196F3',
+                            '#4CAF50',
+                            '#f5f5f5'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'การกระจายความจุถังเก็บน้ำ'
+                        }
+                    }
+                }
+            });
+        }
+
+        // Generate Comparison Chart
+        function generateComparisonChart(hazard, safetyFactor) {
+            const ctx = document.getElementById('comparisonChart').getContext('2d');
+            
+            // Clear previous chart if exists
+            if (window.comparisonChart) {
+                window.comparisonChart.destroy();
+            }
+            
+            // Generate sample data
+            const areas = [500, 1000, 2000, 5000, 10000, 20000];
+            const pumpSizes = areas.map(area => {
+                const flowRate = area * hazard.flow_density * safetyFactor;
+                return (flowRate * hazard.pressure) / (3960 * 0.75);
+            });
+            
+            window.comparisonChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: areas,
+                    datasets: [{
+                        label: 'ขนาด Fire Pump (HP)',
+                        data: pumpSizes,
+                        backgroundColor: 'rgba(255, 87, 34, 0.2)',
+                        borderColor: 'rgba(255, 87, 34, 1)',
+                        borderWidth: 3,
+                        tension: 0.3,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'ขนาด Fire Pump เทียบกับพื้นที่อาคาร'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'ขนาดปั๊ม (HP)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'พื้นที่อาคาร (ตร.ม.)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Generate Comparison Table
+        function generateComparisonTable(hazard, safetyFactor) {
+            const tableBody = document.querySelector('#comparisonTable tbody');
+            tableBody.innerHTML = '';
+            
+            const areas = [500, 1000, 2000, 5000, 10000, 20000];
+            
+            areas.forEach(area => {
+                const flowRate = area * hazard.flow_density * safetyFactor;
+                const pumpHp = (flowRate * hazard.pressure) / (3960 * 0.75);
+                const waterStorage = flowRate * hazard.storage_time;
+                const waterStorageM3Value = waterStorage * 0.00378541;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${area.toLocaleString()}</td>
+                    <td>${flowRate.toFixed(0).toLocaleString()}</td>
+                    <td>${pumpHp.toFixed(1).toLocaleString()}</td>
+                    <td>${waterStorageM3Value.toFixed(1).toLocaleString()}</td>
+                    <td>${hazard.storage_time}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
