@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA) By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -111,7 +111,7 @@
         }
         .btn-clear:hover {
             background-color: #dc2626;
-            transform: translateY(-2px);
+            transform: translateY(0);
         }
         .btn-clear:active {
             transform: translateY(0);
@@ -381,7 +381,7 @@
             <label for="design_area">พื้นที่ป้องกัน (Design Area - ตร.ม.):</label>
             <input type="number" id="design_area" placeholder="เช่น 139.4 ตร.ม." min="0.1" step="0.1" class="rounded-lg shadow-sm">
             <small class="small-text">
-                อ้างอิง NFPA 13
+                อ้างอิง NFPA 13: Light/Ordinary Hazard อย่างน้อย 139.4 ตร.ม. (ประมาณ 1500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน
             </small>
         </div>
 
@@ -420,12 +420,14 @@
                     <span>แรงดันที่จุดต้องการ:</span> <span id="demand_head_display" class="font-normal">0.00</span> PSI
                     <button onclick="toggleDemandHeadCalculation()" class="toggle-button">ดูวิธีการคำนวณ</button>
                 </p>
-                <p id="demand_head_calculation" class="hidden small-text"></p> <p>
+                <p id="demand_head_calculation" class="hidden small-text"></p>
+                <!-- These lines are now visible in the main display again -->
+                <p id="tank_volume_display_container">
                     <strong>ขนาดถังเก็บน้ำที่ต้องการ:</strong> <span id="tank_volume">0.00</span> ลบ.ม.
-                    <button onclick="toggleTankVolumeCalculation()" class="toggle-button">ดูวิธีการคำนวณ</button>
+                    <button onclick="toggleTankVolumeCalculation()" class="toggle-button">ดูวิธีการคำนวsณ</button>
                 </p>
                 <p id="tank_volume_calculation" class="hidden small-text"></p>
-                <p><strong>เวลากักเก็บน้ำที่คำนวณ:</strong> <span id="actual_duration">0</span> นาที</p>
+                <p id="actual_duration_display_container"><strong>เวลากักเก็บน้ำที่คำนวณ:</strong> <span id="actual_duration">0</span> นาที</p>
                 <!-- Re-added the warning message div -->
                 <div class="warning hidden" id="warning_message"></div>
             </div>
@@ -505,12 +507,12 @@
                         <td class="py-2 px-4 border-b border-gray-300 font-normal"><span id="summary_demand_head">0.00</span> PSI</td>
                     </tr>
                     <tr>
-                        <td class="py-2 px-4 border-b border-gray-300">ขนาดถังเก็บน้ำที่ต้องการ</td>
-                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_tank_volume">0.00</span> ลบ.ม.</td>
-                    </tr>
-                    <tr>
                         <td class="py-2 px-4 border-b border-gray-300">เวลากักเก็บน้ำที่คำนวณ</td>
                         <td class="py-2 px-4 border-b border-gray-300"><span id="summary_actual_duration">0</span> นาที</td>
+                    </tr>
+                    <tr>
+                        <td class="py-2 px-4 border-b border-gray-300" id="summary_tank_volume_label">ขนาดถังเก็บน้ำที่ต้องการ</td>
+                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_tank_volume">0.00</span> ลบ.ม.</td>
                     </tr>
                     <tr>
                         <td class="py-2 px-4 border-b border-gray-300 font-bold">อัตราไหลของปั๊มที่ควรเลือก (โดยประมาณ)</td>
@@ -920,6 +922,11 @@
             const demandHeadDisplayContainer = document.getElementById('demand_head_display_container');
             const demandHeadDisplayElement = document.getElementById('demand_head_display');
             const demandHeadCalculationElement = document.getElementById('demand_head_calculation'); 
+            const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
+
+            // Get elements for hiding/showing in main results section
+            const tankVolumeDisplayContainer = document.getElementById('tank_volume_display_container');
+            const actualDurationDisplayContainer = document.getElementById('actual_duration_display_container');
 
 
             // Input validation for design area
@@ -935,11 +942,19 @@
                 demandHeadDisplayElement.textContent = '0.00'; // Reset head display
                 demandHeadDisplayContainer.classList.add('hidden'); // Hide container
                 demandHeadCalculationElement.classList.add('hidden'); // Hide demand head explanation on error
-                document.getElementById('tank_volume').textContent = '0.00';
+                
+                // Hide these elements in the main display (ensure they are hidden on error)
+                tankVolumeDisplayContainer.classList.add('hidden');
+                actualDurationDisplayContainer.classList.add('hidden');
+                
+                document.getElementById('tank_volume').textContent = '0.00'; // Still update the value even if hidden
                 tankVolumeCalculationElement.classList.add('hidden'); // Hide tank volume explanation
-                document.getElementById('actual_duration').textContent = '0';
+                document.getElementById('actual_duration').textContent = '0'; // Still update the value even if hidden
                 document.getElementById('area_name_display').style.display = 'none';
                 updatePumpCurveChart(0, 0, 0); // Also reset chart on error
+                
+                // Reset dynamic label in summary table
+                summaryTankVolumeLabel.textContent = 'ขนาดถังเก็บน้ำที่ต้องการ';
                 return;
             } else {
                 warningMessageElement.classList.add('hidden'); // Hide warning if input is valid
@@ -949,15 +964,6 @@
             const designAreaSqFt = designAreaSqM * SQ_M_TO_SQ_FT;
 
             // Removed specific warning messages related to NFPA 13 minimums.
-            // Check minimum design area based on NFPA 13 (Simplified, for standard spray sprinklers)
-            const minDesignAreaSqMForSprinkler = 139.4;
-            // The following block is removed as requested by the user
-            /*
-            if ((hazardClass === 'light' || hazardClass.startsWith('ordinary')) && designAreaSqM < minDesignAreaSqMForSprinkler) {
-                warningMessage += `คำเตือน: สำหรับ ${document.getElementById('hazard_class').options[document.getElementById('hazard_class').selectedIndex].text} ควรใช้พื้นที่ป้องกันอย่างน้อย ${minDesignAreaSqMForSprinkler} ตร.ม. (ประมาณ 1500 ตร.ฟุต) ตาม NFPA 13 เพื่อการคำนวณสปริงเกลอร์มาตรฐาน. `;
-            }
-            */
-
             // Check minimum duration based on NFPA 13
             if (durationInput < data.min_duration) {
                 warningMessage += `คำเตือน: ระยะเวลาการจ่ายน้ำขั้นต่ำที่แนะนำสำหรับ ${document.getElementById('hazard_class').options[document.getElementById('hazard_class').selectedIndex].text} คือ ${data.min_duration} นาที ตาม NFPA 13.`;
@@ -973,8 +979,10 @@
             // 3. Total Required Flow Rate (Fire Pump Size in GPM)
             const totalFlowGPM = sprinklerFlowGPM + hoseAllowanceGPM;
 
-            // 4. Calculate Required Tank Volume (US Gallons)
-            const requiredTankVolumeGallons = totalFlowGPM * durationInput; // Volume = Flow Rate * Time
+            // 4. Calculate Required Tank Volume (US Gallons) using pumpRatedFlow
+            // Use pumpRatedFlow for tank volume calculation as requested. If pumpRatedFlow is not valid or 0, default to totalFlowGPM.
+            const flowForTankCalculation = (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) ? pumpRatedFlow : totalFlowGPM;
+            const requiredTankVolumeGallons = flowForTankCalculation * durationInput; // Volume = Flow Rate * Time
 
             // Convert tank volume from US Gallons to Cubic Meters
             const requiredTankVolumeCubicMeters = requiredTankVolumeGallons * US_GALLONS_TO_CUBIC_METERS;
@@ -982,14 +990,21 @@
             // 5. Actual Duration - This is simply the input duration based on the calculation
             const actualDurationMinutes = durationInput; 
 
-            // Display Results
+            // Display Results (these are the ones that stay visible in the main section)
             document.getElementById('sprinkler_flow').textContent = sprinklerFlowGPM.toFixed(2);
             document.getElementById('hose_allowance').textContent = hoseAllowanceGPM.toFixed(2);
             document.getElementById('total_flow').textContent = totalFlowGPM.toFixed(2);
+            
+            // These results should now be visible again
             document.getElementById('tank_volume').textContent = requiredTankVolumeCubicMeters.toFixed(2);
             document.getElementById('actual_duration').textContent = actualDurationMinutes;
+            
+            // Ensure they are visible in the main display
+            tankVolumeDisplayContainer.classList.remove('hidden');
+            actualDurationDisplayContainer.classList.remove('hidden');
 
-            // Update summary table
+
+            // Update summary table (these should always be updated regardless of main display)
             document.getElementById('summary_sprinkler_flow').textContent = sprinklerFlowGPM.toFixed(2);
             document.getElementById('summary_hose_allowance').textContent = hoseAllowanceGPM.toFixed(2);
             document.getElementById('summary_total_flow').textContent = totalFlowGPM.toFixed(2);
@@ -1016,7 +1031,26 @@
             // Note: class 'hidden' is managed by toggleSprinklerCalculation()
 
             // Set tank volume calculation explanation (hidden by default)
-            tankVolumeCalculationElement.textContent = `วิธีการคำนวณ: อัตราการไหลรวม ${totalFlowGPM.toFixed(2)} GPM x ระยะเวลา ${durationInput} นาที = ${requiredTankVolumeGallons.toFixed(2)} แกลลอน (${requiredTankVolumeCubicMeters.toFixed(2)} ลบ.ม.)`;
+            let flowSourceTextForExplanationLong;
+            let flowValueUsedForTankCalc;
+
+            if (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) {
+                flowSourceTextForExplanationLong = `อัตราไหลของปั๊มที่ควรเลือก (โดยประมาณ)`;
+                flowValueUsedForTankCalc = pumpRatedFlow;
+            } else {
+                flowSourceTextForExplanationLong = `อัตราการไหลรวมที่ต้องการ (ขนาดปั๊มดับเพลิง)`;
+                flowValueUsedForTankCalc = totalFlowGPM;
+            }
+            tankVolumeCalculationElement.textContent = `วิธีการคำนวณ: ใช้ ${flowSourceTextForExplanationLong}: ${flowValueUsedForTankCalc.toFixed(2)} GPM x ระยะเวลา ${durationInput} นาที = ${requiredTankVolumeGallons.toFixed(2)} แกลลอน (${requiredTankVolumeCubicMeters.toFixed(2)} ลบ.ม.)`;
+
+            // Update dynamic label in summary table
+            let summaryTankVolumeLabelText;
+            if (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) {
+                summaryTankVolumeLabelText = `ขนาดถังเก็บน้ำที่ต้องการ (ใช้ปั๊ม: ${pumpRatedFlow.toFixed(2)} GPM)`;
+            } else {
+                summaryTankVolumeLabelText = `ขนาดถังเก็บน้ำที่ต้องการ (ใช้รวม: ${totalFlowGPM.toFixed(2)} GPM)`;
+            }
+            summaryTankVolumeLabel.textContent = summaryTankVolumeLabelText;
 
 
             // Display warning if any
@@ -1077,13 +1111,16 @@
             document.getElementById('summary_hose_allowance').textContent = '0.00';
             document.getElementById('summary_total_flow').textContent = '0.00';
             document.getElementById('summary_demand_head').textContent = '0.00';
-            document.getElementById('summary_tank_volume').textContent = '0.00';
+            document.getElementById('summary_tank_volume').textContent = '0.00'; // Reset to original label
             document.getElementById('summary_actual_duration').textContent = '0';
             document.getElementById('summary_recommended_pump_flow').textContent = '0.00';
             document.getElementById('summary_estimated_pressure').textContent = '0.00'; 
 
+            // Reset dynamic label in summary table
+            document.getElementById('summary_tank_volume_label').textContent = 'ขนาดถังเก็บน้ำที่ต้องการ';
 
-            // Hide dynamic result elements and calculation explanations
+
+            // Hide dynamic result elements and calculation explanations (ensure they are hidden on clear)
             document.getElementById('area_name_display').style.display = 'none';
             document.getElementById('demand_head_display_container').classList.add('hidden');
             // Re-enabled warning message clearing
@@ -1092,6 +1129,11 @@
             document.getElementById('sprinkler_flow_calculation').classList.add('hidden');
             document.getElementById('tank_volume_calculation').classList.add('hidden');
             document.getElementById('demand_head_calculation').classList.add('hidden');
+
+            // Set the visibility of these containers back to their initial hidden state
+            document.getElementById('tank_volume_display_container').classList.add('hidden');
+            document.getElementById('actual_duration_display_container').classList.add('hidden');
+
 
             updatePumpCurveChart(0, 0, 0); // Clear chart when data is cleared
         }
