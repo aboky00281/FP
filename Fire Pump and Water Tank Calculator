@@ -381,7 +381,7 @@
             <label for="design_area">พื้นที่ป้องกัน (Design Area - ตร.ม.):</label>
             <input type="number" id="design_area" placeholder="เช่น 139.4 ตร.ม." min="0.1" step="0.1" class="rounded-lg shadow-sm">
             <small class="small-text">
-                อ้างอิง NFPA 13: Light/Ordinary Hazard อย่างน้อย 139.4 ตร.ม. (ประมาณ 1500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน
+                อ้างอิง NFPA 13
             </small>
         </div>
 
@@ -461,11 +461,11 @@
                         <li><strong>Performance Curve จำลอง:</strong> ความสัมพันธ์ระหว่างอัตราการไหลและแรงดันของปั๊ม (จำลองจาก Rated Flow และแรงดันกำหนดที่ผู้ใช้ป้อน)</li>
                         <li><strong>อัตราไหลรวมที่ต้องการ (Demand Point - รูปดาวแดง):</strong> จุดปฏิบัติงานที่คำนวณได้จากปริมาณน้ำสปริงเกลอร์บวกกับปริมาณน้ำท่อยืน ที่แรงดันต้องการของระบบ (System Demand Head)</li>
                         <li><strong>จุดกำหนดของปั๊ม (Rated Point):</strong> จุดประสิทธิภาพสูงสุดตามสเปก (Rated Flow, แรงดันกำหนดที่ผู้ใช้ป้อน)</li>
-                        <li><strong>จุดอ้างอิง 150% Flow, 65% Head:</strong> จุดตรวจสอบประสิทธิภาพ (150% Rated Flow, 65% ของแรงดัน Shut-off Head)</li>
+                        <li><strong>จุดอ้างอิง 150% Flow, 65% Head:</strong> จุดตรวจสอบประสิทธิภาพ (150% Rated Flow, 65% ของแรงดัน rated Head)</li>
                         <li>**เส้นแสดง Shut-off Head (Max. churn):** แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)</li>
                         <li>**เส้นแสดง Rated GPM (สีน้ำเงิน):** เส้นแนวตั้งแสดงอัตราการไหลกำหนดของปั๊ม (Rated GPM)</li>
                         <li>**เส้นแสดงแรงดันกำหนดจากจุด Rated Point (สีน้ำเงิน):** เส้นแนวนอนจากจุด Rated Point ไปยังแกน Y เพื่อเน้นแรงดันกำหนดของปั๊ม</li>
-                        <li>**เส้นแสดง 65% Head (จุดอ้างอิง):** เส้นแนวนอนแสดง 65% ของแรงดันสูงสุดที่อัตราการไหลเป็นศูนย์</li>
+                        <li>**เส้นแสดง 65% Head (จุดอ้างอิง):** เส้นแนวนอนแสดง 65% ของแรงดันสูงสุดที่อัตราการไหล 150% Rated</li>
                     </ul>
                 </div>
             </div>
@@ -643,7 +643,12 @@
                         title: { display: true, text: 'อัตราการไหล (Flow Rate - GPM)' },
                         beginAtZero: true,
                         max: maxXValue,
-                        ticks: { stepSize: 25 }
+                        ticks: {
+                            stepSize: 25,
+                            callback: function(value) {
+                                return value.toFixed(0); // Display as whole number
+                            }
+                        }
                     },
                     y: {
                         type: 'linear',
@@ -651,7 +656,12 @@
                         title: { display: true, text: 'แรงดัน (Head - PSI)' },
                         beginAtZero: true,
                         max: maxYValue,
-                        ticks: { stepSize: 10 }
+                        ticks: {
+                            stepSize: 10,
+                            callback: function(value) {
+                                return value.toFixed(0); // Display as whole number
+                            }
+                        }
                     }
                 },
                 plugins: {
@@ -1022,13 +1032,13 @@
                 const calculatedRequiredHead = isNaN(systemDemandHeadInput) ? 0 : systemDemandHeadInput; // Set to 0 if invalid
                 // The user requested to remove the +65 PSI calculation from estimatedPressureWithAddition
                 const estimatedPressureWithAddition = calculatedRequiredHead; 
-                const demandHeadCalculationText = `วิธีการคำนวณ: แรงดันที่จุดต้องการถูกกำหนดตามค่าที่กรอกในช่อง "แรงดันต้องการของระบบ" คือ ${calculatedRequiredHead.toFixed(2)} PSI.`;
+                const demandHeadCalculationText = `วิธีการคำนวณ: แรงดันที่จุดต้องการถูกกำหนดตามค่าที่กรอกในช่อง "แรงดันต้องการของระบบ" คือ ${calculatedRequiredHead.toFixed(0)} PSI.`; // Changed to toFixed(0)
 
-                demandHeadDisplayElement.textContent = calculatedRequiredHead.toFixed(2);
+                demandHeadDisplayElement.textContent = calculatedRequiredHead.toFixed(0); // Changed to toFixed(0)
                 demandHeadDisplayContainer.classList.remove('hidden');
                 demandHeadCalculationElement.textContent = demandHeadCalculationText;
-                document.getElementById('summary_demand_head').textContent = calculatedRequiredHead.toFixed(2);
-                document.getElementById('summary_estimated_pressure').textContent = estimatedPressureWithAddition.toFixed(2); 
+                document.getElementById('summary_demand_head').textContent = calculatedRequiredHead.toFixed(0); // Changed to toFixed(0)
+                document.getElementById('summary_estimated_pressure').textContent = estimatedPressureWithAddition.toFixed(0); // Changed to toFixed(0)
 
 
                 // Pass systemDemandHeadInput to updatePumpCurveChart for the demand point
