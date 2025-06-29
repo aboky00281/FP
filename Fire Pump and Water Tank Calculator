@@ -497,11 +497,11 @@
                     </tr>
                     <tr>
                         <td class="py-2 px-4 border-b border-gray-300 font-bold">อัตราการไหลรวมที่ต้องการ (ขนาดปั๊มดับเพลิง)</td>
-                        <td class="py-2 px-4 border-b border-gray-300 text-red-600"><span id="summary_total_flow">0.00</span> GPM</td>
+                        <td class="py-2 px-4 border-b border-gray-300 text-red-600 font-normal"><span id="summary_total_flow">0.00</span> GPM</td>
                     </tr>
                     <tr>
                         <td class="py-2 px-4 border-b border-gray-300 font-bold">แรงดันที่จุดต้องการ</td>
-                        <td class="py-2 px-4 border-b border-gray-300"><span id="summary_demand_head">0.00</span> PSI</td>
+                        <td class="py-2 px-4 border-b border-gray-300 font-normal"><span id="summary_demand_head">0.00</span> PSI</td>
                     </tr>
                     <tr>
                         <td class="py-2 px-4 border-b border-gray-300">ขนาดถังเก็บน้ำที่ต้องการ</td>
