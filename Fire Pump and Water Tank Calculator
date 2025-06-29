@@ -437,7 +437,7 @@
             <div class="form-group">
                 <label for="pump_rated_flow">อัตราการไหลกำหนดของปั๊ม (GPM):</label>
                 <input type="number" id="pump_rated_flow" placeholder="เช่น 750 GPM" min="0" step="10" class="rounded-lg shadow-sm">
-                <small class="small-text">อัตราการไหล ณ จุดทำงานที่ระบุโดยผู้ผลิต (Rated Flow)</small>
+                <small class="small-text"> อัตราไหลของปั้มที่คุณต้องการ (Rated Flow)</small>
             </div>
             <div class="form-group">
                 <label for="system_demand_head">แรงดันต้องการของระบบ (PSI):</label>
@@ -1105,4 +1105,3 @@
     </script>
 </body>
 </html>
-
