@@ -1098,7 +1098,7 @@
             if (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) {
                 const calculatedRequiredHead = isNaN(systemDemandHeadInput) ? 0 : systemDemandHeadInput; // Set to 0 if invalid
                 const estimatedPressureWithAddition = calculatedRequiredHead; 
-                const demandHeadCalculationText = `วิธีการคำนวณ: แรงดันที่จุดต้องการถูกกำหนดตามค่าที่กรอกในช่อง "แรงดันต้องการของระบบ" คือ ${calculatedRequiredHead.toFixed(0)} PSI.`; // Changed to toFixed(0)
+                if (demandHeadCalculationElement) demandHeadCalculationElement.textContent = `วิธีการคำนวณ: แรงดันที่จุดต้องการมาจากค่าที่ป้อนในช่อง "แรงดันต้องการของระบบ (PSI)" โดยตรง คือ ${calculatedRequiredHead.toFixed(0)} PSI.`; // Adjusted text here
 
                 if (demandHeadDisplayElement) demandHeadDisplayElement.textContent = calculatedRequiredHead.toFixed(0); // Changed to toFixed(0)
                 if (demandHeadDisplayContainer) demandHeadDisplayContainer.classList.remove('hidden');
