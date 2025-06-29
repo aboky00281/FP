@@ -40,6 +40,7 @@
             color: #334155;
         }
         input[type="number"],
+        input[type="text"], /* Added style for text input */
         select {
             width: 100%;
             padding: 12px;
@@ -50,6 +51,7 @@
             box-sizing: border-box;
         }
         input[type="number"]:focus,
+        input[type="text"]:focus, /* Added style for text input focus */
         select:focus {
             outline: none;
             border-color: #3b82f6;
@@ -159,7 +161,7 @@
                 border: none;
             }
             /* Hide buttons and disclaimer when printing */
-            button, .disclaimer, .form-group, .print-pdf-buttons {
+            button, .disclaimer, .form-group:not(#area_name_group):not(#hazard_class_group):not(#design_area_group):not(#duration_group), .print-pdf-buttons {
                 display: none !important;
             }
             /* Ensure results section is visible and well formatted */
@@ -179,6 +181,16 @@
                 padding: 0;
                 margin: 0;
             }
+            /* Ensure area name is visible in print */
+            #area_name_display {
+                display: block !important;
+                margin-bottom: 10px;
+                font-size: 16px;
+                color: #475569;
+            }
+            #area_name_display strong {
+                color: #1e293b;
+            }
         }
     </style>
 </head>
@@ -192,7 +204,12 @@
             การออกแบบระบบจริงต้องพิจารณาปัจจัยทางวิศวกรรมที่ซับซ้อนอื่นๆ เสมอ โปรดปรึกษาวิศวกรที่มีใบอนุญาตสำหรับการออกแบบระบบจริง
         </p>
 
-        <div class="form-group">
+        <div class="form-group" id="area_name_group">
+            <label for="area_name">ชื่อ/รายละเอียดพื้นที่:</label>
+            <input type="text" id="area_name" placeholder="เช่น อาคารสำนักงาน A ชั้น 3" class="rounded-lg shadow-sm">
+        </div>
+
+        <div class="form-group" id="hazard_class_group">
             <label for="hazard_class">เลือกประเภทอันตราย (Occupancy Hazard Classification):</label>
             <select id="hazard_class" class="rounded-lg shadow-sm">
                 <option value="light">Light Hazard (อันตรายน้อย)</option>
@@ -203,7 +220,7 @@
             </select>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="design_area_group">
             <label for="design_area">พื้นที่ป้องกัน (Design Area - ตร.ม.):</label>
             <input type="number" id="design_area" placeholder="เช่น 139.4 ตร.ม." min="0.1" step="0.1" class="rounded-lg shadow-sm">
             <small class="small-text">
@@ -211,7 +228,7 @@
             </small>
         </div>
 
-        <div class="form-group">
+        <div class="form-group" id="duration_group">
             <label for="duration">ระยะเวลาการจ่ายน้ำขั้นต่ำ (นาที):</label>
             <select id="duration" class="rounded-lg shadow-sm">
                 <option value="30">30 นาที (สำหรับ Light Hazard)</option>
@@ -226,6 +243,9 @@
 
         <div id="results" class="results-section">
             <h2>ผลการคำนวณ:</h2>
+            <p id="area_name_display" style="display:none;">
+                <strong>สำหรับพื้นที่:</strong> <span id="display_area_name"></span>
+            </p>
             <p><strong>อัตราการไหลของน้ำดับเพลิง (สปริงเกลอร์):</strong> <span id="sprinkler_flow">0.00</span> GPM</p>
             <p><strong>อัตราการไหลสำหรับท่อยืน (Hose Stream Allowance):</strong> <span id="hose_allowance">0.00</span> GPM</p>
             <p><strong>อัตราการไหลรวมที่ต้องการ (ขนาดปั๊มดับเพลิง):</strong> <span id="total_flow">0.00</span> GPM</p>
@@ -338,6 +358,7 @@
         }
 
         function calculate() {
+            const areaName = document.getElementById('area_name').value; // Get area name
             const hazardClass = document.getElementById('hazard_class').value;
             let designAreaSqM = parseFloat(document.getElementById('design_area').value);
             const durationInput = parseInt(document.getElementById('duration').value);
@@ -346,7 +367,7 @@
             let warningMessage = '';
             const warningMessageElement = document.getElementById('warning_message');
 
-            // Input validation
+            // Input validation for design area
             if (isNaN(designAreaSqM) || designAreaSqM <= 0) {
                 warningMessage = 'ข้อผิดพลาด: กรุณาป้อนพื้นที่ป้องกันที่ถูกต้อง (ต้องมากกว่า 0 และเป็นตัวเลข)';
                 warningMessageElement.textContent = warningMessage;
@@ -357,6 +378,7 @@
                 document.getElementById('total_flow').textContent = '0.00';
                 document.getElementById('tank_volume').textContent = '0.00';
                 document.getElementById('actual_duration').textContent = '0';
+                document.getElementById('area_name_display').style.display = 'none'; // Hide area name on error
                 updateChart(0, 0, 0); // Reset chart
                 return;
             } else {
@@ -402,6 +424,17 @@
             document.getElementById('total_flow').textContent = totalFlowGPM.toFixed(2);
             document.getElementById('tank_volume').textContent = requiredTankVolumeCubicMeters.toFixed(2);
             document.getElementById('actual_duration').textContent = actualDurationMinutes;
+
+            // Display area name if entered
+            const displayAreaNameElement = document.getElementById('display_area_name');
+            const areaNameDisplayContainer = document.getElementById('area_name_display');
+            if (areaName.trim() !== '') {
+                displayAreaNameElement.textContent = areaName;
+                areaNameDisplayContainer.style.display = 'block';
+            } else {
+                displayAreaNameElement.textContent = '';
+                areaNameDisplayContainer.style.display = 'none';
+            }
 
             // Display warning if any
             if (warningMessage) {
