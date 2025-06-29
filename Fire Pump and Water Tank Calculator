@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.0 By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -354,11 +354,11 @@
 <body>
     <div class="container">
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
-            คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) By วัยรุ่นเซินเจิ้น
+            คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.0 By วัยรุ่นเซินเจิ้น
         </h1>
         <p class="disclaimer mb-6">
             เครื่องมือนี้ใช้สำหรับการประมาณการเบื้องต้นเท่านั้น ไม่สามารถใช้ทดแทนการออกแบบโดยวิศวกรผู้เชี่ยวชาญได้
-            การออกแบบระบบจริงต้องพิจารณาปัจจัยทางวิศวกรรมที่ซับซับซ้อนอื่นๆ เสมอ โปรดปรึกษาวิศวกรที่มีใบอนุญาตสำหรับการออกแบบระบบจริง
+            การออกแบบระบบจริงต้องพิจารณาปัจจัยทางวิศวกรรมที่ซับซับซ้อนอื่นๆ เสมอ
         </p>
 
         <div class="form-group" id="area_name_group">
@@ -381,7 +381,8 @@
             <label for="design_area">พื้นที่ป้องกัน (Design Area - ตร.ม.):</label>
             <input type="number" id="design_area" placeholder="เช่น 139.4 ตร.ม." min="0.1" step="0.1" class="rounded-lg shadow-sm">
             <small class="small-text">
-                อ้างอิง NFPA 13: Light/Ordinary Hazard อย่างน้อย 139.4 ตร.ม. (ประมาณ 1500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน
+                อ้างอิง NFPA 13: Light/Ordinary Hazard ไม่เกิน 139.4 ตร.ม. (ประมาณ 1500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน <br>
+                Extra Hazard ไม่เกิน 232.26 ตร.ม. (ประมาณ 2500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน
             </small>
         </div>
 
@@ -459,7 +460,6 @@
                 </h4>
                 <div id="graph_summary_content" class="hidden">
                     <ul class="list-disc ml-5 text-gray-700 text-sm">
-                        <!-- Removed the "ช่วงแรงดันการทำงานที่แนะนำ (สีส้มอ่อน)" explanation -->
                         <li><strong>Performance Curve จำลอง:</strong> ความสัมพันธ์ระหว่างอัตราการไหลและแรงดันของปั๊ม (จำลองจาก Rated Flow และแรงดันกำหนดที่ผู้ใช้ป้อน)</li>
                         <li><strong>อัตราไหลรวมที่ต้องการ (Demand Point - รูปดาวแดง):</strong> จุดปฏิบัติงานที่คำนวณได้จากปริมาณน้ำสปริงเกลอร์บวกกับปริมาณน้ำท่อยืน ที่แรงดันต้องการของระบบ (System Demand Head)</li>
                         <li><strong>จุดกำหนดของปั๊ม (Rated Point):</strong> จุดประสิทธิภาพสูงสุดตามสเปก (Rated Flow, แรงดันกำหนดที่ผู้ใช้ป้อน)</li>
@@ -606,10 +606,12 @@
 
             // Use systemDemandHeadInput for the pump's "rated head" if valid, otherwise use default
             const ratedHeadForCurve = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : DEFAULT_PUMP_RATED_HEAD_PSI;
+            const shutOffHead = ratedHeadForCurve * 1.10;
+            const head65Percent = ratedHeadForCurve * 0.65; // Consistent 65% head line
+
             // The user requested to remove the +65 PSI calculation from estimatedPressureOnGraph
             const estimatedPressureOnGraph = ratedHeadForCurve; 
 
-            const shutOffHead = ratedHeadForCurve * 1.10;
             const maxPumpCurveFlow = pumpRatedFlow * 1.5;
 
             const flowPoints = [0, pumpRatedFlow * 0.5, pumpRatedFlow, maxPumpCurveFlow];
@@ -620,8 +622,9 @@
                 ratedHeadForCurve * 0.65
             ];
 
+            // Corrected: purplePointHead should also be 65% of ratedHeadForCurve for consistency
             let purplePointFlow = pumpRatedFlow * 1.5;
-            let purplePointHead = shutOffHead * 0.65;
+            let purplePointHead = ratedHeadForCurve * 0.65; // Consistent with 65% rated head line
             if (purplePointHead < 0) purplePointHead = 0;
 
 
@@ -677,8 +680,7 @@
 
             // Removed the "ช่วงแรงดันการทำงานที่แนะนำ" (Recommended Operating Pressure Range) highlight dataset.
 
-
-            // 1. Performance Curve (Teal line)
+            // 1. Performance Curve (Teal line) - order 1
             if (pumpRatedFlow > 0 && ratedHeadForCurve > 0) {
                 chartData.datasets.push({
                     label: 'Performance Curve จำลอง (Pump)',
@@ -696,7 +698,7 @@
                 });
             }
 
-            // 2. Shut-off Head (Max. churn) line (Dark red dashed)
+            // 2. Shut-off Head line (Dark red dashed) - order 3
             if (!isNaN(ratedHeadForCurve) && ratedHeadForCurve > 0) {
                 chartData.datasets.push({
                     type: 'line',
@@ -730,8 +732,29 @@
                 });
             }
             
+            // 3. Add a separate dataset for the 65% Head horizontal line (purple dashed) - order 3
+            if (pumpRatedFlow > 0 && ratedHeadForCurve > 0) {
+                chartData.datasets.push({
+                    type: 'line',
+                    label: 'เส้นแสดง 65% Head (จุดอ้างอิง)', // Updated label to reflect it's a line
+                    data: [
+                        { x: 0, y: head65Percent },
+                        { x: maxXValue, y: head65Percent }
+                    ],
+                    fill: false,
+                    borderColor: 'rgba(153, 102, 255, 0.7)', // Purple
+                    borderDash: [4, 4],
+                    pointRadius: 0,
+                    hoverBorderWidth: 0,
+                    tension: 0,
+                    order: 3, // Keep same order as shut-off head for layering
+                    datalabels: {
+                        display: false // No datalabel for this line by default
+                    }
+                });
+            }
 
-            // 3. Rated Point (Yellow circle) and its associated dashed lines
+            // 4. Rated Point (Yellow circle) and its associated dashed lines - order 2/3
             if (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0 && !isNaN(ratedHeadForCurve) && ratedHeadForCurve > 0) {
                 // Rated Point itself
                 chartData.datasets.push({
@@ -798,7 +821,7 @@
                 });
             }
 
-            // 4. 150% Flow, 65% Head point (Purple rectRot) and its associated purple dashed lines
+            // 5. 150% Flow, 65% Head point (Purple rectRot) and its associated purple dashed lines - order 2/3
             if (pumpRatedFlow > 0 && ratedHeadForCurve > 0) {
                 chartData.datasets.push({
                     type: 'scatter',
@@ -826,6 +849,7 @@
                     }
                 });
 
+                // Vertical dashed line for 150% Flow (purple)
                 chartData.datasets.push({
                     type: 'line',
                     label: 'เส้นแสดง 150% Flow (จุดอ้างอิง)',
@@ -841,25 +865,9 @@
                     tension: 0,
                     order: 3
                 });
-
-                chartData.datasets.push({
-                    type: 'line',
-                    label: 'เส้นแสดง 65% Head (จุดอ้างอิง)',
-                    data: [
-                        { x: 0, y: purplePointHead },
-                        { x: maxXValue, y: purplePointHead }
-                    ],
-                    fill: false,
-                    borderColor: 'rgba(153, 102, 255, 0.7)',
-                    borderDash: [4, 4],
-                    pointRadius: 0,
-                    hoverBorderWidth: 0,
-                    tension: 0,
-                    order: 3
-                });
             }
 
-            // 5. Add Total Required Flow as a red star point
+            // 6. Add Total Required Flow as a red star point - order 2
             if (totalRequiredFlow > 0) {
                 chartData.datasets.push({
                     type: 'scatter',
