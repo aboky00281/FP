@@ -410,7 +410,7 @@
                 </p>
                 <p>
                     <strong>อัตราการไหลของน้ำดับเพลิง (สปริงเกลอร์):</strong> <span id="sprinkler_flow" class="font-bold">0.00</span> GPM
-                    <button onclick="toggleSprinklerCalculation()" class="toggle-button">ดูวิธีการคำนวsณ</button>
+                    <button onclick="toggleSprinklerCalculation()" class="toggle-button">ดูวิธีการคำนวณ</button>
                 </p>
                 <p id="sprinkler_flow_calculation" class="hidden small-text"></p>
                 <p><strong>อัตราการไหลสำหรับท่อยืน (Hose Stream Allowance):</strong> <span id="hose_allowance">0.00</span> GPM</p>
@@ -425,7 +425,7 @@
                 <!-- These lines are now visible in the main display again -->
                 <p id="tank_volume_display_container">
                     <strong>ขนาดถังเก็บน้ำที่ต้องการ:</strong> <span id="tank_volume">0.00</span> ลบ.ม.
-                    <button onclick="toggleTankVolumeCalculation()" class="toggle-button">ดูวิธีการคำนวsณ</button>
+                    <button onclick="toggleTankVolumeCalculation()" class="toggle-button">ดูวิธีการคำนวณ</button>
                 </p>
                 <p id="tank_volume_calculation" class="hidden small-text"></p>
                 <p id="actual_duration_display_container"><strong>เวลากักเก็บน้ำที่คำนวณ:</strong> <span id="actual_duration">0</span> นาที</p>
@@ -739,9 +739,9 @@
                     order: 4, 
                     datalabels: {
                         display: true, // Set to true to display the label
-                        align: 'end', // Changed from 'center' to 'end'
-                        anchor: 'end', // Changed from 'center' to 'end'
-                        offset: 5, // Set offset to 5 (from 0)
+                        align: 'end', 
+                        anchor: 'end',
+                        offset: 5, 
                         color: 'rgb(128, 0, 0)',
                         font: { weight: 'bold' },
                         formatter: function(value, context) {
