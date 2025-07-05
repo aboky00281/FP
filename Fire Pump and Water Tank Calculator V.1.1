@@ -506,9 +506,9 @@
                 <div id="graph_summary_content" class="hidden">
                     <ul class="list-disc ml-5 text-gray-700 text-sm">
                         <li><span>Performance Curve จำลอง:</span> ความสัมพันธ์ระหว่างอัตราการไหลและแรงดันของปั๊ม (จำลองจาก Rated Flow และแรงดันกำหนดที่ผู้ใช้ป้อน)</li>
-                        <li><span>อัตราไหลรวมที่ต้องการ (Water Demand - จุดข้าวหลามตัดสีแดง):</span> จุดปฏิบัติงานที่คำนวณได้จากปริมาณน้ำสปริงเกลอร์บวกกับปริมาณน้ำท่อยืน ที่แรงดันต้องการของระบบ (System Demand Head)</li>
+                        <li><span>อัตราไหลรวมที่ต้องการ (Water Demand - จุดสามเหลี่ยมสีแดง):</span> จุดปฏิบัติงานที่คำนวณได้จากปริมาณน้ำสปริงเกลอร์บวกกับปริมาณน้ำท่อยืน ที่แรงดันต้องการของระบบ (System Demand Head)</li>
                         <li><span>จุดกำหนดของปั๊ม (Rated Point):</span> จุดประสิทธิภาพสูงสุดตามสเปก (Rated Flow, แรงดันกำหนดที่ผู้ใช้ป้อน)</li>
-                        <li><span>จุดอ้างอิง 150% Flow, 65% Head:</span> จุดตรวจสอบประสิทธิภาพ (150% Rated Flow, 65% ของแรงดัน rated Head)</li>
+                        <li><span>จุดอ้างอิง 150% Flow, 65% Head:</span> จุดตรวจสอบประสิทธิภาพ (150% Rated Flow, 65% ของแรงดัน rated Head) (ป้ายกำกับอยู่ด้านขวาของจุด)</li>
                         <li><span>เส้นแสดง Shut-off Head (Max. churn):</span> แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)</li>
                         <li><span>เส้นแสดง Flat Head Capacity Curve:</span> เส้นโค้งพาราโบลาแสดงแรงดัน Rated Head ของปั๊ม (PSI) ที่ปรับให้โค้งตามลักษณะ Performance Curve โดยส่วนซ้ายของจุด Rated จะเป็นเส้นตรง</li>
                         <!-- Removed the highlight area from the explanation -->
@@ -673,7 +673,8 @@
                 return 100; // Flat line at 100% head up to 100% flow
             } else {
                 // Parabolic equation for flowPercent > 100, starting from (100, 100) and going down
-                return -0.004 * Math.pow(flowPercent - 100, 2) + 100;
+                // Increased the absolute value of the coefficient to make it curve down more aggressively
+                return -0.008 * Math.pow(flowPercent - 100, 2) + 100; // Changed from -0.004 to -0.008
             }
         }
 
@@ -701,13 +702,18 @@
                 return;
             }
 
+            // Calculate the maximum flow for the curve: 150% of rated flow + 50 GPM
+            const extendedFlowGPM = (1.5 * graphRatedFlow) + 50;
+            // Convert this extended flow back to a percentage of rated flow
+            const maxCurveFlowPercent = Math.max(150, (extendedFlowGPM / graphRatedFlow) * 100); // Ensure it's at least 150%
+
             // Generate smooth curve points for Performance Curve
             const performanceCurveData = [];
             const flatHeadCapacityCurveData = []; // Data for the new curved flat head line
             const numCurveSegments = 100; // For smoother curve
 
             for (let i = 0; i <= numCurveSegments; i++) {
-                const percentFlow = (i / numCurveSegments) * 150; // Go up to 150% flow for the curve
+                const percentFlow = (i / numCurveSegments) * maxCurveFlowPercent; // Go up to maxCurveFlowPercent for the curve
 
                 // Main Performance Curve
                 const percentHeadPerformance = getHeadOnPumpCurvePercentage(percentFlow);
@@ -727,10 +733,10 @@
             const demandHeadPSI = systemDemandHeadInput;
 
             // Determine max values for axes (slightly more than max data point)
-            // Max X value should be based on 150% of rated flow or demand flow, whichever is higher
-            let maxXValue = Math.max(graphRatedFlow * 1.5, demandFlowGPM) * 1.1;
+            // Max X value should be based on the extended flow or demand flow, whichever is higher
+            let maxXValue = Math.max(extendedFlowGPM, demandFlowGPM) * 1.2; // Increased multiplier for padding
             // Max Y value should be based on 110% of rated head (for Shut-off) or demand head, whichever is higher
-            let maxYValue = Math.max(graphRatedHead * 1.10, demandHeadPSI) * 1.1; // Changed to 1.10 for Max.churn
+            let maxYValue = Math.max(graphRatedHead * 1.10, demandHeadPSI) * 1.5; // Increased multiplier for padding to 1.5
 
             // Ensure max values are reasonable minimums if inputs are small
             maxXValue = Math.max(500, maxXValue); // Minimum X-axis max to show some range
@@ -856,15 +862,15 @@
                 datalabels: { display: false } // No labels on the curve line itself
             });
 
-            // Shut-off Head point (Dark red square) - order 4
+            // Shut-off Head point (Dark red circle) - order 4
             chartData.datasets.push({
                 type: 'scatter',
                 label: `จุด Shut-off Head (Max. churn)`,
                 data: [{ x: 0, y: graphRatedHead * 1.10 }], // 0 GPM, 110% of rated head in PSI (Adjusted)
                 backgroundColor: 'rgb(128, 0, 0)',
                 borderColor: 'rgb(128, 0, 0)',
-                pointRadius: 5, // Reduced size
-                pointStyle: 'rect', // Changed to rect (square)
+                pointRadius: 3, // Reduced size
+                pointStyle: 'circle', // Changed to circle
                 hoverBackgroundColor: 'rgb(128, 0, 0)',
                 hoverBorderColor: '#fff',
                 hoverBorderWidth: 2,
@@ -872,15 +878,15 @@
                 // Datalabel for this point will use the global align: 'top'
             });
 
-            // Rated Point (Blue square) and its associated dashed lines - order 4
+            // Rated Point (Blue circle) and its associated dashed lines - order 4
             chartData.datasets.push({
                 type: 'scatter',
                 label: 'จุดกำหนดของปั๊ม (Rated Point)',
                 data: [{ x: graphRatedFlow, y: graphRatedHead }], // Rated Flow GPM, Rated Head PSI
                 backgroundColor: 'rgba(0, 0, 255, 1)',
                 borderColor: 'rgba(0, 0, 255, 1)',
-                pointRadius: 5, // Reduced size
-                pointStyle: 'rect', // Changed to rect (square)
+                pointRadius: 3, // Reduced size
+                pointStyle: 'circle', // Changed to circle
                 hoverBackgroundColor: 'rgba(0, 0, 255, 1)',
                 hoverBorderColor: '#fff',
                 hoverBorderWidth: 2,
@@ -888,21 +894,21 @@
                 // Datalabel for this point will use the global align: 'top'
             });
 
-            // 150% Flow, 65% Head point (Purple square)
+            // 150% Flow, 65% Head point (Purple circle)
             chartData.datasets.push({
                 type: 'scatter',
                 label: 'จุดอ้างอิงที่ 150% Flow, 65% Head',
                 data: [{ x: graphRatedFlow * 1.5, y: graphRatedHead * 0.65 }], // 150% Rated Flow GPM, 65% Rated Head PSI
                 backgroundColor: 'rgba(153, 102, 255, 1)',
                 borderColor: 'rgba(153, 102, 255, 1)',
-                pointRadius: 5, // Reduced size
-                pointStyle: 'rect', // Changed to rect (square)
+                pointRadius: 3, // Reduced size
+                pointStyle: 'circle', // Changed to circle
                 hoverBackgroundColor: 'rgba(153, 102, 255, 1)',
                 hoverBorderColor: '#fff',
                 hoverBorderWidth: 2,
                 order: 4, 
                 datalabels: { // Override global alignment for this specific point
-                    align: 'bottom',
+                    align: 'right', // Changed from 'end' to 'right'
                     offset: 10
                 }
             });
@@ -915,8 +921,8 @@
                     data: [{ x: demandFlowGPM, y: demandHeadPSI }], // Actual Demand Flow GPM, Actual Demand Head PSI
                     backgroundColor: 'rgba(255, 0, 0, 1)',
                     borderColor: 'rgba(255, 0, 0, 1)',
-                    pointRadius: 5, // Reduced size
-                    pointStyle: 'triangle', // Remains triangle
+                    pointRadius: 3, // Reduced size
+                    pointStyle: 'triangle', // Changed to triangle
                     hoverBackgroundColor: 'rgba(255, 0, 0, 1)',
                     hoverBorderColor: '#fff',
                     hoverBorderWidth: 2,
