@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.2 By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.1 By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -462,20 +462,18 @@
                 <div id="graph_summary_content" class="hidden">
                     <ul class="list-disc ml-5 text-gray-700 text-sm">
                         <li><span>Performance Curve จำลอง:</span> ความสัมพันธ์ระหว่างอัตราการไหลและแรงดันของปั๊ม (จำลองจาก Rated Flow และแรงดันกำหนดที่ผู้ใช้ป้อน)</li>
-                        <li><span>อัตราไหลรวมที่ต้องการ (Demand Point - รูปดาวแดง):</span> จุดปฏิบัติงานที่คำนวณได้จากปริมาณน้ำสปริงเกลอร์บวกกับปริมาณน้ำท่อยืน ที่แรงดันต้องการของระบบ (System Demand Head)</li>
+                        <li><span>อัตราไหลรวมที่ต้องการ (Water Demand - จุดข้าวหลามตัดสีแดง):</span> จุดปฏิบัติงานที่คำนวณได้จากปริมาณน้ำสปริงเกลอร์บวกกับปริมาณน้ำท่อยืน ที่แรงดันต้องการของระบบ (System Demand Head)</li>
                         <li><span>จุดกำหนดของปั๊ม (Rated Point):</span> จุดประสิทธิภาพสูงสุดตามสเปก (Rated Flow, แรงดันกำหนดที่ผู้ใช้ป้อน)</li>
                         <li><span>จุดอ้างอิง 150% Flow, 65% Head:</span> จุดตรวจสอบประสิทธิภาพ (150% Rated Flow, 65% ของแรงดัน rated Head)</li>
                         <li><span>เส้นแสดง Shut-off Head (Max. churn):</span> แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)</li>
-                        <li><span>เส้นแสดง Rated GPM (สีน้ำเงิน):</span> เส้นแนวตั้งแสดงอัตราการไหลกำหนดของปั๊ม (Rated GPM)</li>
-                        <li><span>เส้นแสดงแรงดันกำหนดจากจุด Rated Point (สีน้ำเงิน):</span> เส้นแนวนอนจากจุด Rated Point ไปยังแกน Y เพื่อเน้นแรงดันกำหนดของปั๊ม</li>
-                        <li><span>เส้นแสดง 65% Head (จุดอ้างอิง):</span> เส้นแนวนอนแสดง 65% ของแรงดันสูงสุดที่อัตราการไหล 150% Rated</li>
-                        <li><span>พื้นที่แนะนำการเลือกปั๊ม (Highlight สีเหลือง):</span> พื้นที่ที่แสดงช่วงการทำงานที่เหมาะสมของปั๊ม โดยอยู่ระหว่างเส้น Performance Curve และเส้น 65% Head, ตั้งแต่ 0% ถึง 150% ของอัตราการไหลกำหนด</li>
+                        <li><span>เส้นแสดง Flat Head Capacity Curve:</span> เส้นโค้งพาราโบลาแสดงแรงดัน Rated Head ของปั๊ม (PSI) ที่ปรับให้โค้งตามลักษณะ Performance Curve โดยส่วนซ้ายของจุด Rated จะเป็นเส้นตรง</li>
+                        <!-- Removed the highlight area from the explanation -->
                     </ul>
                 </div>
             </div>
 
             <p class="chart-disclaimer">
-                * กราฟนี้เป็นเพียงการจำลอง Performance Curve อย่างง่าย ไม่ใช่ข้อมูลจำเพาะที่แท้จริง โปรดอ้างอิงข้อมูลจากผู้ผลิตและวิศวกร.
+                * กราฟนี้เป็นเพียงการจำลอง Performance Curve อย่างง่าย ไม่ใช่ข้อมูลจำเพาะที่แท้จริง โปรดอ้างอิงข้อมูลจากผู้ผลิต
             </p>
         </div>
 
@@ -581,28 +579,58 @@
             if (el) el.classList.toggle('hidden');
         }
 
-        // Function to interpolate head on the pump curve (now using percentages)
+        /**
+         * Calculates the head percentage for the main pump performance curve
+         * based on a piecewise function to achieve a flatter initial segment.
+         *
+         * Segment 1 (0% to 100% flow): Linear drop from (0, 110) to (100, 100).
+         * Segment 2 (100% to 150% flow): Parabola passing through (100, 100) and (150, 65),
+         * with a slope matching the linear segment at 100%.
+         *
+         * @param {number} flowPercent The flow rate as a percentage of rated flow.
+         * @returns {number} The head as a percentage of rated head.
+         */
         function getHeadOnPumpCurvePercentage(flowPercent) {
-            // These points are fixed percentages based on the standard curve shape
-            const curvePointsPercentage = [
-                { x: 0, y: 140 }, // Shutoff at 0% flow, 140% head
-                { x: 50, y: 120 }, // Example intermediate point for smoother curve
-                { x: 100, y: 100 }, // Rated point at 100% flow, 100% head
-                { x: 150, y: 65 }   // 150% flow, 65% head
-            ];
-
-            if (flowPercent <= curvePointsPercentage[0].x) return curvePointsPercentage[0].y;
-            if (flowPercent >= curvePointsPercentage[curvePointsPercentage.length - 1].x) return curvePointsPercentage[curvePointsPercentage.length - 1].y;
-
-            for (let i = 0; i < curvePointsPercentage.length - 1; i++) {
-                const p0 = curvePointsPercentage[i];
-                const p1 = curvePointsPercentage[i+1];
-
-                if (flowPercent >= p0.x && flowPercent <= p1.x) {
-                    return p0.y + (p1.y - p0.y) * ((flowPercent - p0.x) / (p1.x - p0.x));
-                }
+            if (flowPercent <= 100) {
+                // Linear drop from (0, 110) to (100, 100)
+                // y = mx + c
+                // c = 110 (at x=0)
+                // m = (100 - 110) / (100 - 0) = -10 / 100 = -0.1
+                return -0.1 * flowPercent + 110;
+            } else {
+                // Parabola from (100, 100) through (150, 65) with a slope of -0.1 at 100%
+                // Let x_prime = flowPercent - 100
+                // Points: (0, 100), (50, 65) in x_prime coordinates
+                // y = a * x_prime^2 + b * x_prime + c_prime
+                // c_prime = 100 (at x_prime=0)
+                // b = -0.1 (slope at x_prime=0)
+                // 65 = a * (50)^2 + (-0.1) * (50) + 100
+                // 65 = 2500a - 5 + 100
+                // 65 = 2500a + 95
+                // -30 = 2500a
+                // a = -30 / 2500 = -0.012
+                const a = -0.012;
+                const b = -0.1;
+                const c_prime = 100;
+                const x_prime = flowPercent - 100;
+                return a * Math.pow(x_prime, 2) + b * x_prime + c_prime;
             }
-            return 0; // Should not be reached if flowPercent is within range 0-150
+        }
+
+        /**
+         * Calculates the head percentage for the "Flat Head Capacity Curve".
+         * It's a flat line at 100% head up to 100% flow, then a parabolic curve.
+         *
+         * @param {number} flowPercent The flow rate as a percentage of rated flow.
+         * @returns {number} The head as a percentage of rated head.
+         */
+        function getFlatHeadCapacityCurvePercentage(flowPercent) {
+            if (flowPercent <= 100) {
+                return 100; // Flat line at 100% head up to 100% flow
+            } else {
+                // Parabolic equation for flowPercent > 100, starting from (100, 100) and going down
+                return -0.004 * Math.pow(flowPercent - 100, 2) + 100;
+            }
         }
 
         // Function for Pump Curve Chart
@@ -629,26 +657,41 @@
                 return;
             }
 
-            // Generate smooth curve points based on fixed percentages
+            // Generate smooth curve points for Performance Curve
             const performanceCurveData = [];
+            const flatHeadCapacityCurveData = []; // Data for the new curved flat head line
             const numCurveSegments = 100; // For smoother curve
+
             for (let i = 0; i <= numCurveSegments; i++) {
                 const percentFlow = (i / numCurveSegments) * 150; // Go up to 150% flow for the curve
-                const percentHead = getHeadOnPumpCurvePercentage(percentFlow);
-                performanceCurveData.push({ x: percentFlow, y: percentHead });
+
+                // Main Performance Curve
+                const percentHeadPerformance = getHeadOnPumpCurvePercentage(percentFlow);
+                const actualFlowPerformance = (percentFlow / 100) * graphRatedFlow;
+                const actualHeadPerformance = (percentHeadPerformance / 100) * graphRatedHead;
+                performanceCurveData.push({ x: actualFlowPerformance, y: actualHeadPerformance });
+
+                // Flat Head Capacity Curve
+                const percentHeadFlatCapacity = getFlatHeadCapacityCurvePercentage(percentFlow);
+                const actualFlowFlatCapacity = (percentFlow / 100) * graphRatedFlow;
+                const actualHeadFlatCapacity = (percentHeadFlatCapacity / 100) * graphRatedHead;
+                flatHeadCapacityCurveData.push({ x: actualFlowFlatCapacity, y: actualHeadFlatCapacity });
             }
 
-            // Calculate Demand Point in percentages
-            const demandFlowPercent = (totalRequiredFlow / graphRatedFlow) * 100;
-            const demandHeadPercent = (systemDemandHeadInput / graphRatedHead) * 100; // Demand head is 100% of the reference head
+            // Calculate Demand Point in actual GPM and PSI
+            const demandFlowGPM = totalRequiredFlow;
+            const demandHeadPSI = systemDemandHeadInput;
 
             // Determine max values for axes (slightly more than max data point)
-            let maxXValue = Math.max(150, demandFlowPercent) * 1.1; // Max flow is 150% for curve, demand can be higher
-            let maxYValue = Math.max(140, demandHeadPercent) * 1.1; // Shutoff is 140%, demand can be higher or lower
+            // Max X value should be based on 150% of rated flow or demand flow, whichever is higher
+            let maxXValue = Math.max(graphRatedFlow * 1.5, demandFlowGPM) * 1.1;
+            // Max Y value should be based on 110% of rated head (for Shut-off) or demand head, whichever is higher
+            let maxYValue = Math.max(graphRatedHead * 1.10, demandHeadPSI) * 1.1; // Changed to 1.10 for Max.churn
 
             // Ensure max values are reasonable minimums if inputs are small
-            maxXValue = Math.max(160, maxXValue);
-            maxYValue = Math.max(150, maxYValue); // Ensure Y-axis goes up to at least 150%
+            maxXValue = Math.max(500, maxXValue); // Minimum X-axis max to show some range
+            maxYValue = Math.max(150, maxYValue); // Minimum Y-axis max to show some range
+
 
             const chartData = {
                 labels: [],
@@ -662,26 +705,26 @@
                     x: {
                         type: 'linear',
                         position: 'bottom',
-                        title: { display: true, text: 'Percent of rated capacity (%)' },
+                        title: { display: true, text: 'อัตราการไหล (Flow Rate)' }, // Removed GPM from title
                         beginAtZero: true,
                         max: maxXValue,
                         ticks: {
-                            stepSize: 25, // Steps of 25%
+                            stepSize: 50, // Changed to 50 GPM
                             callback: function(value) {
-                                return value.toFixed(0) + '%';
+                                return value.toFixed(0); // Removed GPM from tick label
                             }
                         }
                     },
                     y: {
                         type: 'linear',
                         position: 'left',
-                        title: { display: true, text: 'Percent of rated total head (%)' },
+                        title: { display: true, text: 'แรงดัน (Pressure)' }, // Removed PSI from title
                         beginAtZero: true,
                         max: maxYValue,
                         ticks: {
-                            stepSize: 10, // Steps of 10%
+                            stepSize: 10, // Steps of 10 PSI
                             callback: function(value) {
-                                return value.toFixed(0) + '%';
+                                return value.toFixed(0); // Removed PSI from tick label
                             }
                         }
                     }
@@ -699,44 +742,59 @@
                         formatter: function(value, context) {
                             // Custom formatter for specific datasets
                             if (context.dataset.label.includes('จุด Shut-off Head')) {
-                                return `${value.y.toFixed(0)}% (Max. churn)`;
+                                return `Max.churn: ${value.y.toFixed(0)} PSI`; // Uses actual PSI value
                             }
                             if (context.dataset.label.includes('จุดกำหนดของปั๊ม')) {
-                                return `${value.x.toFixed(0)}%, ${value.y.toFixed(0)}% (Rated)`;
+                                // Display actual GPM and PSI
+                                return `${value.x.toFixed(0)} GPM, ${value.y.toFixed(0)} PSI (Rated)`; // Uses actual GPM, PSI
                             }
                             if (context.dataset.label.includes('จุดอ้างอิงที่ 150% Flow')) {
-                                return `${value.x.toFixed(0)}%, ${value.y.toFixed(0)}%`;
+                                // Display actual GPM and PSI for 150% flow, 65% head
+                                return `${value.x.toFixed(0)} GPM, ${value.y.toFixed(0)} PSI`; // Uses actual GPM, PSI
                             }
-                            if (context.dataset.label.includes('อัตราไหลรวมที่ต้องการ')) {
-                                return `Demand: ${value.x.toFixed(0)}%`;
+                            if (context.dataset.label.includes('Water Demand')) { // New formatter for Water Demand point
+                                return `Demand: ${value.x.toFixed(0)} GPM`; // Only show GPM
                             }
                             return null; // Hide datalabels for other datasets (lines)
-                        }
+                        },
+                        align: 'top', // Default alignment for all labels
+                        anchor: 'center',
+                        offset: 10
                     }
                 }
             };
 
-            // Chart Data - update all datasets to use percentages
+            // Chart Data - update all datasets to use actual GPM/PSI
             chartData.datasets = [];
 
+            // Removed the yellow highlight area as requested by the user
+            /*
             // Add the yellow highlight area first so it's behind other lines/points
-            const highlightData = performanceCurveData.filter(p => p.x >= 0 && p.x <= 150); // Filter for the relevant flow range
+            // The highlight area should be between the performance curve and the 65% head line
+            const highlightAreaPoints = performanceCurveData.map(p => ({ x: p.x, y: Math.max(p.y, graphRatedHead * 0.65) }));
+            // We need to add points for the bottom boundary (65% head) to close the shape
+            const sixtyFivePercentHeadLine = [
+                { x: 0, y: graphRatedHead * 0.65 },
+                { x: graphRatedFlow * 1.5, y: graphRatedHead * 0.65 }
+            ];
+
+            // Combine points for the fill area: performance curve points (reversed) and 65% head line
+            const fillPoints = [...performanceCurveData, ...sixtyFivePercentHeadLine.reverse()];
+
             chartData.datasets.push({
                 label: 'พื้นที่แนะนำการเลือกปั๊ม (Highlight สีเหลือง)',
                 type: 'line', // Must be 'line' to use fill
-                data: highlightData,
+                data: fillPoints,
                 backgroundColor: 'rgba(255, 255, 0, 0.3)', // Yellow with transparency
                 borderColor: 'transparent', // No border for the fill area
-                fill: {
-                    target: { value: 65 }, // Fill down to the 65% head line (percentage)
-                    above: 'rgba(255, 255, 0, 0.3)',
-                    below: 'transparent'
-                },
-                tension: 0.2, // Match pump curve tension
+                fill: 'origin', // Fill to the origin (y=0) or 'start'
+                tension: 0, // No tension for fill area, use straight lines between points
                 pointRadius: 0,
                 order: 1, // Render first/lowest layer
                 datalabels: { display: false }
             });
+            */
+
 
             // Performance Curve (Teal line) - order 5
             chartData.datasets.push({
@@ -744,7 +802,7 @@
                 data: performanceCurveData,
                 fill: false,
                 borderColor: 'rgba(75, 192, 192, 1)',
-                tension: 0.2,
+                tension: 0.5, // Adjusted tension for smoother, less curvy line
                 pointBackgroundColor: 'rgba(75, 192, 192, 1)',
                 pointBorderColor: '#fff',
                 pointRadius: 0, // Hide default points on the curve itself
@@ -754,156 +812,93 @@
                 datalabels: { display: false } // No labels on the curve line itself
             });
 
-            // Shut-off Head point (Dark red diamond) and line - order 4
+            // Shut-off Head point (Dark red square) - order 4
             chartData.datasets.push({
                 type: 'scatter',
                 label: `จุด Shut-off Head (Max. churn)`,
-                data: [{ x: 0, y: 140 }], // 0% flow, 140% head
+                data: [{ x: 0, y: graphRatedHead * 1.10 }], // 0 GPM, 110% of rated head in PSI (Adjusted)
                 backgroundColor: 'rgb(128, 0, 0)',
                 borderColor: 'rgb(128, 0, 0)',
-                pointRadius: 7,
-                pointStyle: 'rectRot',
+                pointRadius: 5, // Reduced size
+                pointStyle: 'rect', // Changed to rect (square)
                 hoverBackgroundColor: 'rgb(128, 0, 0)',
                 hoverBorderColor: '#fff',
                 hoverBorderWidth: 2,
                 order: 4,
+                // Datalabel for this point will use the global align: 'top'
             });
 
-            // Shut-off Head horizontal line (Dark red dashed) - order 3
-            chartData.datasets.push({
-                type: 'line',
-                label: `เส้นแสดง Shut-off Head (Max. churn)`,
-                data: [
-                    { x: 0, y: 140 },
-                    { x: maxXValue, y: 140 }
-                ],
-                fill: false,
-                borderColor: 'rgb(128, 0, 0)',
-                borderDash: [6, 6],
-                pointRadius: 0, 
-                hoverBorderWidth: 0,
-                tension: 0,
-                order: 3,
-                datalabels: { display: false }
-            });
-
-            // 65% Head horizontal line (Purple dashed) - order 3
-            chartData.datasets.push({
-                type: 'line',
-                label: 'เส้นแสดง 65% Head (จุดอ้างอิง)',
-                data: [
-                    { x: 0, y: 65 },
-                    { x: maxXValue, y: 65 }
-                ],
-                fill: false,
-                borderColor: 'rgba(153, 102, 255, 0.7)',
-                borderDash: [4, 4],
-                pointRadius: 0,
-                hoverBorderWidth: 0,
-                tension: 0,
-                order: 3, 
-                datalabels: { display: false }
-            });
-
-            // Rated Point (Blue rectRot) and its associated dashed lines - order 4
+            // Rated Point (Blue square) and its associated dashed lines - order 4
             chartData.datasets.push({
                 type: 'scatter',
                 label: 'จุดกำหนดของปั๊ม (Rated Point)',
-                data: [{ x: 100, y: 100 }], // 100% flow, 100% head
+                data: [{ x: graphRatedFlow, y: graphRatedHead }], // Rated Flow GPM, Rated Head PSI
                 backgroundColor: 'rgba(0, 0, 255, 1)',
                 borderColor: 'rgba(0, 0, 255, 1)',
-                pointRadius: 7,
-                pointStyle: 'rectRot',
+                pointRadius: 5, // Reduced size
+                pointStyle: 'rect', // Changed to rect (square)
                 hoverBackgroundColor: 'rgba(0, 0, 255, 1)',
                 hoverBorderColor: '#fff',
                 hoverBorderWidth: 2,
                 order: 4,
+                // Datalabel for this point will use the global align: 'top'
             });
 
-            // Vertical dashed line for Rated GPM (blue and dotted) - order 3
-            chartData.datasets.push({
-                type: 'line',
-                label: 'เส้นแสดง Rated GPM (สีน้ำเงิน)',
-                data: [
-                    { x: 100, y: 0 },
-                    { x: 100, y: 100 }
-                ],
-                fill: false,
-                borderColor: 'rgba(0, 0, 255, 0.7)',
-                borderDash: [5, 5],
-                pointRadius: 0,
-                hoverBorderWidth: 0,
-                tension: 0,
-                order: 3,
-                datalabels: { display: false }
-            });
-
-            // Horizontal dashed line from Rated Point to Y-axis (blue and dotted) - order 3
-            chartData.datasets.push({
-                type: 'line',
-                label: 'เส้นแสดงแรงดันกำหนดจากจุด Rated Point (สีน้ำเงิน)',
-                data: [
-                    { x: 0, y: 100 },
-                    { x: 100, y: 100 }
-                ],
-                fill: false,
-                borderColor: 'rgba(0, 0, 255, 0.7)',
-                borderDash: [5, 5],
-                pointRadius: 0,
-                hoverBorderWidth: 0,
-                tension: 0,
-                datalabels: { display: false }
-            });
-
-            // 150% Flow, 65% Head point (Purple rectRot) and its associated purple dashed lines - order 4
+            // 150% Flow, 65% Head point (Purple square)
             chartData.datasets.push({
                 type: 'scatter',
                 label: 'จุดอ้างอิงที่ 150% Flow, 65% Head',
-                data: [{ x: 150, y: 65 }], // 150% flow, 65% head
+                data: [{ x: graphRatedFlow * 1.5, y: graphRatedHead * 0.65 }], // 150% Rated Flow GPM, 65% Rated Head PSI
                 backgroundColor: 'rgba(153, 102, 255, 1)',
                 borderColor: 'rgba(153, 102, 255, 1)',
-                pointRadius: 7,
-                pointStyle: 'rectRot',
+                pointRadius: 5, // Reduced size
+                pointStyle: 'rect', // Changed to rect (square)
                 hoverBackgroundColor: 'rgba(153, 102, 255, 1)',
                 hoverBorderColor: '#fff',
                 hoverBorderWidth: 2,
                 order: 4, 
+                datalabels: { // Override global alignment for this specific point
+                    align: 'bottom',
+                    offset: 10
+                }
             });
 
-            // Vertical dashed line for 150% Flow (purple) - order 3
-            chartData.datasets.push({
-                type: 'line',
-                label: 'เส้นแสดง 150% Flow (จุดอ้างอิง)',
-                data: [
-                    { x: 150, y: 0 },
-                    { x: 150, y: 65 }
-                ],
-                fill: false,
-                borderColor: 'rgba(153, 102, 255, 0.7)',
-                borderDash: [4, 4],
-                pointRadius: 0,
-                hoverBorderWidth: 0,
-                tension: 0,
-                order: 3,
-                datalabels: { display: false }
-            });
-
-            // Add Total Required Flow as a red star point - order 4
-            if (totalRequiredFlow > 0 && graphRatedFlow > 0 && graphRatedHead > 0) {
+            // Water Demand Point (Red Triangle)
+            if (totalRequiredFlow > 0 && graphRatedFlow > 0 && graphRatedHead > 0 && !isNaN(demandHeadPSI) && demandHeadPSI > 0) {
                 chartData.datasets.push({
                     type: 'scatter',
-                    label: `อัตราไหลรวมที่ต้องการ (Demand Point - รูปดาวแดง)`,
-                    data: [{ x: demandFlowPercent, y: demandHeadPercent }],
+                    label: `อัตราไหลรวมที่ต้องการ (Water Demand)`,
+                    data: [{ x: demandFlowGPM, y: demandHeadPSI }], // Actual Demand Flow GPM, Actual Demand Head PSI
                     backgroundColor: 'rgba(255, 0, 0, 1)',
                     borderColor: 'rgba(255, 0, 0, 1)',
-                    pointRadius: 8,
-                    pointStyle: 'star',
+                    pointRadius: 5, // Reduced size
+                    pointStyle: 'triangle', // Remains triangle
                     hoverBackgroundColor: 'rgba(255, 0, 0, 1)',
                     hoverBorderColor: '#fff',
                     hoverBorderWidth: 2,
                     order: 4, 
+                    datalabels: { // Override global alignment for this specific point
+                        align: 'bottom',
+                        offset: 10
+                    }
                 });
             }
+
+            // Add Flat Head Capacity Curve (thin dashed blue line, now parabolic)
+            chartData.datasets.push({
+                type: 'line',
+                label: 'เส้นแสดง Flat Head Capacity Curve',
+                data: flatHeadCapacityCurveData, // Use the new parabolic data
+                fill: false,
+                borderColor: 'rgba(0, 0, 255, 0.5)', // Thin blue
+                borderDash: [5, 5], // Dashed
+                borderWidth: 1, // Thin line
+                pointRadius: 0,
+                hoverBorderWidth: 0,
+                tension: 0, // No tension, as it's already parabolic
+                order: 2, // Render above highlight, below points/performance curve
+                datalabels: { display: false }
+            });
 
 
             if (pumpCurveChart) {
@@ -1114,7 +1109,7 @@
                 // Update the new summary_max_pressure field with null check
                 if (summaryMaxPressureElement) {
                     const ratedHeadForCurve = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : DEFAULT_PUMP_RATED_HEAD_PSI;
-                    const shutOffHead = ratedHeadForCurve * 1.10;
+                    const shutOffHead = ratedHeadForCurve * 1.10; // Updated to 1.10 for Max.churn
                     summaryMaxPressureElement.textContent = shutOffHead.toFixed(2);
                 }
 
@@ -1167,7 +1162,7 @@
             const sprinklerFlowCalculationElement = document.getElementById('sprinkler_flow_calculation');
             const tankVolumeCalculationElement = document.getElementById('tank_volume_calculation');
             const demandHeadCalculationElement = document.getElementById('demand_head_calculation');
-            const tankVolumeDisplayContainer = document.getElementById('tank_volume_display_container');
+            const tankVolumeDisplayContainer = document = document.getElementById('tank_volume_display_container');
             const actualDurationDisplayContainer = document.getElementById('actual_duration_display_container');
 
 
@@ -1181,10 +1176,10 @@
 
             // Clear results display
             if (sprinklerFlowDisplayEl) sprinklerFlowDisplayEl.textContent = '0.00';
-            if (hoseAllowanceDisplayEl) hoseAllowanceDisplayEl.textContent = '0.00';
+            if (hoseAllowanceDisplayEl) hoseAllowanceEl.textContent = '0.00';
             if (totalFlowDisplayEl) totalFlowDisplayEl.textContent = '0.00';
             if (tankVolumeDisplayEl) tankVolumeDisplayEl.textContent = '0.00';
-            if (actualDurationDisplayEl) actualDurationDisplayEl.textContent = '0';
+            if (actualDurationDisplayEl) actualDurationEl.textContent = '0';
             if (demandHeadDisplayEl) demandHeadDisplayEl.textContent = '0.00';
 
             // Clear summary table
