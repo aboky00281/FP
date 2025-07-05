@@ -15,7 +15,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 100vh;
+            min-height: 10vh;
             padding: 20px;
             box-sizing: border-box;
         }
@@ -27,6 +27,7 @@
             max-width: 600px;
             width: 100%;
             border: 1px solid #e2e8f0;
+            position: relative; /* Added for absolute positioning of version */
         }
         /* Form group and input styling */
         .form-group {
@@ -188,6 +189,15 @@
         }
         .toggle-button:hover {
             background-color: #3b82f6;
+        }
+        /* Version text styling */
+        .version-text {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 10px; /* Smaller font size */
+            color: #94a3b8; /* Lighter color */
+            font-weight: 300; /* Thinner font weight */
         }
 
         /* Print specific styles */
@@ -360,12 +370,23 @@
             #results table td span { /* Apply to both tables */
                 color: inherit !important; /* Inherit color from parent, which will be the original Tailwind color */
             }
+            /* Version text should be visible on print */
+            .version-text {
+                display: block !important; /* Changed to block to make it visible */
+                position: absolute; /* Keep it positioned */
+                top: 10px;
+                right: 10px;
+                font-size: 10px;
+                color: #000 !important; /* Black for print */
+                font-weight: 300;
+            }
         </style>
 </head>
 <body>
     <div class="container">
+        <div class="version-text">V.1.1</div> <!-- Added version text here -->
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
-            คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ <br> (NFPA Guidance) V.1.1 By วัยรุ่นเซินเจิ้น
+            คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ <br> (NFPA Guidance) By วัยรุ่นเซินเจิ้น
         </h1>
         <p class="disclaimer mb-6">
             เครื่องมือนี้ใช้สำหรับการประมาณการเบื้องต้นเท่านั้น ไม่สามารถใช้ทดแทนการออกแบบโดยวิศวกรผู้เชี่ยวชาญได้
@@ -816,35 +837,6 @@
 
             // Chart Data - update all datasets to use actual GPM/PSI
             chartData.datasets = [];
-
-            // Removed the yellow highlight area as requested by the user
-            /*
-            // Add the yellow highlight area first so it's behind other lines/points
-            // The highlight area should be between the performance curve and the 65% head line
-            const highlightAreaPoints = performanceCurveData.map(p => ({ x: p.x, y: Math.max(p.y, graphRatedHead * 0.65) }));
-            // We need to add points for the bottom boundary (65% head) to close the shape
-            const sixtyFivePercentHeadLine = [
-                { x: 0, y: graphRatedHead * 0.65 },
-                { x: graphRatedFlow * 1.5, y: graphRatedHead * 0.65 }
-            ];
-
-            // Combine points for the fill area: performance curve points (reversed) and 65% head line
-            const fillPoints = [...performanceCurveData, ...sixtyFivePercentHeadLine.reverse()];
-
-            chartData.datasets.push({
-                label: 'พื้นที่แนะนำการเลือกปั๊ม (Highlight สีเหลือง)',
-                type: 'line', // Must be 'line' to use fill
-                data: fillPoints,
-                backgroundColor: 'rgba(255, 255, 0, 0.3)', // Yellow with transparency
-                borderColor: 'transparent', // No border for the fill area
-                fill: 'origin', // Fill to the origin (y=0) or 'start'
-                tension: 0, // No tension for fill area, use straight lines between points
-                pointRadius: 0,
-                order: 1, // Render first/lowest layer
-                datalabels: { display: false }
-            });
-            */
-
 
             // Performance Curve (Teal line) - order 5
             chartData.datasets.push({
