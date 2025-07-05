@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.1 By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.2 By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -15,7 +15,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            min-height: 10vh;
+            min-height: 100vh; /* Reverted to 100vh for better vertical centering */
             padding: 20px;
             box-sizing: border-box;
         }
@@ -384,7 +384,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="version-text">V.1.1</div> <!-- Added version text here -->
+        <div class="version-text">V.1.2</div> <!-- Updated version text here -->
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
             คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ <br> (NFPA Guidance) By วัยรุ่นเซินเจิ้น
         </h1>
@@ -646,39 +646,41 @@
 
         /**
          * Calculates the head percentage for the main pump performance curve
-         * based on a piecewise function to achieve a flatter initial segment.
+         * using a piecewise quadratic function.
          *
-         * Segment 1 (0% to 100% flow): Linear drop from (0, 110) to (100, 100).
-         * Segment 2 (100% to 150% flow): Parabola passing through (100, 100) and (150, 65),
-         * with a slope matching the linear segment at 100%.
+         * Segment 1 (0% to 100% flow): Quadratic passing through (0, 110%) and (100%, 100%)
+         * with a zero slope at 0% flow.
+         * Equation: H_norm = -0.10 * Q_norm^2 + 1.10
+         *
+         * Segment 2 (100% to 150% flow): Quadratic passing through (100%, 100%) and (150%, 65%)
+         * with continuous slope from the first segment at 100% flow.
+         * Equation: H_norm = -1 * Q_norm^2 + 1.8 * Q_norm + 0.20
          *
          * @param {number} flowPercent The flow rate as a percentage of rated flow.
          * @returns {number} The head as a percentage of rated head.
          */
         function getHeadOnPumpCurvePercentage(flowPercent) {
-            if (flowPercent <= 100) {
-                // Linear drop from (0, 110) to (100, 100)
-                // y = mx + c
-                // c = 110 (at x=0)
-                // m = (100 - 110) / (100 - 0) = -10 / 100 = -0.1
-                return -0.1 * flowPercent + 110;
+            const Q_norm = flowPercent / 100; // Normalize flow to 0-1.5
+
+            if (Q_norm <= 1) {
+                // First segment: 0% to 100% flow
+                // Passes through (0, 1.10) and (1, 1.00) with slope 0 at Q_norm = 0
+                // H_norm = a*Q_norm^2 + b*Q_norm + c
+                // H_norm(0) = 1.10 => c = 1.10
+                // H'_norm = 2*a*Q_norm + b
+                // H'_norm(0) = 0 => b = 0
+                // H_norm(1) = 1.00 => a*(1)^2 + 0*(1) + 1.10 = 1.00 => a = -0.10
+                return (-0.10 * Math.pow(Q_norm, 2) + 1.10) * 100;
             } else {
-                // Parabola from (100, 100) through (150, 65) with a slope of -0.1 at 100%
-                // Let x_prime = flowPercent - 100
-                // Points: (0, 100), (50, 65) in x_prime coordinates
-                // y = a * x_prime^2 + b * x_prime + c_prime
-                // c_prime = 100 (at x_prime=0)
-                // b = -0.1 (slope at x_prime=0)
-                // 65 = a * (50)^2 + (-0.1) * (50) + 100
-                // 65 = 2500a - 5 + 100
-                // 65 = 2500a + 95
-                // -30 = 2500a
-                // a = -30 / 2500 = -0.012
-                const a = -0.012;
-                const b = -0.1;
-                const c_prime = 100;
-                const x_prime = flowPercent - 100;
-                return a * Math.pow(x_prime, 2) + b * x_prime + c_prime;
+                // Second segment: 100% to 150% flow
+                // Passes through (1, 1.00) and (1.5, 0.65) with continuous slope at Q_norm = 1
+                // Slope of first segment at Q_norm = 1: H'_norm(1) = -0.20 * 1 = -0.20
+                // H_norm = A*Q_norm^2 + B*Q_norm + C
+                // H_norm(1) = 1.00 => A + B + C = 1.00
+                // H_norm(1.5) = 0.65 => 2.25A + 1.5B + C = 0.65
+                // H'_norm(1) = -0.20 => 2A + B = -0.20
+                // Solving these gives A = -1, B = 1.8, C = 0.2
+                return (-1 * Math.pow(Q_norm, 2) + 1.8 * Q_norm + 0.20) * 100;
             }
         }
 
@@ -844,7 +846,7 @@
                 data: performanceCurveData,
                 fill: false,
                 borderColor: 'rgba(75, 192, 192, 1)',
-                tension: 0.5, // Adjusted tension for smoother, less curvy line
+                tension: 0, // Set tension to 0 as the curve is now mathematically defined
                 pointBackgroundColor: 'rgba(75, 192, 192, 1)',
                 pointBorderColor: '#fff',
                 pointRadius: 0, // Hide default points on the curve itself
