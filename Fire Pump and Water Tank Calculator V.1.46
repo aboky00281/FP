@@ -430,7 +430,7 @@
             <label for="design_area">พื้นที่ป้องกัน (Design Area - ตร.ม.):</label>
             <input type="number" id="design_area" placeholder="เช่น 139.4 ตร.ม." min="0.1" step="0.1" class="rounded-lg shadow-sm">
             <small class="small-text print-hide"> <!-- Added print-hide class here -->
-                อ้างอิง NFPA 13 (2025) Table 19.2.3.1.1 <br>
+                อ้างอิง NFPA 13 (2025) <span id="table_19_2_3_1_1_link" class="text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showImagePopup('https://img2.pic.in.th/pic/Screenshot-2025-07-16-004620.png')">Table 19.2.3.1.1</span> <br>
                 Light/Ordinary Hazard ไม่เกิน 140 ตร.ม. (ประมาณ 1500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน <br>
                 Extra Hazard ไม่เกิน 230 ตร.ม. (ประมาณ 2500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน
             </small>
@@ -444,7 +444,7 @@
                 <option value="90">90 นาที (สำหรับ Extra Hazard Group 1)</option>
                 <option value="120">120 นาที (สำหรับ Extra Hazard Group 2)</option>
             </select>
-            <small class="small-text print-hide">อ้างอิง NFPA 13 (2025) Table 19.2.3.1.2</small>
+            <small class="small-text print-hide">อ้างอิง NFPA 13 (2025) <span id="table_19_2_3_1_2_link" class="text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showImagePopup('https://img5.pic.in.th/file/secure-sv1/Screenshot-2025-07-16-003636.png')">Table 19.2.3.1.2</span></small>
         </div>
 
         <!-- Updated button container to display buttons side-by-side -->
@@ -632,6 +632,14 @@
         </div>
     </div>
 
+    <!-- Image Popup Modal -->
+    <div id="imagePopupModal" class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 hidden">
+        <div class="bg-white p-4 rounded-lg shadow-xl relative max-w-3xl max-h-full overflow-auto">
+            <button class="absolute top-2 right-2 text-gray-700 hover:text-gray-900 text-2xl font-bold" onclick="closeImagePopup()">&times;</button>
+            <img id="popupImage" src="" alt="NFPA Table" class="w-full h-auto rounded-lg">
+        </div>
+    </div>
+
     <script>
         // Data อ้างอิงจาก NFPA 13 (ค่าโดยประมาณและสำหรับการสาธิต)
         const NFPA_DATA = {
@@ -677,6 +685,26 @@
             const el = document.getElementById('graph_summary_content');
             if (el) el.classList.toggle('hidden');
         }
+
+        /**
+         * Function to show the image popup.
+         * @param {string} imageUrl The URL of the image to display in the popup.
+         */
+        function showImagePopup(imageUrl) {
+            const modal = document.getElementById('imagePopupModal');
+            const img = document.getElementById('popupImage');
+            img.src = imageUrl; 
+            modal.classList.remove('hidden');
+        }
+
+        /**
+         * Function to close the image popup.
+         */
+        function closeImagePopup() {
+            const modal = document.getElementById('imagePopupModal');
+            modal.classList.add('hidden');
+        }
+
 
         /**
          * Calculates the head percentage for the main pump performance curve
@@ -961,7 +989,7 @@
                 hoverBorderWidth: 0,
                 showLine: true,
                 order: 5, // Drawn last, so it's on top
-                datalabels: { display: false }, // No labels on the curve line itself
+                datalabels: { display: false },
                 xAxisID: 'x-axis-bottom' // Explicitly assign to bottom axis
             });
 
@@ -1080,11 +1108,9 @@
             const pumpType = document.getElementById('pump_type').value; // Get selected pump type
 
             // Define shutOffHeadMultiplier and shutOffHead here, at a higher scope
-            let shutOffHeadMultiplier;
+            let shutOffHeadMultiplier = 1.10; // Initialize with default for horizontal pump
             if (pumpType === 'vertical') {
                 shutOffHeadMultiplier = 1.40; // 140% for Vertical Turbine Fire Pump
-            } else {
-                shutOffHeadMultiplier = 1.10; // 110% for Horizontal Fire Pump (default)
             }
             const ratedHeadForCurve = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : DEFAULT_PUMP_RATED_HEAD_PSI;
             const shutOffHead = ratedHeadForCurve * shutOffHeadMultiplier; // Now shutOffHead is always defined
@@ -1094,15 +1120,15 @@
             let warningMessage = '';
 
             // Get all elements at once to avoid re-declaring them or getting null issues
-            const warningMessageElement = document.getElementById('warning_message');
-            const sprinklerFlowCalculationCell = document.getElementById('sprinkler_flow_calculation_cell'); // Changed ID
-            const totalFlowCalculationCell = document.getElementById('total_flow_calculation_cell'); // New ID
-            const tankVolumeCalculationCell = document.getElementById('tank_volume_calculation_cell'); // Changed ID
+            const sprinklerFlowCalculationCell = document.getElementById('sprinkler_flow_calculation_cell'); 
+            const totalFlowCalculationCell = document.getElementById('total_flow_calculation_cell'); 
+            const tankVolumeCalculationCell = document.getElementById('tank_volume_calculation_cell'); 
             const demandHeadDisplayElement = document.getElementById('demand_head_display');
-            const demandHeadCalculationCell = document.getElementById('demand_head_calculation_cell'); // Changed ID
+            const demandHeadCalculationCell = document.getElementById('demand_head_calculation_cell'); 
             const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
             const summaryMaxPressureElement = document.getElementById('summary_max_pressure'); 
-            const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); // Get the new element
+            const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); 
+            const warningMessageElement = document.getElementById('warning_message'); 
 
 
             // Table rows for main results
@@ -1125,14 +1151,14 @@
             const summaryDemandHeadTableEl = document.getElementById('summary_demand_head_table');
 
             // Table row elements for visibility toggling
-            const demandHeadRow = document.getElementById('demand_head_row'); // New
-            const tankVolumeRow = document.getElementById('tank_volume_row'); // New
-            const actualDurationRow = document.getElementById('actual_duration_row'); // New
-            const totalFlowRow = document.getElementById('total_flow_row'); // New
-            const sprinklerFlowCalculationRow = document.getElementById('sprinkler_flow_calculation_row'); // New
-            const totalFlowCalculationRow = document.getElementById('total_flow_calculation_row'); // New
-            const demandHeadCalculationRow = document.getElementById('demand_head_calculation_row'); // New
-            const tankVolumeCalculationRow = document.getElementById('tank_volume_calculation_row'); // New
+            const demandHeadRow = document.getElementById('demand_head_row'); 
+            const tankVolumeRow = document.getElementById('tank_volume_row'); 
+            const actualDurationRow = document.getElementById('actual_duration_row'); 
+            const totalFlowRow = document.getElementById('total_flow_row'); 
+            const sprinklerFlowCalculationRow = document.getElementById('sprinkler_flow_calculation_row'); 
+            const totalFlowCalculationRow = document.getElementById('total_flow_calculation_row'); 
+            const demandHeadCalculationRow = document.getElementById('demand_head_calculation_row'); 
+            const tankVolumeCalculationRow = document.getElementById('tank_volume_calculation_row'); 
 
 
             // Input validation for design area
@@ -1328,7 +1354,7 @@
                 if (shutOffHeadDescriptionEl) {
                     shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
                 }
-                updatePumpCurveChart(0, 0, 0, pumpType); // Pass pumpType to chart update
+                updatePumpCurveChart(0, 0, 0, pumpType); // Pass default pumpType to clear chart
             }
         }
 
@@ -1362,7 +1388,7 @@
             const summaryEstimatedPressureEl = document.getElementById('summary_estimated_pressure'); 
             const summaryMaxPressureElement = document.getElementById('summary_max_pressure');
             const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
-            const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); // Get the new element
+            const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); 
             
             // Containers/Rows for visibility
             const areaNameDisplayContainer = document.getElementById('area_name_display');
@@ -1370,13 +1396,13 @@
             
             // New table rows for explanations
             const sprinklerFlowCalculationRow = document.getElementById('sprinkler_flow_calculation_row');
-            const totalFlowCalculationRow = document.getElementById('total_flow_calculation_row'); // New
+            const totalFlowCalculationRow = document.getElementById('total_flow_calculation_row'); 
             const tankVolumeCalculationRow = document.getElementById('tank_volume_calculation_row');
             const demandHeadCalculationRow = document.getElementById('demand_head_calculation_row');
 
             // New table cells for explanations (to clear text content)
             const sprinklerFlowCalculationCell = document.getElementById('sprinkler_flow_calculation_cell');
-            const totalFlowCalculationCell = document.getElementById('total_flow_calculation_cell'); // New
+            const totalFlowCalculationCell = document.getElementById('total_flow_calculation_cell'); 
             const tankVolumeCalculationCell = document.getElementById('tank_volume_calculation_cell');
             const demandHeadCalculationCell = document.getElementById('demand_head_calculation_cell');
 
@@ -1433,13 +1459,13 @@
             
             // Hide calculation explanation rows
             if (sprinklerFlowCalculationRow) sprinklerFlowCalculationRow.classList.add('hidden');
-            if (totalFlowCalculationRow) totalFlowCalculationRow.classList.add('hidden'); // New
+            if (totalFlowCalculationRow) totalFlowCalculationRow.classList.add('hidden'); 
             if (tankVolumeCalculationRow) tankVolumeCalculationRow.classList.add('hidden');
             if (demandHeadCalculationRow) demandHeadCalculationRow.classList.add('hidden');
 
             // Clear text content of calculation explanation cells
             if (sprinklerFlowCalculationCell) sprinklerFlowCalculationCell.textContent = '';
-            if (totalFlowCalculationCell) totalFlowCalculationCell.textContent = ''; // New
+            if (totalFlowCalculationCell) totalFlowCalculationCell.textContent = ''; 
             if (tankVolumeCalculationCell) tankVolumeCalculationCell.textContent = '';
             if (demandHeadCalculationCell) demandHeadCalculationCell.textContent = '';
 
