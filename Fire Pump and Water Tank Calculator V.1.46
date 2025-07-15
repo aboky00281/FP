@@ -237,6 +237,10 @@
                 font-size: 12px !important; /* Smaller font size for print */
                 color: #000 !important; /* Black text for print */
             }
+            /* Hide specific small text for print */
+            .print-hide {
+                display: none !important;
+            }
 
             /* Ensure results section is visible and well formatted on its own page (Page 2) */
             #results_page {
@@ -245,8 +249,15 @@
                 padding-top: 0 !important;
                 width: 100%;
             }
-            /* Ensure pump info and chart section is visible and well formatted on its own page (Page 3) */
-            #pump_info_and_chart_section {
+            /* Ensure pump definition section is visible and well formatted on its own page (Page 3) */
+            #pump_definition_section { /* Renamed for clarity */
+                page-break-before: always;
+                margin-top: 0 !important;
+                padding-top: 0 !important;
+                width: 100%;
+            }
+            /* Ensure chart section is visible and well formatted on its own page (Page 4) */
+            #chart_section { /* New section for chart */
                 page-break-before: always;
                 margin-top: 0 !important;
                 padding-top: 0 !important;
@@ -401,7 +412,7 @@
 
         <div class="form-group" id="area_name_group">
             <label for="area_name">ชื่อ/รายละเอียดพื้นที่:</label>
-            <input type="text" id="area_name" placeholder="เช่น อาคารสำนักงาน A ชั้น 3" class="rounded-lg shadow-sm">
+            <input type="text" id="area_name" placeholder="เช่น ห้อง Generator Room ชั้น 1" class="rounded-lg shadow-sm">
         </div>
 
         <div class="form-group" id="hazard_class_group">
@@ -418,8 +429,9 @@
         <div class="form-group" id="design_area_group">
             <label for="design_area">พื้นที่ป้องกัน (Design Area - ตร.ม.):</label>
             <input type="number" id="design_area" placeholder="เช่น 139.4 ตร.ม." min="0.1" step="0.1" class="rounded-lg shadow-sm">
-            <small class="small-text">
-                อ้างอิง NFPA 13: Light/Ordinary Hazard ไม่เกิน 139.4 ตร.ม. (ประมาณ 1500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน <br>
+            <small class="small-text print-hide"> <!-- Added print-hide class here -->
+                อ้างอิง NFPA 13: <br>
+                Light/Ordinary Hazard ไม่เกิน 139.4 ตร.ม. (ประมาณ 1500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน <br>
                 Extra Hazard ไม่เกิน 232.26 ตร.ม. (ประมาณ 2500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน
             </small>
         </div>
@@ -432,7 +444,7 @@
                 <option value="90">90 นาที (สำหรับ Extra Hazard Group 1)</option>
                 <option value="120">120 นาที (สำหรับ Extra Hazard Group 2)</option>
             </select>
-            <small class="small-text">อ้างอิง NFPA 13 (2025) Table 19.2.3.1.2</small>
+            <small class="small-text print-hide">อ้างอิง NFPA 13 (2025) Table 19.2.3.1.2</small>
         </div>
 
         <!-- Updated button container to display buttons side-by-side -->
@@ -507,7 +519,7 @@
             </div>
         </div>
 
-        <div id="pump_info_and_chart_section" class="pt-8">
+        <div id="pump_definition_section" class="pt-8"> <!-- Renamed ID -->
             <h3 class="text-xl font-bold text-center text-gray-700 mt-8 mb-4">
                 กำหนดขนาดปั้ม
             </h3>
@@ -523,18 +535,20 @@
             <div class="form-group">
                 <label for="pump_rated_flow">กำหนดอัตราไหลของปั๊ม (GPM):</label>
                 <input type="number" id="pump_rated_flow" placeholder="เช่น 750 GPM" min="0" step="10" class="rounded-lg shadow-sm">
-                <small class="small-text">อัตราไหลของปั้มที่คุณต้องการ (Rated Flow)</small>
+                <small class="small-text print-hide">อัตราไหลของปั้มที่คุณต้องการ (Rated Flow)</small>
             </div>
             <div class="form-group">
                 <label for="system_demand_head">แรงดันต้องการของระบบ (PSI):</label>
                 <input type="number" id="system_demand_head" placeholder="เช่น 70 PSI" min="0" step="1" class="rounded-lg shadow-sm">
-                <small class="small-text">ค่าแรงดันของระบบ = Pressure Static + Pressure Loss + Pressure Residual</small>
+                <small class="small-text print-hide">ค่าแรงดันของระบบ = Static head + Residual pressure + Friction loss</small>
             </div>
             <!-- Updated button container for "สร้างกราฟ" -->
-            <div class="flex justify-start mb-4">
+            <div class="flex justify-center mb-4">
                 <button onclick="calculate()" class="btn-primary rounded-lg shadow-md w-1/2">สร้างกราฟ (Performance Curve)</button>
             </div>
+        </div>
 
+        <div id="chart_section" class="pt-8"> <!-- New section for chart and related elements -->
             <!-- Moved chart and its disclaimer here -->
             <canvas id="pumpCurveChart"></canvas>
             <p class="chart-disclaimer">
@@ -547,12 +561,12 @@
                     <button onclick="toggleGraphSummary()" class="toggle-button">ดูคำอธิบาย</button>
                 </h4>
                 <div id="graph_summary_content" class="hidden"> <!-- Added 'hidden' class here -->
-                    <ul class="list-none ml-5 text-gray-700 text-sm">
+                    <ul class="list-none ml-5 text-gray-700 text-xs"> <!-- Changed text-sm to text-xs here -->
                         <li><span style="color: rgba(0, 170, 170, 1);">━</span> Performance Curve จำลอง: ความสัมพันธ์ระหว่างอัตราการไหลและแรงดันของปั๊ม (จำลองจาก Rated Flow และแรงดันกำหนดที่ผู้ใช้ป้อน)</li>
-                        <li><span style="color: rgba(255, 0, 0, 1);">▲</span> อัตราไหลรวมที่ต้องการ (Water Demand - จุดสามเหลี่ยมสีแดง): จุดปฏิบัติงานที่คำนวณได้จากปริมาณน้ำสปริงเกลอร์บวกกับปริมาณน้ำท่อยืน ที่แรงดันต้องการของระบบ (System Demand Head)</li>
+                        <li><span style="color: rgba(255, 0, 0, 1);">▲</span> อัตราไหลรวมที่ต้องการ (Water Demand): จุดปฏิบัติงานที่คำนวณได้จากปริมาณน้ำสปริงเกลอร์บวกกับปริมาณน้ำท่อยืน ที่แรงดันต้องการของระบบ (System Demand Head)</li>
                         <li><span style="color: rgba(0, 0, 255, 1);">🔵</span> จุดกำหนดของปั๊ม (Rated Point): จุดประสิทธิภาพสูงสุดตามสเปก (Rated Flow, แรงดันกำหนดที่ผู้ใช้ป้อน)</li>
                         <li id="shut_off_head_description"><span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)</li> <!-- Added ID here -->
-                        <li><span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head: จุดตรวจสอบประสิทธิภาพ (150% Rated Flow, 65% ของแรงดัน rated Head) (ป้ายกำกับอยู่ด้านขวาของจุด)</li>
+                        <li><span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head: จุดตรวจสอบประสิทธิภาพ (150% Rated Flow, 65% ของแรงดัน rated Head)</li>
                     </ul>
                 </div>
             </div>
