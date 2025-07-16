@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.54 By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.56 By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -361,19 +361,19 @@
             }
             /* Version text should be visible on print */
             .version-text {
-                display: block !important; /* Changed to block to make it visible */
-                position: absolute; /* Keep it positioned */
+                position: absolute;
                 top: 10px;
                 right: 10px;
-                font-size: 10px;
-                color: #000 !important; /* Black for print */
-                font-weight: 300;
+                font-size: 10px; /* Smaller font size */
+                color: #94a3b8; /* Lighter color */
+                font-weight: 300; /* Thinner font weight */
             }
-        </style>
+        }
+    </style>
 </head>
 <body>
     <div class="container">
-        <div class="version-text">V.1.54</div> <!-- Updated version text here -->
+        <div class="version-text">V.1.56</div> <!-- Updated version text here -->
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
             คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ <br> (NFPA Guidance) By วัยรุ่นเซินเจิ้น
         </h1>
@@ -416,7 +416,7 @@
                 <option value="90">90 นาที (สำหรับ Extra Hazard Group 1)</option>
                 <option value="120">120 นาที (สำหรับ Extra Hazard Group 2)</option>
             </select>
-            <small class="small-text print-hide">อ้างอิง NFPA 13 (2025) Table <span id="table_19_2_3_1_2_link" class="text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showImagePopup('https://img5.pic.in.th/file/secure-sv1/Screenshot-2025-07-16-003636.png')">19.2.3.1.2</span></small>
+            <small class="small-text print-hide">อ้างอิง NFPA 13 (2025) <span id="table_19_2_3_1_2_link" class="text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showImagePopup('https://img5.pic.in.th/file/secure-sv1/Screenshot-2025-07-16-003636.png')">Table 19.2.3.1.2</span></small>
         </div>
 
         <!-- Updated button container to display buttons side-by-side -->
@@ -628,28 +628,77 @@
         // Register ChartDataLabels plugin
         Chart.register(ChartDataLabels);
 
+        // Function to show image popup
+        function showImagePopup(imageUrl) {
+            const popupModal = document.getElementById('imagePopupModal');
+            const popupImage = document.getElementById('popupImage');
+            if (popupImage && popupModal) {
+                popupImage.src = imageUrl;
+                popupModal.classList.remove('hidden');
+            }
+        }
+
+        // Function to close image popup
+        function closeImagePopup() {
+            const popupModal = document.getElementById('imagePopupModal');
+            if (popupModal) {
+                popupModal.classList.add('hidden');
+            }
+        }
+
         // Define all functions globally at the top of the script
         function getHeadOnPumpCurvePercentage(flowPercent, shutOffHeadMultiplier) {
             const Q_norm = flowPercent / 100; // Normalize flow to 0-1.5
 
             if (shutOffHeadMultiplier === 1.20) { // Vertical Turbine Fire Pump
-                // Cubic equation passing through (0, 120), (100, 100), (150, 65)
-                // And having a slope of 0 at x=0 for a flatter start.
-                // y = ax^3 + bx^2 + cx + d
-                // d = 120 (from (0, 120))
-                // c = 0 (for slope 0 at x=0)
-                // Solving for a and b using (100, 100) and (150, 65):
-                // a = -1 / 112500
-                // b = -1 / 900
+                // We need a cubic equation that passes through:
+                // (0, 120) with slope 0 (flat start)
+                // (100, 100) (rated point)
+                // (150, 65) (150% flow point)
+
+                // Let the cubic equation be y = a*x^3 + b*x^2 + c*x + d
+                // 1. Point (0, 120):
+                //    120 = a*(0)^3 + b*(0)^2 + c*(0) + d  => d = 120
+                // 2. Slope at (0, 120) is 0:
+                //    y' = 3ax^2 + 2bx + c
+                //    0 = 3a(0)^2 + 2b(0) + c  => c = 0
+                // So, the equation simplifies to y = a*x^3 + b*x^2 + 120
+
+                // 3. Point (100, 100):
+                //    100 = a*(100)^3 + b*(100)^2 + 120
+                //    100 - 120 = 1000000a + 10000b
+                //    -20 = 1000000a + 10000b  (Eq A)
+                // 4. Point (150, 65):
+                //    65 = a*(150)^3 + b*(150)^2 + 120
+                //    65 - 120 = 3375000a + 22500b
+                //    -55 = 3375000a + 22500b  (Eq B)
+
+                // Simplify Eq A: Divide by 10000 => -0.002 = 100a + b  => b = -0.002 - 100a
+                // Simplify Eq B: Divide by 2500 => -0.022 = 1350a + 9b
+
+                // Substitute b into simplified Eq B:
+                // -0.022 = 1350a + 9(-0.002 - 100a)
+                // -0.022 = 1350a - 0.018 - 900a
+                // -0.022 + 0.018 = 450a
+                // -0.004 = 450a
+                // a = -0.004 / 450 = -4 / 450000 = -1 / 112500
+
+                // Calculate b:
+                // b = -0.002 - 100 * (-1 / 112500)
+                // b = -0.002 + 100 / 112500
+                // b = -0.002 + 1 / 1125 = -2/1000 + 1/1125 = -1/500 + 1/1125
+                // b = (-1*1125 + 1*500) / (500*1125) = (-1125 + 500) / 562500 = -625 / 562500 = -1 / 900
+
                 const a = -1 / 112500;
                 const b = -1 / 900;
                 const c = 0;
                 const d = 120;
+
                 let head = (a * Math.pow(flowPercent, 3) + b * Math.pow(flowPercent, 2) + c * flowPercent + d);
                 if (head < 0) head = 0; // Ensure head doesn't go negative
                 return head;
             } else { // Horizontal pump (shutOffHeadMultiplier === 1.10)
-                // Existing piecewise quadratic for horizontal pump
+                // Existing piecewise quadratic for horizontal pump remains unchanged
                 const A_horizontal_segment2 = -1;
                 const B_horizontal_segment2 = 1.8;
                 const C_horizontal_segment2 = 0.2;
@@ -1012,7 +1061,7 @@
             const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
             const summaryMaxPressureElement = document.getElementById('summary_max_pressure'); 
             const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); 
-            const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_description'); // Get the new element
+            const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_1_description'); // Corrected ID
             const warningMessageElement = document.getElementById('warning_message'); 
 
 
@@ -1281,7 +1330,7 @@
             const summaryMaxPressureElement = document.getElementById('summary_max_pressure');
             const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
             const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); 
-            const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_description'); // Get the new element
+            const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_1_description'); // Corrected ID
             
             // Containers/Rows for visibility
             const areaNameDisplayContainer = document.getElementById('area_name_display');
@@ -1364,7 +1413,7 @@
             if (shutOffHeadDescriptionEl) {
                 shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`; // Reset to default 110%
             }
-            if (reference150PercentDescriptionEl) { // Reset on clear
+            if (reference150PercentDescriptionEl) { // Reset on error
                 reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
             }
 
