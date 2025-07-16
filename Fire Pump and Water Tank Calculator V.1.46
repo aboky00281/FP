@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.47 By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.49 By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -373,7 +373,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="version-text">V.1.47</div> <!-- Updated version text here -->
+        <div class="version-text">V.1.49</div> <!-- Updated version text here -->
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
             คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ <br> (NFPA Guidance) By วัยรุ่นเซินเจิ้น
         </h1>
@@ -530,7 +530,7 @@
                         <li><span style="color: rgba(0, 170, 170, 1);">━</span> Performance Curve จำลอง: ความสัมพันธ์ระหว่างอัตราการไหลและแรงดันของปั๊ม (จำลองจาก Rated Flow และแรงดันกำหนดที่ผู้ใช้ป้อน)</li>
                         <li><span style="color: rgba(255, 0, 0, 1);">▲</span> อัตราไหลรวมที่ต้องการ (Water Demand): จุดปฏิบัติงานที่คำนวณได้จากปริมาณน้ำสปริงเกลอร์บวกกับปริมาณน้ำท่อยืน ที่แรงดันต้องการของระบบ (System Demand Head)</li>
                         <li><span style="color: rgba(0, 0, 255, 1);">🔵</span> จุดกำหนดของปั๊ม (Rated Point): จุดประสิทธิภาพสูงสุดตามสเปก (Rated Flow, แรงดันกำหนดที่ผู้ใช้ป้อน)</li>
-                        <li id="shut_off_head_description"><span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)</li> <!-- Added ID here -->
+                        <li id="shut_off_head_description"><span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 120% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)</li> <!-- Updated description here -->
                         <li id="reference_150_percent_description"><span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head</li>
                     </ul>
                 </div>
@@ -632,9 +632,17 @@
         function getHeadOnPumpCurvePercentage(flowPercent, shutOffHeadMultiplier) {
             const Q_norm = flowPercent / 100; // Normalize flow to 0-1.5
 
-            if (shutOffHeadMultiplier === 1.40) { // This means it's a vertical turbine pump (steepest curve)
-                // H(Q_norm) = -0.2 * Math.pow(Q_norm, 2) - 0.2 * Q_norm + 1.4
-                let head = (-0.2 * Math.pow(Q_norm, 2) - 0.2 * Q_norm + 1.4) * 100;
+            if (shutOffHeadMultiplier === 1.20) { // This means it's a vertical turbine pump (steepest curve)
+                // Quadratic equation passing through (0, 120), (100, 100), (150, 65)
+                // y = ax^2 + bx + c
+                // c = 120 (from (0, 120))
+                // 100 = a(100)^2 + b(100) + 120  => 10000a + 100b = -20  => 100a + b = -0.2
+                // 65 = a(150)^2 + b(150) + 120  => 22500a + 150b = -55  => 450a + 3b = -1.1
+                // Solving: a = -1/300, b = 2/15
+                const a = -1/300;
+                const b = 2/15;
+                const c = 120;
+                let head = (a * Math.pow(flowPercent, 2) + b * flowPercent + c);
                 if (head < 0) head = 0; // Ensure head doesn't go negative
                 return head;
             } else { // Horizontal pump (shutOffHeadMultiplier === 1.10)
@@ -669,7 +677,7 @@
             }
         }
 
-        function updatePumpCurveChart(pumpRatedFlow, totalRequiredFlow, systemDemandHeadEffective, pumpType) { // Renamed systemDemandHeadInput to systemDemandHeadEffective
+        function updatePumpCurveChart(pumpRatedFlow, totalRequiredFlow, systemDemandHeadEffective, pumpType) {
             const ctx = document.getElementById('pumpCurveChart');
             if (!ctx) {
                 console.error("Canvas element 'pumpCurveChart' not found.");
@@ -695,7 +703,7 @@
             // Calculate shut-off head based on pump type
             let shutOffHeadMultiplier;
             if (pumpType === 'vertical') {
-                shutOffHeadMultiplier = 1.40; // 140% for Vertical Turbine Fire Pump
+                shutOffHeadMultiplier = 1.20; // 120% for Vertical Turbine Fire Pump
             } else {
                 shutOffHeadMultiplier = 1.10; // 110% for Horizontal Fire Pump (default)
             }
@@ -978,9 +986,11 @@
             const pumpType = document.getElementById('pump_type').value; // Get selected pump type
 
             // Define shutOffHeadMultiplier and shutOffHead here, at a higher scope
-            let shutOffHeadMultiplier = 1.10; // Initialize with default for horizontal pump
+            let shutOffHeadMultiplier;
             if (pumpType === 'vertical') {
-                shutOffHeadMultiplier = 1.40; // 140% for Vertical Turbine Fire Pump
+                shutOffHeadMultiplier = 1.20; // 120% for Vertical Turbine Fire Pump
+            } else {
+                shutOffHeadMultiplier = 1.10; // 110% for Horizontal Fire Pump (default)
             }
             // Use ratedHeadForCurve as the effective head for calculations and chart plotting
             const ratedHeadForCurve = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : window.DEFAULT_PUMP_RATED_HEAD_PSI;
@@ -1070,7 +1080,7 @@
                 
                 // Reset shut-off head description on error
                 if (shutOffHeadDescriptionEl) {
-                    shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
+                    shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 120% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`; // Updated text
                 }
                 if (reference150PercentDescriptionEl) { // Reset on error
                     reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
@@ -1206,7 +1216,7 @@
 
                     // Update shut-off head description based on pumpType
                     if (shutOffHeadDescriptionEl) {
-                        shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
+                        shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ ${Math.round(shutOffHeadMultiplier * 100)}% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`; // Updated text to use dynamic percentage
                     }
                 }
 
@@ -1228,7 +1238,7 @@
                 }
                 // Reset shut-off head description on invalid input
                 if (shutOffHeadDescriptionEl) {
-                    shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
+                    shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`; // Reset to default 110%
                 }
                 if (reference150PercentDescriptionEl) { // Reset on error
                     reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
@@ -1349,7 +1359,7 @@
 
             // Reset shut-off head description on clear
             if (shutOffHeadDescriptionEl) {
-                shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
+                shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`; // Reset to default 110%
             }
             if (reference150PercentDescriptionEl) { // Reset on clear
                 reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
