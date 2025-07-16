@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.67 By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.66 By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -754,58 +754,14 @@
             const graphRatedHead = systemDemandHeadEffective; // Use the effective head directly
 
             // Handle invalid inputs for graph scaling
-            // If pumpRatedFlow or graphRatedHead is 0 or less, create an empty chart
             if (graphRatedFlow <= 0 || graphRatedHead <= 0) {
+                // Clear chart or show message if essential rated values are missing
                 if (pumpCurveChart) {
                     pumpCurveChart.destroy();
+                    pumpCurveChart = null;
                 }
-                // Create a new chart with no datasets, but with scales defined
-                pumpCurveChart = new Chart(chartContext, {
-                    type: 'line',
-                    data: {
-                        labels: [],
-                        datasets: [] // Empty datasets
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            'x-axis-bottom': {
-                                type: 'linear',
-                                position: 'bottom',
-                                title: { display: true, text: 'percent of rated capacity' },
-                                beginAtZero: true,
-                                max: 200, // Default max for empty graph
-                                ticks: { stepSize: 10 },
-                                grid: { drawOnChartArea: true, color: 'rgba(200, 200, 200, 0.5)', lineWidth: 1 }
-                            },
-                            'x-axis-top': {
-                                type: 'linear',
-                                position: 'top',
-                                title: { display: true, text: 'Flow (GPM)' },
-                                beginAtZero: true,
-                                max: (200 / 100) * window.DEFAULT_PUMP_RATED_HEAD_PSI, // Scale based on default head
-                                ticks: { stepSize: (50 / 100) * window.DEFAULT_PUMP_RATED_HEAD_PSI },
-                                grid: { drawOnChartArea: false }
-                            },
-                            y: {
-                                type: 'linear',
-                                position: 'left',
-                                title: { display: true, text: 'แรงดัน (PSI)' },
-                                beginAtZero: true,
-                                max: window.DEFAULT_PUMP_RATED_HEAD_PSI * 1.5, // Default max for empty graph
-                                ticks: { stepSize: 10 },
-                                grid: { drawOnChartArea: true, color: 'rgba(200, 200, 200, 0.5)', lineWidth: 1 }
-                            }
-                        },
-                        plugins: {
-                            legend: { display: false },
-                            title: { display: true, text: 'กราฟ Flow Rate vs. Head (Performance Curve จำลอง)' },
-                            datalabels: { display: false } // No datalabels for empty chart
-                        }
-                    }
-                });
-                return; // Exit function after creating empty chart
+                // Optionally display a message on the canvas or UI
+                return;
             }
 
             // Calculate shut-off head based on pump type
@@ -1507,15 +1463,15 @@
         document.addEventListener('DOMContentLoaded', () => {
             // Use setTimeout to ensure all global window properties are set before calculate is called
             setTimeout(() => {
-                // Get elements
+                // Initially hide chart disclaimer and graph summary
                 const chartDisclaimerElement = document.querySelector('.chart-disclaimer');
                 const graphSummaryElement = document.getElementById('graph_summary');
-                const chartSectionElement = document.getElementById('chart_section');
+                const chartSectionElement = document.getElementById('chart_section'); // Get the chart section element
 
-                // Ensure chart section is visible to show empty graph
+                // Remove hidden class from chartSectionElement to show empty graph
                 if (chartSectionElement) chartSectionElement.classList.remove('hidden');
 
-                // Call updatePumpCurveChart with zero values to show empty graph (axes and grid only)
+                // Call updatePumpCurveChart with zero values to show empty graph
                 updatePumpCurveChart(0, 0, 0, 'horizontal');
 
                 // Ensure disclaimer and summary are hidden on initial load
