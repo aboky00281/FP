@@ -221,34 +221,6 @@
             button, .disclaimer, .print-pdf-buttons, .toggle-button, .btn-clear { /* Added .btn-clear */
                 display: none !important;
             }
-            /* Ensure form groups are explicitly visible */
-            .form-group {
-                display: block !important;
-                margin-bottom: 10px !important; /* Adjust margin for print */
-            }
-            label, input[type="number"], input[type="text"], select, .small-text {
-                display: block !important;
-                width: auto !important; /* Prevent fixed width issues */
-                padding: 5px !important; /* Smaller padding for print */
-                /* REMOVED BORDER AND SHADOW FOR PRINT */
-                border: none !important;
-                border-radius: 0 !important; /* No rounded corners on print */
-                box-shadow: none !important; /* No shadow on print */
-                font-size: 12px !important; /* Smaller font size for print */
-                color: #000 !important; /* Black text for print */
-            }
-            /* Hide specific small text for print */
-            .print-hide {
-                display: none !important;
-            }
-
-            /* Ensure results section is visible and well formatted on its own page (Page 2) */
-            #results_page {
-                page-break-before: always;
-                margin-top: 0 !important;
-                padding-top: 0 !important;
-                width: 100%;
-            }
             /* Ensure pump definition section is visible and well formatted on its own page (Page 3) */
             #pump_definition_section { /* Renamed for clarity */
                 page-break-before: always;
@@ -432,7 +404,7 @@
             <small class="small-text print-hide"> <!-- Added print-hide class here -->
                 อ้างอิง NFPA 13 (2025) <span id="table_19_2_3_1_1_link" class="text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showImagePopup('https://img2.pic.in.th/pic/Screenshot-2025-07-16-004620.png')">Table 19.2.3.1.1</span> <br>
                 Light/Ordinary Hazard ไม่เกิน 140 ตร.ม. (ประมาณ 1500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน <br>
-                Extra Hazard ไม่เกิน 230 ตร.ม. (ประมาณ 2500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน
+                Extra Hazard ไม่เกิน 230 ตร.M. (ประมาณ 2500 ตร.ฟุต) สำหรับสปริงเกลอร์มาตรฐาน
             </small>
         </div>
 
@@ -444,7 +416,7 @@
                 <option value="90">90 นาที (สำหรับ Extra Hazard Group 1)</option>
                 <option value="120">120 นาที (สำหรับ Extra Hazard Group 2)</option>
             </select>
-            <small class="small-text print-hide">อ้างอิง NFPA 13 (2025) <span id="table_19_2_3_1_2_link" class="text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showImagePopup('https://img5.pic.in.th/file/secure-sv1/Screenshot-2025-07-16-003636.png')">Table 19.2.3.1.2</span></small>
+            <small class="small-text print-hide">อ้างอิง NFPA 13 (2025) Table <span id="table_19_2_3_1_2_link" class="text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showImagePopup('https://img5.pic.in.th/file/secure-sv1/Screenshot-2025-07-16-003636.png')">19.2.3.1.2</span></small>
         </div>
 
         <!-- Updated button container to display buttons side-by-side -->
@@ -464,54 +436,46 @@
                         <tr class="bg-gray-100">
                             <th class="py-2 px-4 border-b border-gray-300 text-left text-gray-700 font-normal">รายการ</th>
                             <th class="py-2 px-4 border-b border-gray-300 text-left text-gray-700 font-normal">ค่า</th>
-                            <th class="py-2 px-4 border-b border-gray-300 text-left text-gray-700 font-normal">คำอธิบาย</th>
+                            <!-- Removed "คำอธิบาย" column header -->
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td class="py-2 px-4 border-b border-gray-300 text-base">อัตราการไหลของน้ำดับเพลิง (Sprinkler)</td>
                             <td class="py-2 px-4 border-b border-gray-300 text-base"><span id="sprinkler_flow">0.00</span> GPM</td>
-                            <td class="py-2 px-4 border-b border-gray-300 text-base">
-                                <button onclick="toggleSprinklerCalculation()" class="toggle-button">ดูวิธีการคำนวณ</button>
-                            </td>
+                            <!-- Removed "ดูวิธีการคำนวณ" button -->
                         </tr>
                         <tr class="hidden" id="sprinkler_flow_calculation_row">
-                            <td colspan="3" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="sprinkler_flow_calculation_cell"></td>
+                            <td colspan="2" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="sprinkler_flow_calculation_cell"></td>
                         </tr>
                         <tr id="total_flow_row">
                             <td class="py-2 px-4 border-b border-gray-300 text-base">อัตราการไหลรวมที่ต้องการ</td>
                             <td class="py-2 px-4 border-b border-gray-300 text-red-600 text-base"><span id="total_flow">0.00</span> GPM</td>
-                            <td class="py-2 px-4 border-b border-gray-300 text-base">
-                                <button onclick="toggleTotalFlowCalculation()" class="toggle-button">ดูวิธีการคำนวณ</button>
-                            </td>
+                            <!-- Removed "ดูวิธีการคำนวณ" button -->
                         </tr>
                         <tr class="hidden" id="total_flow_calculation_row">
-                            <td colspan="3" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="total_flow_calculation_cell"></td>
+                            <td colspan="2" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="total_flow_calculation_cell"></td>
                         </tr>
                         <tr class="hidden" id="demand_head_row">
                             <td class="py-2 px-4 border-b border-gray-300 text-base">แรงดันที่จุดต้องการ</td>
                             <td class="py-2 px-4 border-b border-gray-300 text-red-600 text-base"><span id="demand_head_display">0.00</span> PSI</td>
-                            <td class="py-2 px-4 border-b border-gray-300 text-base">
-                                <button onclick="toggleDemandHeadCalculation()" class="toggle-button">ดูวิธีการคำนวณ</button>
-                            </td>
+                            <!-- Removed "ดูวิธีการคำนวณ" button -->
                         </tr>
                         <tr class="hidden" id="demand_head_calculation_row">
-                            <td colspan="3" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="demand_head_calculation_cell"></td>
+                            <td colspan="2" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="demand_head_calculation_cell"></td>
                         </tr>
                         <tr id="actual_duration_row"> <!-- Moved this row up -->
                             <td class="py-2 px-4 border-b border-gray-300 text-base">เวลากักเก็บน้ำที่คำนวณ</td>
                             <td class="py-2 px-4 border-b border-gray-300 text-base"><span id="actual_duration">0</span> นาที</td>
-                            <td class="py-2 px-4 border-b border-gray-300 text-base"></td>
+                            <!-- Removed empty td -->
                         </tr>
                         <tr id="tank_volume_row"> <!-- Moved this row down -->
                             <td class="py-2 px-4 border-b border-gray-300 text-base">ขนาดถังเก็บน้ำที่ต้องการ</td>
                             <td class="py-2 px-4 border-b border-gray-300 text-base"><span id="tank_volume">0.00</span> ลบ.ม.</td>
-                            <td class="py-2 px-4 border-b border-gray-300 text-base">
-                                <button onclick="toggleTankVolumeCalculation()" class="toggle-button">ดูวิธีการคำนวณ</button>
-                            </td>
+                            <!-- Removed "ดูวิธีการคำนวณ" button -->
                         </tr>
                         <tr class="hidden" id="tank_volume_calculation_row">
-                            <td colspan="3" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="tank_volume_calculation_cell"></td>
+                            <td colspan="2" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="tank_volume_calculation_cell"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -520,7 +484,7 @@
         </div>
 
         <div id="pump_definition_section" class="pt-8"> <!-- Renamed ID -->
-            <h3 class="text-xl font-bold text-center text-gray-700 mt-8 mb-4">
+            <h3 class="text-xl font-bold text-center text-gray-700 mb-4">
                 กำหนดขนาดปั้ม
             </h3>
             <!-- New Pump Type Selection -->
@@ -544,7 +508,7 @@
             </div>
             <!-- Updated button container for "สร้างกราฟ" -->
             <div class="flex justify-center mb-4">
-                <button onclick="calculate()" class="btn-primary rounded-lg shadow-md w-1/2">สร้างกราฟ (Performance Curve)</button>
+                <button onclick="calculate()" class="btn-primary rounded-lg shadow-md w-1/2">สร้างกราฟ</button>
             </div>
         </div>
 
@@ -558,15 +522,15 @@
             <div id="graph_summary" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <h4 class="text-lg font-semibold text-blue-800 mb-3">
                     คำอธิบายกราฟ:
-                    <button onclick="toggleGraphSummary()" class="toggle-button">ดูคำอธิบาย</button>
+                    <!-- Removed "ดูคำอธิบาย" button -->
                 </h4>
-                <div id="graph_summary_content" class="hidden"> <!-- Added 'hidden' class here -->
+                <div id="graph_summary_content"> <!-- Removed 'hidden' class here -->
                     <ul class="list-none ml-5 text-gray-700 text-xs"> <!-- Changed text-sm to text-xs here -->
                         <li><span style="color: rgba(0, 170, 170, 1);">━</span> Performance Curve จำลอง: ความสัมพันธ์ระหว่างอัตราการไหลและแรงดันของปั๊ม (จำลองจาก Rated Flow และแรงดันกำหนดที่ผู้ใช้ป้อน)</li>
                         <li><span style="color: rgba(255, 0, 0, 1);">▲</span> อัตราไหลรวมที่ต้องการ (Water Demand): จุดปฏิบัติงานที่คำนวณได้จากปริมาณน้ำสปริงเกลอร์บวกกับปริมาณน้ำท่อยืน ที่แรงดันต้องการของระบบ (System Demand Head)</li>
                         <li><span style="color: rgba(0, 0, 255, 1);">🔵</span> จุดกำหนดของปั๊ม (Rated Point): จุดประสิทธิภาพสูงสุดตามสเปก (Rated Flow, แรงดันกำหนดที่ผู้ใช้ป้อน)</li>
                         <li id="shut_off_head_description"><span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)</li> <!-- Added ID here -->
-                        <li><span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head: จุดตรวจสอบประสิทธิภาพ (150% Rated Flow, 65% ของแรงดัน rated Head)</li>
+                        <li id="reference_150_percent_description"><span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head</li>
                     </ul>
                 </div>
             </div>
@@ -650,142 +614,50 @@
             'extra2': { density_gpm_sqft: 0.40, hose_allowance_gpm: 500, min_duration: 120 }
         };
 
-        // Conversion Factors
-        const SQ_M_TO_SQ_FT = 10.7639;
-        const US_GALLONS_TO_CUBIC_METERS = 0.00378541;
-
         // Chart instances
         let pumpCurveChart;
 
-        // Default rated head for pump characteristics if systemDemandHeadInput is not provided
-        const DEFAULT_PUMP_RATED_HEAD_PSI = 100;
+        // Make conversion factors globally accessible
+        window.SQ_M_TO_SQ_FT = 10.7639;
+        window.US_GALLONS_TO_CUBIC_METERS = 0.00378541;
+
+        // Make DEFAULT_PUMP_RATED_HEAD_PSI globally accessible
+        window.DEFAULT_PUMP_RATED_HEAD_PSI = 100;
 
         // Register ChartDataLabels plugin
         Chart.register(ChartDataLabels);
 
-        // Function to toggle visibility of calculation explanations
-        function toggleSprinklerCalculation() {
-            const el = document.getElementById('sprinkler_flow_calculation_row');
-            if (el) el.classList.toggle('hidden');
-        }
-        function toggleTotalFlowCalculation() {
-            const el = document.getElementById('total_flow_calculation_row');
-            if (el) el.classList.toggle('hidden');
-        }
-        function toggleTankVolumeCalculation() {
-            const el = document.getElementById('tank_volume_calculation_row');
-            if (el) el.classList.toggle('hidden');
-        }
-        function toggleDemandHeadCalculation() {
-            const el = document.getElementById('demand_head_calculation_row');
-            if (el) el.classList.toggle('hidden');
-        }
-        // Function to toggle visibility of graph summary
-        function toggleGraphSummary() {
-            const el = document.getElementById('graph_summary_content');
-            if (el) el.classList.toggle('hidden');
-        }
-
-        /**
-         * Function to show the image popup.
-         * @param {string} imageUrl The URL of the image to display in the popup.
-         */
-        function showImagePopup(imageUrl) {
-            const modal = document.getElementById('imagePopupModal');
-            const img = document.getElementById('popupImage');
-            img.src = imageUrl; 
-            modal.classList.remove('hidden');
-        }
-
-        /**
-         * Function to close the image popup.
-         */
-        function closeImagePopup() {
-            const modal = document.getElementById('imagePopupModal');
-            modal.classList.add('hidden');
-        }
-
-
-        /**
-         * Calculates the head percentage for the main pump performance curve
-         * using a piecewise quadratic function.
-         *
-         * Segment 1 (0% to 100% flow): Quadratic passing through (0, shutOffHeadMultiplier) and (100%, 100%)
-         * and having a continuous slope at 100% flow with the second segment.
-         *
-         * Segment 2 (100% to 150% flow): Quadratic passing through (100%, 100%) and (150%, 65%)
-         * with a fixed slope at 100% flow, derived from a typical horizontal pump's characteristics.
-         *
-         * @param {number} flowPercent The flow rate as a percentage of rated flow.
-         * @param {number} shutOffHeadMultiplier The multiplier for shut-off head (e.g., 1.10 or 1.40).
-         * @returns {number} The head as a percentage of rated head.
-         */
+        // Define all functions globally at the top of the script
         function getHeadOnPumpCurvePercentage(flowPercent, shutOffHeadMultiplier) {
             const Q_norm = flowPercent / 100; // Normalize flow to 0-1.5
 
-            // Coefficients for the second segment (100% to 150% flow) - fixed to horizontal pump's curve
-            // H_norm = A_h*Q_norm^2 + B_h*Q_norm + C_h
-            // H_norm(1) = 1.00
-            // H_norm(1.5) = 0.65
-            // H'_norm(1) = -0.2 (slope of typical horizontal pump at 100% flow)
-            const A_horizontal_segment2 = -1;
-            const B_horizontal_segment2 = 1.8;
-            const C_horizontal_segment2 = 0.2;
-
-            // Calculate the desired slope at Q_norm = 1 for continuity
-            const targetSlopeAt100Percent = 2 * A_horizontal_segment2 * 1 + B_horizontal_segment2; // Slope of segment 2 at Q_norm = 1
-
-            if (Q_norm <= 1) {
-                // First segment: 0% to 100% flow
-                // Apply this logic ONLY for vertical turbine, otherwise use the previous calculation for horizontal.
-                if (shutOffHeadMultiplier === 1.40) { // This means it's a vertical turbine pump
-                    // To match the orange curve's *shape* while ensuring it starts at `shutOffHeadMultiplier`
-                    // and ends at `1.00` (at 100% flow), we need to scale the "ideal" orange curve.
-                    // The ideal orange curve from the image looks like H = -0.4 * Q^2 + 1.4 for Q from 0 to 1.
-                    // We want a curve H(Q) = m * H_ideal(Q) + b_offset such that:
-                    // H(0) = shutOffHeadMultiplier
-                    // H(1) = 1.00
-                    // m * 1.4 + b_offset = shutOffHeadMultiplier
-                    // m * 1.0 + b_offset = 1.00
-                    // Subtracting the second from the first: 0.4 * m = shutOffHeadMultiplier - 1.00
-                    // m = (shutOffHeadMultiplier - 1.00) / 0.4
-                    // b_offset = 1.00 - m
-
-                    const m = (shutOffHeadMultiplier - 1.00) / 0.4;
-                    const b_offset = 1.00 - m;
-                    const H_ideal = -0.4 * Math.pow(Q_norm, 2) + 1.4;
-                    let head = (m * H_ideal + b_offset) * 100;
-                    if (head < 0) head = 0; // Ensure head doesn't go negative
-                    return head;
-                } else { // Horizontal pump, use the original calculation
-                    // H_norm = a*Q_norm^2 + b*Q_norm + c
-                    // Conditions:
-                    // 1. H_norm(0) = shutOffHeadMultiplier => c = shutOffHeadMultiplier
-                    // 2. H_norm(1) = 1.00 => a + b + c = 1.00
-                    // 3. H'_norm(1) = targetSlopeAt100Percent => 2a + b = targetSlopeAt100Percent
-
-                    const c = shutOffHeadMultiplier;
-                    const a = targetSlopeAt100Percent - (1.00 - c); // Solved from (2) and (3)
-                    const b = targetSlopeAt100Percent - 2 * a;
-                    let head = (a * Math.pow(Q_norm, 2) + b * Q_norm + c) * 100;
-                    if (head < 0) head = 0; // Ensure head doesn't go negative
-                    return head;
-                }
-            } else {
-                // Second segment: 100% to 150% flow - fixed to horizontal pump's curve
-                let head = (A_horizontal_segment2 * Math.pow(Q_norm, 2) + B_horizontal_segment2 * Q_norm + C_horizontal_segment2) * 100;
+            if (shutOffHeadMultiplier === 1.40) { // This means it's a vertical turbine pump (steepest curve)
+                // H(Q_norm) = -0.2 * Math.pow(Q_norm, 2) - 0.2 * Q_norm + 1.4
+                let head = (-0.2 * Math.pow(Q_norm, 2) - 0.2 * Q_norm + 1.4) * 100;
                 if (head < 0) head = 0; // Ensure head doesn't go negative
                 return head;
+            } else { // Horizontal pump (shutOffHeadMultiplier === 1.10)
+                // Existing piecewise quadratic for horizontal pump
+                const A_horizontal_segment2 = -1;
+                const B_horizontal_segment2 = 1.8;
+                const C_horizontal_segment2 = 0.2;
+                const targetSlopeAt100Percent = 2 * A_horizontal_segment2 * 1 + B_horizontal_segment2;
+
+                if (Q_norm <= 1) {
+                    const c = shutOffHeadMultiplier; // This is 1.10 for horizontal
+                    const a = targetSlopeAt100Percent - (1.00 - c);
+                    const b = targetSlopeAt100Percent - 2 * a;
+                    let head = (a * Math.pow(Q_norm, 2) + b * Q_norm + c) * 100;
+                    if (head < 0) head = 0;
+                    return head;
+                } else {
+                    let head = (A_horizontal_segment2 * Math.pow(Q_norm, 2) + B_horizontal_segment2 * Q_norm + C_horizontal_segment2) * 100;
+                    if (head < 0) head = 0;
+                    return head;
+                }
             }
         }
 
-        /**
-         * Calculates the head percentage for the "Flat Head Capacity Curve".
-         * It's a flat line at 100% head up to 100% flow, then a parabolic curve.
-         *
-         * @param {number} flowPercent The flow rate as a percentage of rated flow.
-         * @returns {number} The head as a percentage of rated head.
-         */
         function getFlatHeadCapacityCurvePercentage(flowPercent) {
             if (flowPercent <= 100) {
                 return 100; // Flat line at 100% head up to 100% flow
@@ -796,7 +668,6 @@
             }
         }
 
-        // Function for Pump Curve Chart
         function updatePumpCurveChart(pumpRatedFlow, totalRequiredFlow, systemDemandHeadInput, pumpType) {
             const ctx = document.getElementById('pumpCurveChart');
             if (!ctx) {
@@ -807,7 +678,7 @@
 
             // Define 100% references for the graph
             const graphRatedFlow = pumpRatedFlow;
-            const graphRatedHead = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : DEFAULT_PUMP_RATED_HEAD_PSI;
+            const graphRatedHead = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : window.DEFAULT_PUMP_RATED_HEAD_PSI;
 
             // Handle invalid inputs for graph scaling
             if (graphRatedFlow <= 0 || graphRatedHead <= 0) {
@@ -862,7 +733,7 @@
 
             // Ensure max values are reasonable minimums if inputs are small
             maxXValue = Math.max(200, maxXValue); // Minimum X-axis max to show some range (e.g., for small flows)
-            maxYValuePSI = Math.max(DEFAULT_PUMP_RATED_HEAD_PSI * 1.5, maxYValuePSI); // Minimum Y-axis max to show some range (e.g., for small heads)
+            maxYValuePSI = Math.max(window.DEFAULT_PUMP_RATED_HEAD_PSI * 1.5, maxYValuePSI); // Minimum Y-axis max to show some range (e.g., for small heads)
 
 
             const chartData = {
@@ -956,12 +827,11 @@
                                 // Display actual GPM and PSI
                                 return `${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM, ${value.y.toFixed(0)} PSI (Rated)`; // Value.y is already PSI
                             }
-                            if (context.dataset.label.includes('จุดอ้างอิงที่ 150% Flow')) {
-                                // Display actual GPM and PSI for 150% flow, 65% head
-                                return `${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM, ${value.y.toFixed(0)} PSI`; // Value.y is already PSI
-                            }
                             if (context.dataset.label.includes('Water Demand')) { // New formatter for Water Demand point
                                 return `Demand: ${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM`; // Only show GPM
+                            }
+                            if (context.dataset.label.includes('จุดอ้างอิงที่ 150% Flow')) { // Ensure this label is formatted
+                                return `${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM, ${value.y.toFixed(0)} PSI`;
                             }
                             return null; // Hide datalabels for other datasets (lines)
                         },
@@ -1085,20 +955,18 @@
             });
 
             if (pumpCurveChart) {
-                pumpCurveChart.data = chartData;
-                pumpCurveChart.options = chartOptions;
-                pumpCurveChart.update();
-            } else {
-                pumpCurveChart = new Chart(chartContext, {
-                    type: 'line',
-                    data: chartData,
-                    options: chartOptions
-                });
+                pumpCurveChart.destroy(); // Destroy existing chart before creating a new one
+                pumpCurveChart = null; // Clear reference
             }
+            pumpCurveChart = new Chart(chartContext, {
+                type: 'line',
+                data: chartData,
+                options: chartOptions
+            });
         }
 
 
-        function calculate() {
+        function calculate() { // Made global
             const areaName = document.getElementById('area_name').value;
             const hazardClass = document.getElementById('hazard_class').value;
             let designAreaSqM = parseFloat(document.getElementById('design_area').value);
@@ -1112,7 +980,7 @@
             if (pumpType === 'vertical') {
                 shutOffHeadMultiplier = 1.40; // 140% for Vertical Turbine Fire Pump
             }
-            const ratedHeadForCurve = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : DEFAULT_PUMP_RATED_HEAD_PSI;
+            const ratedHeadForCurve = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : window.DEFAULT_PUMP_RATED_HEAD_PSI;
             const shutOffHead = ratedHeadForCurve * shutOffHeadMultiplier; // Now shutOffHead is always defined
 
 
@@ -1128,6 +996,7 @@
             const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
             const summaryMaxPressureElement = document.getElementById('summary_max_pressure'); 
             const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); 
+            const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_description'); // Get the new element
             const warningMessageElement = document.getElementById('warning_message'); 
 
 
@@ -1200,6 +1069,9 @@
                 if (shutOffHeadDescriptionEl) {
                     shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
                 }
+                if (reference150PercentDescriptionEl) { // Reset on error
+                    reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
+                }
                 return;
             } else {
                 if (warningMessageElement) {
@@ -1208,7 +1080,7 @@
             }
 
             // Convert design area from square meters to square feet for calculation
-            const designAreaSqFt = designAreaSqM * SQ_M_TO_SQ_FT;
+            const designAreaSqFt = designAreaSqM * window.SQ_M_TO_SQ_FT;
 
             // Removed specific warning messages related to NFPA 13 minimums.
             // Check minimum duration based on NFPA 13
@@ -1229,18 +1101,18 @@
             // 4. Calculate Required Tank Volume for MAIN DISPLAY (US Gallons)
             // This will ALWAYS use totalFlowGPM as per user's latest request
             const mainDisplayTankVolumeGallons = totalFlowGPM * durationInput;
-            const mainDisplayTankVolumeCubicMeters = mainDisplayTankVolumeGallons * US_GALLONS_TO_CUBIC_METERS;
+            const mainDisplayTankVolumeCubicMeters = mainDisplayTankVolumeGallons * window.US_GALLONS_TO_CUBIC_METERS;
 
             // 5. Calculate Required Tank Volume for SUMMARY TABLE (US Gallons)
             // This prefers pumpRatedFlow if valid, otherwise falls back to totalFlowGPM
             const flowForTankCalculationForSummary = (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) ? pumpRatedFlow : totalFlowGPM;
             const summaryTankVolumeGallons = flowForTankCalculationForSummary * durationInput;
-            const summaryTankVolumeCubicMeters = summaryTankVolumeGallons * US_GALLONS_TO_CUBIC_METERS;
+            const summaryTankVolumeCubicMeters = summaryTankVolumeGallons * window.US_GALLONS_TO_CUBIC_METERS;
 
             // 6. Actual Duration - This is simply the input duration based on the calculation
             const actualDurationMinutes = durationInput; 
 
-            // Display Results (these are the ones that stay visible in the main section)
+            // Display Results (thes are the ones that stay visible in the main section)
             if (sprinklerFlowEl) sprinklerFlowEl.textContent = sprinklerFlowGPM.toFixed(2);
             if (hoseAllowanceEl) hoseAllowanceEl.textContent = hoseAllowanceGPM.toFixed(2);
             
@@ -1332,10 +1204,16 @@
 
                     // Update shut-off head description based on pumpType
                     if (shutOffHeadDescriptionEl) {
-                        shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ ${Math.round(shutOffHeadMultiplier * 100)}% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
+                        shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
                     }
                 }
 
+                // Calculate and update 150% Flow, 65% Head description
+                const flow150Percent = (1.5 * pumpRatedFlow);
+                const head65Percent = (0.65 * ratedHeadForCurve);
+                if (reference150PercentDescriptionEl) {
+                    reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
+                }
 
                 // Pass systemDemandHeadInput to updatePumpCurveChart for the demand point
                 // FIX: Pass totalFlowGPM as the second argument to updatePumpCurveChart
@@ -1354,12 +1232,15 @@
                 if (shutOffHeadDescriptionEl) {
                     shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
                 }
+                if (reference150PercentDescriptionEl) { // Reset on error
+                    reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
+                }
                 updatePumpCurveChart(0, 0, 0, pumpType); // Pass default pumpType to clear chart
             }
         }
 
         // Function to clear all input data and results
-        function clearData() {
+        function clearData() { // Made global
             // Get all elements at once
             const areaNameEl = document.getElementById('area_name');
             const hazardClassEl = document.getElementById('hazard_class');
@@ -1389,6 +1270,7 @@
             const summaryMaxPressureElement = document.getElementById('summary_max_pressure');
             const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
             const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); 
+            const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_description'); // Get the new element
             
             // Containers/Rows for visibility
             const areaNameDisplayContainer = document.getElementById('area_name_display');
@@ -1400,69 +1282,18 @@
             const tankVolumeCalculationRow = document.getElementById('tank_volume_calculation_row');
             const demandHeadCalculationRow = document.getElementById('demand_head_calculation_row');
 
-            // New table cells for explanations (to clear text content)
+            // Get calculation explanation cells
             const sprinklerFlowCalculationCell = document.getElementById('sprinkler_flow_calculation_cell');
             const totalFlowCalculationCell = document.getElementById('total_flow_calculation_cell'); 
             const tankVolumeCalculationCell = document.getElementById('tank_volume_calculation_cell');
             const demandHeadCalculationCell = document.getElementById('demand_head_calculation_cell');
 
-            // Main result rows (to hide/show)
-            const totalFlowRow = document.getElementById('total_flow_row');
-            const tankVolumeRow = document.getElementById('tank_volume_row');
-            const actualDurationRow = document.getElementById('actual_duration_row');
-            const demandHeadRow = document.getElementById('demand_head_row');
-
-
-            // Clear input fields
-            if (areaNameEl) areaNameEl.value = '';
-            if (hazardClassEl) hazardClassEl.value = 'light';
-            if (designAreaEl) designAreaEl.value = '';
-            if (durationEl) durationEl.value = '30';
-            if (pumpRatedFlowEl) pumpRatedFlowEl.value = '';
-            if (systemDemandHeadEl) systemDemandHeadEl.value = ''; // Set to empty string
-            if (pumpTypeEl) pumpTypeEl.value = 'horizontal'; // Reset pump type
-
-            // Clear results display (spans within the table)
-            if (sprinklerFlowDisplayEl) sprinklerFlowDisplayEl.textContent = '0.00';
-            if (hoseAllowanceDisplayEl) hoseAllowanceDisplayEl.textContent = '0.00';
-            if (totalFlowDisplayEl) totalFlowDisplayEl.textContent = '0.00';
-            if (tankVolumeDisplayEl) tankVolumeDisplayEl.textContent = '0.00';
-            if (actualDurationDisplayEl) actualDurationDisplayEl.textContent = '0';
-            if (demandHeadDisplayEl) demandHeadDisplayEl.textContent = '0.00';
-
-            // Clear summary table
-            if (summarySprinklerFlowEl) summarySprinklerFlowEl.textContent = '0.00';
-            if (summaryHoseAllowanceEl) summaryHoseAllowanceEl.textContent = '0.00';
-            if (summaryTotalFlowEl) summaryTotalFlowEl.textContent = '0.00';
-            if (summaryDemandHeadTableEl) summaryDemandHeadTableEl.textContent = '0.00'; // Clear new summary field
-            if (summaryTankVolumeEl) summaryTankVolumeEl.textContent = '0.00'; // Reset to original label
-            if (summaryActualDurationEl) summaryActualDurationEl.textContent = '0';
-            if (summaryRecommendedPumpFlowEl) summaryRecommendedPumpFlowEl.textContent = '0.00';
-            if (summaryEstimatedPressureEl) summaryEstimatedPressureEl.textContent = '0.00'; 
-            
-            // Clear new field with null check
-            if (summaryMaxPressureElement) {
-                summaryMaxPressureElement.textContent = '0.00'; 
-            }
-
-            // Reset dynamic label in summary table
-            if (summaryTankVolumeLabel) summaryTankVolumeLabel.textContent = 'ขนาดถังเก็บน้ำที่ต้องการ';
-
-            // Reset shut-off head description to default (horizontal pump)
-            if (shutOffHeadDescriptionEl) {
-                shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
-            }
-
-            // Hide dynamic result elements and calculation explanations (ensure they are hidden on clear)
-            if (areaNameDisplayContainer) areaNameDisplayContainer.style.display = 'none';
-            if (warningMessageElement) warningMessageElement.classList.add('hidden');
-            
-            // Hide calculation explanation rows
+            // Hide all calculation explanation rows
             if (sprinklerFlowCalculationRow) sprinklerFlowCalculationRow.classList.add('hidden');
             if (totalFlowCalculationRow) totalFlowCalculationRow.classList.add('hidden'); 
             if (tankVolumeCalculationRow) tankVolumeCalculationRow.classList.add('hidden');
             if (demandHeadCalculationRow) demandHeadCalculationRow.classList.add('hidden');
-
+            
             // Clear text content of calculation explanation cells
             if (sprinklerFlowCalculationCell) sprinklerFlowCalculationCell.textContent = '';
             if (totalFlowCalculationCell) totalFlowCalculationCell.textContent = ''; 
@@ -1470,7 +1301,11 @@
             if (demandHeadCalculationCell) demandHeadCalculationCell.textContent = '';
 
             // Set the visibility of these containers back to their initial hidden state
-            // totalFlowRow should remain visible as it's a primary result.
+            const totalFlowRow = document.getElementById('total_flow_row'); 
+            const tankVolumeRow = document.getElementById('tank_volume_row'); 
+            const actualDurationRow = document.getElementById('actual_duration_row'); 
+            const demandHeadRow = document.getElementById('demand_head_row'); 
+
             if (totalFlowRow) totalFlowRow.classList.remove('hidden'); // Should remain visible
             if (tankVolumeRow) tankVolumeRow.classList.add('hidden'); // Hide on clear
             if (actualDurationRow) actualDurationRow.classList.add('hidden'); // Hide on clear
@@ -1482,7 +1317,8 @@
 
         // Initialize calculation on page load with default values
         document.addEventListener('DOMContentLoaded', () => {
-            calculate();
+            // Use setTimeout to ensure all global window properties are set before calculate is called
+            setTimeout(calculate, 0);
         });
     </script>
 </body>
