@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.46 By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.47 By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -373,7 +373,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="version-text">V.1.46</div> <!-- Updated version text here -->
+        <div class="version-text">V.1.47</div> <!-- Updated version text here -->
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
             คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ <br> (NFPA Guidance) By วัยรุ่นเซินเจิ้น
         </h1>
@@ -669,7 +669,7 @@
             }
         }
 
-        function updatePumpCurveChart(pumpRatedFlow, totalRequiredFlow, systemDemandHeadInput, pumpType) {
+        function updatePumpCurveChart(pumpRatedFlow, totalRequiredFlow, systemDemandHeadEffective, pumpType) { // Renamed systemDemandHeadInput to systemDemandHeadEffective
             const ctx = document.getElementById('pumpCurveChart');
             if (!ctx) {
                 console.error("Canvas element 'pumpCurveChart' not found.");
@@ -679,7 +679,7 @@
 
             // Define 100% references for the graph
             const graphRatedFlow = pumpRatedFlow;
-            const graphRatedHead = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : window.DEFAULT_PUMP_RATED_HEAD_PSI;
+            const graphRatedHead = systemDemandHeadEffective; // Use the effective head directly
 
             // Handle invalid inputs for graph scaling
             if (graphRatedFlow <= 0 || graphRatedHead <= 0) {
@@ -708,7 +708,7 @@
 
             // Generate smooth curve points for Performance Curve
             const performanceCurveData = [];
-            const flatHeadCapacityCurveData = []; // Data for the new curved flat head line
+            const flatHeadCapacityCurveData = []; // Data for the new parabolic flat head line
             const numCurveSegments = 100; // For smoother curve
 
             for (let i = 0; i <= numCurveSegments; i++) {
@@ -729,8 +729,8 @@
             // Determine max values for axes (slightly more than max data point)
             // Max X value should be based on the extended flow percentage or demand flow percentage, whichever is higher
             let maxXValue = Math.max(maxCurveFlowPercent, demandFlowPercent) * 1.2; // Increased multiplier for padding
-            // Max Y value should be based on shut-off head or demand head, whichever is higher
-            let maxYValuePSI = Math.max(shutOffHead, systemDemandHeadInput) * 1.5; // Increased multiplier for padding
+            // Max Y value should be based on shut-off head or effective demand head, whichever is higher
+            let maxYValuePSI = Math.max(shutOffHead, graphRatedHead) * 1.5; // Changed to graphRatedHead
 
             // Ensure max values are reasonable minimums if inputs are small
             maxXValue = Math.max(200, maxXValue); // Minimum X-axis max to show some range (e.g., for small flows)
@@ -829,7 +829,7 @@
                                 return `${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM, ${value.y.toFixed(0)} PSI (Rated)`; // Value.y is already PSI
                             }
                             if (context.dataset.label.includes('Water Demand')) { // New formatter for Water Demand point
-                                return `Demand: ${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM`; // Only show GPM
+                                return `Demand: ${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM, ${value.y.toFixed(0)} PSI`; // Now shows PSI
                             }
                             if (context.dataset.label.includes('จุดอ้างอิงที่ 150% Flow')) { // Ensure this label is formatted
                                 return `${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM, ${value.y.toFixed(0)} PSI`;
@@ -917,11 +917,12 @@
             });
 
             // Water Demand Point (Red Triangle)
-            if (totalRequiredFlow > 0 && graphRatedFlow > 0 && graphRatedHead > 0 && !isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) {
+            // Plot if totalRequiredFlow and graphRatedFlow are positive
+            if (totalRequiredFlow > 0 && graphRatedFlow > 0) { // Simplified condition
                 chartData.datasets.push({
                     type: 'scatter',
                     label: `อัตราไหลรวมที่ต้องการ (Water Demand)`,
-                    data: [{ x: demandFlowPercent, y: systemDemandHeadInput }], // Y is already PSI
+                    data: [{ x: demandFlowPercent, y: graphRatedHead }], // Use graphRatedHead for Y
                     backgroundColor: 'rgba(255, 0, 0, 1)',
                     borderColor: 'rgba(255, 0, 0, 1)',
                     pointRadius: 4, // Adjusted size to 4
@@ -981,6 +982,7 @@
             if (pumpType === 'vertical') {
                 shutOffHeadMultiplier = 1.40; // 140% for Vertical Turbine Fire Pump
             }
+            // Use ratedHeadForCurve as the effective head for calculations and chart plotting
             const ratedHeadForCurve = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput : window.DEFAULT_PUMP_RATED_HEAD_PSI;
             const shutOffHead = ratedHeadForCurve * shutOffHeadMultiplier; // Now shutOffHead is always defined
 
@@ -1143,7 +1145,7 @@
             
             // Update the new summary_demand_head_table field
             if (summaryDemandHeadTableEl) {
-                summaryDemandHeadTableEl.textContent = (!isNaN(systemDemandHeadInput) && systemDemandHeadInput > 0) ? systemDemandHeadInput.toFixed(2) : '0.00';
+                summaryDemandHeadTableEl.textContent = ratedHeadForCurve.toFixed(2); // Use ratedHeadForCurve here
             }
 
 
@@ -1193,12 +1195,7 @@
 
             // Update display head and estimated pressure
             if (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) {
-                const calculatedRequiredHead = isNaN(systemDemandHeadInput) ? 0 : systemDemandHeadInput; // Set to 0 if invalid
-                const estimatedPressureWithAddition = calculatedRequiredHead; 
-                // Removed demandHeadCalculationCell update for main results as it's removed
-                // Removed demandHeadDisplayElement update for main results as it's removed
-                // Removed demandHeadRow visibility toggle for main results as it's removed
-                // Removed demandHeadCalculationRow visibility toggle for main results as it's removed
+                const estimatedPressureWithAddition = ratedHeadForCurve; // Use ratedHeadForCurve here
                 
                 if (summaryEstimatedPressureEl) summaryEstimatedPressureEl.textContent = estimatedPressureWithAddition.toFixed(2); // Changed to toFixed(2)
 
@@ -1220,14 +1217,10 @@
                     reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
                 }
 
-                // Pass systemDemandHeadInput to updatePumpCurveChart for the demand point
-                // FIX: Pass totalFlowGPM as the second argument to updatePumpCurveChart
-                updatePumpCurveChart(pumpRatedFlow, totalFlowGPM, systemDemandHeadInput, pumpType); // Pass pumpType to chart update
+                // Pass ratedHeadForCurve to updatePumpCurveChart for the demand point
+                updatePumpCurveChart(pumpRatedFlow, totalFlowGPM, ratedHeadForCurve, pumpType); // Pass ratedHeadForCurve to chart update
             } else {
                 // Clear or reset if inputs are invalid
-                // Removed demandHeadDisplayElement reset for main results as it's removed
-                // Removed demandHeadRow visibility toggle for main results as it's removed
-                // Removed demandHeadCalculationRow visibility toggle for main results as it's removed
                 if (summaryEstimatedPressureEl) summaryEstimatedPressureEl.textContent = '0.00'; 
                 // Clear new field on invalid input with null check
                 if (summaryMaxPressureElement) {
