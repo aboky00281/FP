@@ -249,7 +249,7 @@
             }
 
             /* Hide calculation explanations and description column on print */
-            #sprinkler_flow_calculation_row, #tank_volume_calculation_row, #demand_head_calculation_row, #total_flow_calculation_row { /* Added #total_flow_calculation_row */
+            #sprinkler_flow_calculation_row, #tank_volume_calculation_row, #demand_head_calculation_row, #total_flow_calculation_row, #hose_allowance_calculation_row { /* Added #total_flow_calculation_row and #hose_allowance_calculation_row */
                 display: none !important; /* Hide these rows on print */
             }
 
@@ -448,6 +448,14 @@
                         <tr class="hidden" id="sprinkler_flow_calculation_row">
                             <td colspan="2" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="sprinkler_flow_calculation_cell"></td>
                         </tr>
+                        <!-- Added Hose Stream Allowance row -->
+                        <tr id="hose_allowance_row">
+                            <td class="py-2 px-4 border-b border-gray-300 text-base">อัตราการไหลสำหรับท่อยืน (Hose Stream Allowance)</td>
+                            <td class="py-2 px-4 border-b border-gray-300 text-base"><span id="hose_allowance">0.00</span> GPM</td>
+                        </tr>
+                        <tr class="hidden" id="hose_allowance_calculation_row">
+                            <td colspan="2" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="hose_allowance_calculation_cell"></td>
+                        </tr>
                         <tr id="total_flow_row">
                             <td class="py-2 px-4 border-b border-gray-300 text-base">อัตราการไหลรวมที่ต้องการ</td>
                             <td class="py-2 px-4 border-b border-gray-300 text-red-600 text-base"><span id="total_flow">0.00</span> GPM</td>
@@ -456,14 +464,7 @@
                         <tr class="hidden" id="total_flow_calculation_row">
                             <td colspan="2" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="total_flow_calculation_cell"></td>
                         </tr>
-                        <tr class="hidden" id="demand_head_row">
-                            <td class="py-2 px-4 border-b border-gray-300 text-base">แรงดันที่จุดต้องการ</td>
-                            <td class="py-2 px-4 border-b border-gray-300 text-red-600 text-base"><span id="demand_head_display">0.00</span> PSI</td>
-                            <!-- Removed "ดูวิธีการคำนวณ" button -->
-                        </tr>
-                        <tr class="hidden" id="demand_head_calculation_row">
-                            <td colspan="2" class="py-2 px-4 border-b border-gray-300 text-base small-text" id="demand_head_calculation_cell"></td>
-                        </tr>
+                        <!-- Removed demand_head_row and demand_head_calculation_row as requested -->
                         <tr id="actual_duration_row"> <!-- Moved this row up -->
                             <td class="py-2 px-4 border-b border-gray-300 text-base">เวลากักเก็บน้ำที่คำนวณ</td>
                             <td class="py-2 px-4 border-b border-gray-300 text-base"><span id="actual_duration">0</span> นาที</td>
@@ -991,8 +992,8 @@
             const sprinklerFlowCalculationCell = document.getElementById('sprinkler_flow_calculation_cell'); 
             const totalFlowCalculationCell = document.getElementById('total_flow_calculation_cell'); 
             const tankVolumeCalculationCell = document.getElementById('tank_volume_calculation_cell'); 
-            const demandHeadDisplayElement = document.getElementById('demand_head_display');
-            const demandHeadCalculationCell = document.getElementById('demand_head_calculation_cell'); 
+            // Removed demandHeadDisplayElement and demandHeadCalculationCell as they are no longer in the main results
+            const hoseAllowanceCalculationCell = document.getElementById('hose_allowance_calculation_cell'); // New element
             const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
             const summaryMaxPressureElement = document.getElementById('summary_max_pressure'); 
             const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); 
@@ -1002,7 +1003,7 @@
 
             // Table rows for main results
             const sprinklerFlowEl = document.getElementById('sprinkler_flow');
-            const hoseAllowanceEl = document.getElementById('hose_allowance');
+            const hoseAllowanceEl = document.getElementById('hose_allowance'); // Now used for main display
             const totalFlowEl = document.getElementById('total_flow');
             const tankVolumeEl = document.getElementById('tank_volume');
             const actualDurationEl = document.getElementById('actual_duration');
@@ -1020,14 +1021,15 @@
             const summaryDemandHeadTableEl = document.getElementById('summary_demand_head_table');
 
             // Table row elements for visibility toggling
-            const demandHeadRow = document.getElementById('demand_head_row'); 
+            // Removed demandHeadRow and demandHeadCalculationRow as they are no longer in the main results
+            const hoseAllowanceRow = document.getElementById('hose_allowance_row'); // New element for visibility
             const tankVolumeRow = document.getElementById('tank_volume_row'); 
             const actualDurationRow = document.getElementById('actual_duration_row'); 
             const totalFlowRow = document.getElementById('total_flow_row'); 
             const sprinklerFlowCalculationRow = document.getElementById('sprinkler_flow_calculation_row'); 
             const totalFlowCalculationRow = document.getElementById('total_flow_calculation_row'); 
-            const demandHeadCalculationRow = document.getElementById('demand_head_calculation_row'); 
             const tankVolumeCalculationRow = document.getElementById('tank_volume_calculation_row'); 
+            const hoseAllowanceCalculationRow = document.getElementById('hose_allowance_calculation_row'); // New element for visibility
 
 
             // Input validation for design area
@@ -1040,12 +1042,11 @@
                 // Reset results
                 if (sprinklerFlowEl) sprinklerFlowEl.textContent = '0.00';
                 if (sprinklerFlowCalculationRow) sprinklerFlowCalculationRow.classList.add('hidden'); // Hide row
-                if (hoseAllowanceEl) hoseAllowanceEl.textContent = '0.00';
+                if (hoseAllowanceEl) hoseAllowanceEl.textContent = '0.00'; // Reset new hose allowance display
+                if (hoseAllowanceRow) hoseAllowanceRow.classList.add('hidden'); // Hide new row
+                if (hoseAllowanceCalculationRow) hoseAllowanceCalculationRow.classList.add('hidden'); // Hide new row
                 if (totalFlowEl) totalFlowEl.textContent = '0.00';
                 if (totalFlowCalculationRow) totalFlowCalculationRow.classList.add('hidden'); // Hide row
-                if (demandHeadDisplayElement) demandHeadDisplayElement.textContent = '0.00';
-                if (demandHeadRow) demandHeadRow.classList.add('hidden'); // Hide row
-                if (demandHeadCalculationRow) demandHeadCalculationRow.classList.add('hidden'); // Hide row
                 
                 // Hide these elements in the main display (ensure they are hidden on error)
                 if (tankVolumeRow) tankVolumeRow.classList.add('hidden'); // Hide row
@@ -1114,7 +1115,8 @@
 
             // Display Results (thes are the ones that stay visible in the main section)
             if (sprinklerFlowEl) sprinklerFlowEl.textContent = sprinklerFlowGPM.toFixed(2);
-            if (hoseAllowanceEl) hoseAllowanceEl.textContent = hoseAllowanceGPM.toFixed(2);
+            if (hoseAllowanceEl) hoseAllowanceEl.textContent = hoseAllowanceGPM.toFixed(2); // Display hose allowance
+            if (hoseAllowanceRow) hoseAllowanceRow.classList.remove('hidden'); // Ensure hose allowance row is visible
             
             if (totalFlowEl) totalFlowEl.textContent = totalFlowGPM.toFixed(2);
             if (totalFlowRow) totalFlowRow.classList.remove('hidden'); // Ensure it's visible
@@ -1158,6 +1160,9 @@
             if (sprinklerFlowCalculationCell) sprinklerFlowCalculationCell.textContent = `วิธีการคำนวณ: พื้นที่ป้องกัน ${designAreaSqM.toFixed(2)} ตร.ม. (${designAreaSqFt.toFixed(2)} ตร.ฟุต) x อัตราหนาแน่นน้ำ ${data.density_gpm_sqft.toFixed(2)} GPM/ตร.ฟุต = ${sprinklerFlowGPM.toFixed(2)} GPM`;
             // Note: class 'hidden' is managed by toggleSprinklerCalculation()
 
+            // Set hose allowance calculation explanation
+            if (hoseAllowanceCalculationCell) hoseAllowanceCalculationCell.textContent = `วิธีการคำนวณ: อัตราการไหลสำหรับท่อยืน (Hose Stream Allowance) คือ ${hoseAllowanceGPM.toFixed(2)} GPM ตามประเภทอันตรายที่เลือก`;
+
             // Set total flow calculation explanation
             if (totalFlowCalculationCell) totalFlowCalculationCell.textContent = `วิธีการคำนวณ: อัตราการไหลของน้ำดับเพลิง (Sprinkler) ${sprinklerFlowGPM.toFixed(2)} GPM + อัตราการไหลสำหรับท่อยืน (Hose Stream Allowance) ${hoseAllowanceGPM.toFixed(2)} GPM = ${totalFlowGPM.toFixed(2)} GPM`;
 
@@ -1190,11 +1195,11 @@
             if (!isNaN(pumpRatedFlow) && pumpRatedFlow > 0) {
                 const calculatedRequiredHead = isNaN(systemDemandHeadInput) ? 0 : systemDemandHeadInput; // Set to 0 if invalid
                 const estimatedPressureWithAddition = calculatedRequiredHead; 
-                if (demandHeadCalculationCell) demandHeadCalculationCell.textContent = `วิธีการคำนวณ: แรงดันที่จุดต้องการมาจากค่าที่ป้อนในช่อง "แรงดันต้องการของระบบ (PSI)" โดยตรง คือ ${calculatedRequiredHead.toFixed(2)} PSI.`; // Adjusted text here
-
-                if (demandHeadDisplayElement) demandHeadDisplayElement.textContent = calculatedRequiredHead.toFixed(2); // Changed to toFixed(2)
-                if (demandHeadRow) demandHeadRow.classList.remove('hidden'); // Make row visible
-                if (demandHeadCalculationRow) demandHeadCalculationRow.classList.add('hidden'); // This should be hidden by default
+                // Removed demandHeadCalculationCell update for main results as it's removed
+                // Removed demandHeadDisplayElement update for main results as it's removed
+                // Removed demandHeadRow visibility toggle for main results as it's removed
+                // Removed demandHeadCalculationRow visibility toggle for main results as it's removed
+                
                 if (summaryEstimatedPressureEl) summaryEstimatedPressureEl.textContent = estimatedPressureWithAddition.toFixed(2); // Changed to toFixed(2)
 
                 // Update the new summary_max_pressure field with null check
@@ -1220,9 +1225,9 @@
                 updatePumpCurveChart(pumpRatedFlow, totalFlowGPM, systemDemandHeadInput, pumpType); // Pass pumpType to chart update
             } else {
                 // Clear or reset if inputs are invalid
-                if (demandHeadDisplayElement) demandHeadDisplayElement.textContent = '0.00';
-                if (demandHeadRow) demandHeadRow.classList.add('hidden'); // Hide row
-                if (demandHeadCalculationRow) demandHeadCalculationRow.classList.add('hidden');
+                // Removed demandHeadDisplayElement reset for main results as it's removed
+                // Removed demandHeadRow visibility toggle for main results as it's removed
+                // Removed demandHeadCalculationRow visibility toggle for main results as it's removed
                 if (summaryEstimatedPressureEl) summaryEstimatedPressureEl.textContent = '0.00'; 
                 // Clear new field on invalid input with null check
                 if (summaryMaxPressureElement) {
@@ -1252,11 +1257,11 @@
             
             // Main results display elements (now spans within table cells)
             const sprinklerFlowDisplayEl = document.getElementById('sprinkler_flow');
-            const hoseAllowanceDisplayEl = document.getElementById('hose_allowance');
+            const hoseAllowanceDisplayEl = document.getElementById('hose_allowance'); // New element to clear
             const totalFlowDisplayEl = document.getElementById('total_flow');
             const tankVolumeDisplayEl = document.getElementById('tank_volume');
             const actualDurationDisplayEl = document.getElementById('actual_duration');
-            const demandHeadDisplayEl = document.getElementById('demand_head_display');
+            // Removed demandHeadDisplayEl as it's no longer in the main results
 
             // Summary table elements
             const summarySprinklerFlowEl = document.getElementById('summary_sprinkler_flow');
@@ -1278,39 +1283,84 @@
             
             // New table rows for explanations
             const sprinklerFlowCalculationRow = document.getElementById('sprinkler_flow_calculation_row');
+            const hoseAllowanceCalculationRow = document.getElementById('hose_allowance_calculation_row'); // New element
             const totalFlowCalculationRow = document.getElementById('total_flow_calculation_row'); 
             const tankVolumeCalculationRow = document.getElementById('tank_volume_calculation_row');
-            const demandHeadCalculationRow = document.getElementById('demand_head_calculation_row');
+            // Removed demandHeadCalculationRow as it's no longer in the main results
 
             // Get calculation explanation cells
             const sprinklerFlowCalculationCell = document.getElementById('sprinkler_flow_calculation_cell');
+            const hoseAllowanceCalculationCell = document.getElementById('hose_allowance_calculation_cell'); // New element
             const totalFlowCalculationCell = document.getElementById('total_flow_calculation_cell'); 
             const tankVolumeCalculationCell = document.getElementById('tank_volume_calculation_cell');
-            const demandHeadCalculationCell = document.getElementById('demand_head_calculation_cell');
+            // Removed demandHeadCalculationCell as it's no longer in the main results
 
             // Hide all calculation explanation rows
             if (sprinklerFlowCalculationRow) sprinklerFlowCalculationRow.classList.add('hidden');
+            if (hoseAllowanceCalculationRow) hoseAllowanceCalculationRow.classList.add('hidden'); // Hide new row
             if (totalFlowCalculationRow) totalFlowCalculationRow.classList.add('hidden'); 
             if (tankVolumeCalculationRow) tankVolumeCalculationRow.classList.add('hidden');
-            if (demandHeadCalculationRow) demandHeadCalculationRow.classList.add('hidden');
             
             // Clear text content of calculation explanation cells
             if (sprinklerFlowCalculationCell) sprinklerFlowCalculationCell.textContent = '';
+            if (hoseAllowanceCalculationCell) hoseAllowanceCalculationCell.textContent = ''; // Clear new cell
             if (totalFlowCalculationCell) totalFlowCalculationCell.textContent = ''; 
             if (tankVolumeCalculationCell) tankVolumeCalculationCell.textContent = '';
-            if (demandHeadCalculationCell) demandHeadCalculationCell.textContent = '';
+            
 
             // Set the visibility of these containers back to their initial hidden state
             const totalFlowRow = document.getElementById('total_flow_row'); 
+            const hoseAllowanceRow = document.getElementById('hose_allowance_row'); // New element
             const tankVolumeRow = document.getElementById('tank_volume_row'); 
             const actualDurationRow = document.getElementById('actual_duration_row'); 
-            const demandHeadRow = document.getElementById('demand_head_row'); 
+            // Removed demandHeadRow as it's no longer in the main results
 
-            if (totalFlowRow) totalFlowRow.classList.remove('hidden'); // Should remain visible
-            if (tankVolumeRow) tankVolumeRow.classList.add('hidden'); // Hide on clear
-            if (actualDurationRow) actualDurationRow.classList.add('hidden'); // Hide on clear
-            if (demandHeadRow) demandHeadRow.classList.add('hidden'); // Hide on clear
+            // Reset input fields
+            if (areaNameEl) areaNameEl.value = '';
+            if (hazardClassEl) hazardClassEl.value = 'light';
+            if (designAreaEl) designAreaEl.value = '';
+            if (durationEl) durationEl.value = '30';
+            if (pumpRatedFlowEl) pumpRatedFlowEl.value = '';
+            if (systemDemandHeadEl) systemDemandHeadEl.value = '';
+            if (pumpTypeEl) pumpTypeEl.value = 'horizontal'; // Reset pump type
 
+            // Reset main display values
+            if (sprinklerFlowDisplayEl) sprinklerFlowDisplayEl.textContent = '0.00';
+            if (hoseAllowanceDisplayEl) hoseAllowanceDisplayEl.textContent = '0.00'; // Reset new hose allowance display
+            if (totalFlowDisplayEl) totalFlowDisplayEl.textContent = '0.00';
+            if (tankVolumeDisplayEl) tankVolumeDisplayEl.textContent = '0.00';
+            if (actualDurationDisplayEl) actualDurationDisplayEl.textContent = '0';
+            
+            // Hide main display rows that should be hidden on clear
+            if (hoseAllowanceRow) hoseAllowanceRow.classList.add('hidden'); // Hide new row
+            if (tankVolumeRow) tankVolumeRow.classList.add('hidden');
+            if (actualDurationRow) actualDurationRow.classList.add('hidden');
+            if (totalFlowRow) totalFlowRow.classList.add('hidden'); // Also hide total flow on clear
+
+            // Reset summary table values
+            if (summarySprinklerFlowEl) summarySprinklerFlowEl.textContent = '0.00';
+            if (summaryHoseAllowanceEl) summaryHoseAllowanceEl.textContent = '0.00';
+            if (summaryTotalFlowEl) summaryTotalFlowEl.textContent = '0.00';
+            if (summaryDemandHeadTableEl) summaryDemandHeadTableEl.textContent = '0.00';
+            if (summaryTankVolumeEl) summaryTankVolumeEl.textContent = '0.00';
+            if (summaryActualDurationEl) summaryActualDurationEl.textContent = '0';
+            if (summaryRecommendedPumpFlowEl) summaryRecommendedPumpFlowEl.textContent = '0.00';
+            if (summaryEstimatedPressureEl) summaryEstimatedPressureEl.textContent = '0.00';
+            if (summaryMaxPressureElement) summaryMaxPressureElement.textContent = '0.00';
+            if (summaryTankVolumeLabel) summaryTankVolumeLabel.textContent = 'ขนาดถังเก็บน้ำที่ต้องการ';
+            
+            // Hide area name display
+            if (areaNameDisplayContainer) areaNameDisplayContainer.style.display = 'none';
+            // Hide warning message
+            if (warningMessageElement) warningMessageElement.classList.add('hidden');
+
+            // Reset shut-off head description on clear
+            if (shutOffHeadDescriptionEl) {
+                shutOffHeadDescriptionEl.innerHTML = `<span style="color: rgb(128, 0, 0);">🔴</span> จุด Shut-off Head (Max. churn): แรงดันสูงสุดที่ปั๊มสร้างได้ (ประมาณ 110% ของ แรงดันกำหนดที่ผู้ใช้ป้อน)`;
+            }
+            if (reference150PercentDescriptionEl) { // Reset on clear
+                reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
+            }
 
             updatePumpCurveChart(0, 0, 0, 'horizontal'); // Pass default pumpType to clear chart
         }
