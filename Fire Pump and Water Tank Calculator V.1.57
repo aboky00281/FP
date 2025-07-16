@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.57 By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.67 By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -78,7 +78,7 @@
             transform: translateY(0);
         }
         .btn-secondary {
-            width: 100%;
+            /* Removed width: 100%; to allow w-1/2 from Tailwind */
             padding: 12px 20px;
             background-color: #3b82f6;
             color: white;
@@ -266,11 +266,16 @@
                 display: none !important;
             }
 
-            .chart-disclaimer {
-                display: block !important;
+            /* Hide graph summary on print, but keep chart disclaimer visible */
+            #graph_summary { /* Only hide graph_summary */
+                display: none !important;
+            }
+            .chart-disclaimer { /* Ensure this is visible on print */
+                display: block !important; /* Override display: none from initial HTML */
                 font-size: 10px !important; /* Even smaller font for disclaimer */
                 color: #333 !important;
             }
+
             #demand_head_display_container { /* This is now a tr, but the ID is on the span */
                 font-weight: normal; /* Changed from bold to normal for print */
             }
@@ -380,7 +385,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="version-text">V.1.57</div> <!-- Updated version text here -->
+        <div class="version-text">V.1.65</div> <!-- Updated version text here -->
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
             คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ <br> (NFPA Guidance) By วัยรุ่นเซินเจิ้น
         </h1>
@@ -520,14 +525,14 @@
             </div>
         </div>
 
-        <div id="chart_section" class="pt-8"> <!-- New section for chart and related elements -->
+        <div id="chart_section" class="pt-8"> <!-- Removed hidden class -->
             <!-- Moved chart and its disclaimer here -->
             <canvas id="pumpCurveChart"></canvas>
-            <p class="chart-disclaimer">
+            <p class="chart-disclaimer hidden">
                 * กราฟนี้เป็นเพียงการจำลอง Performance Curve อย่างง่าย ไม่ใช่ข้อมูลจำเพาะที่แท้จริง โปรดอ้างอิงข้อมูลจากผู้ผลิต
             </p>
 
-            <div id="graph_summary" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div id="graph_summary" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
                 <h4 class="text-lg font-semibold text-blue-800 mb-3">
                     คำอธิบายกราฟ:
                     <!-- Removed "ดูคำอธิบาย" button -->
@@ -596,8 +601,8 @@
             </table>
         </div>
 
-        <div class="print-pdf-buttons mt-6 flex flex-col space-y-4">
-            <button onclick="window.print()" class="btn-secondary rounded-lg shadow-md">พิมพ์ (Print)</button>
+        <div class="print-pdf-buttons mt-6 flex flex-col space-y-4 justify-center items-center">
+            <button onclick="window.print()" class="btn-secondary rounded-lg shadow-md w-1/2">พิมพ์ (Print)</button>
             <small class="small-text text-center">
                 สำหรับการส่งออกเป็น PDF โปรดเลือก "บันทึกเป็น PDF" ในหน้าต่างการพิมพ์ของเบราว์เซอร์
             </small>
@@ -749,14 +754,58 @@
             const graphRatedHead = systemDemandHeadEffective; // Use the effective head directly
 
             // Handle invalid inputs for graph scaling
+            // If pumpRatedFlow or graphRatedHead is 0 or less, create an empty chart
             if (graphRatedFlow <= 0 || graphRatedHead <= 0) {
-                // Clear chart or show message if essential rated values are missing
                 if (pumpCurveChart) {
                     pumpCurveChart.destroy();
-                    pumpCurveChart = null;
                 }
-                // Optionally display a message on the canvas or UI
-                return;
+                // Create a new chart with no datasets, but with scales defined
+                pumpCurveChart = new Chart(chartContext, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [] // Empty datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            'x-axis-bottom': {
+                                type: 'linear',
+                                position: 'bottom',
+                                title: { display: true, text: 'percent of rated capacity' },
+                                beginAtZero: true,
+                                max: 200, // Default max for empty graph
+                                ticks: { stepSize: 10 },
+                                grid: { drawOnChartArea: true, color: 'rgba(200, 200, 200, 0.5)', lineWidth: 1 }
+                            },
+                            'x-axis-top': {
+                                type: 'linear',
+                                position: 'top',
+                                title: { display: true, text: 'Flow (GPM)' },
+                                beginAtZero: true,
+                                max: (200 / 100) * window.DEFAULT_PUMP_RATED_HEAD_PSI, // Scale based on default head
+                                ticks: { stepSize: (50 / 100) * window.DEFAULT_PUMP_RATED_HEAD_PSI },
+                                grid: { drawOnChartArea: false }
+                            },
+                            y: {
+                                type: 'linear',
+                                position: 'left',
+                                title: { display: true, text: 'แรงดัน (PSI)' },
+                                beginAtZero: true,
+                                max: window.DEFAULT_PUMP_RATED_HEAD_PSI * 1.5, // Default max for empty graph
+                                ticks: { stepSize: 10 },
+                                grid: { drawOnChartArea: true, color: 'rgba(200, 200, 200, 0.5)', lineWidth: 1 }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            title: { display: true, text: 'กราฟ Flow Rate vs. Head (Performance Curve จำลอง)' },
+                            datalabels: { display: false } // No datalabels for empty chart
+                        }
+                    }
+                });
+                return; // Exit function after creating empty chart
             }
 
             // Calculate shut-off head based on pump type
@@ -1070,6 +1119,9 @@
             const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); 
             const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_description'); // Corrected ID
             const warningMessageElement = document.getElementById('warning_message'); 
+            const chartDisclaimerElement = document.querySelector('.chart-disclaimer'); // Get the chart disclaimer element
+            const graphSummaryElement = document.getElementById('graph_summary'); // Get the graph summary element
+            const chartSectionElement = document.getElementById('chart_section'); // Get the chart section element
 
 
             // Table rows for main results
@@ -1144,6 +1196,10 @@
                 if (reference150PercentDescriptionEl) { // Reset on error
                     reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
                 }
+                // Hide chart and summary on error
+                if (chartSectionElement) chartSectionElement.classList.add('hidden'); // Hide chart section
+                if (chartDisclaimerElement) chartDisclaimerElement.classList.add('hidden');
+                if (graphSummaryElement) graphSummaryElement.classList.add('hidden');
                 return;
             } else {
                 if (warningMessageElement) {
@@ -1288,6 +1344,12 @@
 
                 // Pass ratedHeadForCurve to updatePumpCurveChart for the demand point
                 updatePumpCurveChart(pumpRatedFlow, totalFlowGPM, ratedHeadForCurve, pumpType); // Pass ratedHeadForCurve to chart update
+                
+                // Show chart and summary when calculation is successful
+                if (chartSectionElement) chartSectionElement.classList.remove('hidden'); // Show chart section
+                if (chartDisclaimerElement) chartDisclaimerElement.classList.remove('hidden');
+                if (graphSummaryElement) graphSummaryElement.classList.remove('hidden');
+
             } else {
                 // Clear or reset if inputs are invalid
                 if (summaryEstimatedPressureEl) summaryEstimatedPressureEl.textContent = '0.00'; 
@@ -1303,6 +1365,10 @@
                     reference150PercentDescriptionEl.innerHTML = `<span style="color: rgba(153, 102, 255, 1);">🟣</span> จุดอ้างอิง 150% Flow, 65% Head`;
                 }
                 updatePumpCurveChart(0, 0, 0, pumpType); // Pass default pumpType to clear chart
+                // Hide chart and summary on error
+                if (chartSectionElement) chartSectionElement.classList.add('hidden'); // Hide chart section
+                if (chartDisclaimerElement) chartDisclaimerElement.classList.add('hidden');
+                if (graphSummaryElement) graphSummaryElement.classList.add('hidden');
             }
         }
 
@@ -1342,6 +1408,9 @@
             // Containers/Rows for visibility
             const areaNameDisplayContainer = document.getElementById('area_name_display');
             const warningMessageElement = document.getElementById('warning_message');
+            const chartDisclaimerElement = document.querySelector('.chart-disclaimer'); // Get the chart disclaimer element
+            const graphSummaryElement = document.getElementById('graph_summary'); // Get the graph summary element
+            const chartSectionElement = document.getElementById('chart_section'); // Get the chart section element
             
             // New table rows for explanations
             const sprinklerFlowCalculationRow = document.getElementById('sprinkler_flow_calculation_row');
@@ -1415,6 +1484,13 @@
             if (areaNameDisplayContainer) areaNameDisplayContainer.style.display = 'none';
             // Hide warning message
             if (warningMessageElement) warningMessageElement.classList.add('hidden');
+            // Hide chart disclaimer
+            if (chartDisclaimerElement) chartDisclaimerElement.classList.add('hidden');
+            // Hide graph summary
+            if (graphSummaryElement) graphSummaryElement.classList.add('hidden');
+            // Hide chart section
+            if (chartSectionElement) chartSectionElement.classList.add('hidden');
+
 
             // Reset shut-off head description on clear
             if (shutOffHeadDescriptionEl) {
@@ -1430,7 +1506,22 @@
         // Initialize calculation on page load with default values
         document.addEventListener('DOMContentLoaded', () => {
             // Use setTimeout to ensure all global window properties are set before calculate is called
-            setTimeout(calculate, 0);
+            setTimeout(() => {
+                // Get elements
+                const chartDisclaimerElement = document.querySelector('.chart-disclaimer');
+                const graphSummaryElement = document.getElementById('graph_summary');
+                const chartSectionElement = document.getElementById('chart_section');
+
+                // Ensure chart section is visible to show empty graph
+                if (chartSectionElement) chartSectionElement.classList.remove('hidden');
+
+                // Call updatePumpCurveChart with zero values to show empty graph (axes and grid only)
+                updatePumpCurveChart(0, 0, 0, 'horizontal');
+
+                // Ensure disclaimer and summary are hidden on initial load
+                if (chartDisclaimerElement) chartDisclaimerElement.classList.add('hidden');
+                if (graphSummaryElement) graphSummaryElement.classList.add('hidden');
+            }, 0);
         });
     </script>
 </body>
