@@ -380,7 +380,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="version-text">V.1.56</div> <!-- Updated version text here -->
+        <div class="version-text">V.1.57</div> <!-- Updated version text here -->
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
             คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ <br> (NFPA Guidance) By วัยรุ่นเซินเจิ้น
         </h1>
