@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.49 By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.54 By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -373,7 +373,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="version-text">V.1.49</div> <!-- Updated version text here -->
+        <div class="version-text">V.1.54</div> <!-- Updated version text here -->
         <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">
             คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ <br> (NFPA Guidance) By วัยรุ่นเซินเจิ้น
         </h1>
@@ -632,17 +632,20 @@
         function getHeadOnPumpCurvePercentage(flowPercent, shutOffHeadMultiplier) {
             const Q_norm = flowPercent / 100; // Normalize flow to 0-1.5
 
-            if (shutOffHeadMultiplier === 1.20) { // This means it's a vertical turbine pump (steepest curve)
-                // Quadratic equation passing through (0, 120), (100, 100), (150, 65)
-                // y = ax^2 + bx + c
-                // c = 120 (from (0, 120))
-                // 100 = a(100)^2 + b(100) + 120  => 10000a + 100b = -20  => 100a + b = -0.2
-                // 65 = a(150)^2 + b(150) + 120  => 22500a + 150b = -55  => 450a + 3b = -1.1
-                // Solving: a = -1/300, b = 2/15
-                const a = -1/300;
-                const b = 2/15;
-                const c = 120;
-                let head = (a * Math.pow(flowPercent, 2) + b * flowPercent + c);
+            if (shutOffHeadMultiplier === 1.20) { // Vertical Turbine Fire Pump
+                // Cubic equation passing through (0, 120), (100, 100), (150, 65)
+                // And having a slope of 0 at x=0 for a flatter start.
+                // y = ax^3 + bx^2 + cx + d
+                // d = 120 (from (0, 120))
+                // c = 0 (for slope 0 at x=0)
+                // Solving for a and b using (100, 100) and (150, 65):
+                // a = -1 / 112500
+                // b = -1 / 900
+                const a = -1 / 112500;
+                const b = -1 / 900;
+                const c = 0;
+                const d = 120;
+                let head = (a * Math.pow(flowPercent, 3) + b * Math.pow(flowPercent, 2) + c * flowPercent + d);
                 if (head < 0) head = 0; // Ensure head doesn't go negative
                 return head;
             } else { // Horizontal pump (shutOffHeadMultiplier === 1.10)
@@ -837,7 +840,7 @@
                                 return `${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM, ${value.y.toFixed(0)} PSI (Rated)`; // Value.y is already PSI
                             }
                             if (context.dataset.label.includes('Water Demand')) { // New formatter for Water Demand point
-                                return `Demand: ${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM, ${value.y.toFixed(0)} PSI`; // Now shows PSI
+                                return `Demand: ${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM`; // Only show GPM
                             }
                             if (context.dataset.label.includes('จุดอ้างอิงที่ 150% Flow')) { // Ensure this label is formatted
                                 return `${(value.x / 100 * graphRatedFlow).toFixed(0)} GPM, ${value.y.toFixed(0)} PSI`;
