@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.56 By วัยรุ่นเซินเจิ้น</title>
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.1.57 By วัยรุ่นเซินเจิ้น</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
@@ -240,6 +240,13 @@
                 page-break-before: always;
                 margin-top: 0 !important;
                 padding-top: 0 !important;
+                width: 100%;
+            }
+            /* Force results section to start on a new page */
+            #results { /* Added this rule */
+                page-break-before: always;
+                margin-top: 0 !important; /* Remove top margin if any */
+                padding-top: 0 !important; /* Remove top padding if any */
                 width: 100%;
             }
             .results-section {
@@ -1061,7 +1068,7 @@
             const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
             const summaryMaxPressureElement = document.getElementById('summary_max_pressure'); 
             const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); 
-            const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_1_description'); // Corrected ID
+            const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_description'); // Corrected ID
             const warningMessageElement = document.getElementById('warning_message'); 
 
 
@@ -1330,7 +1337,7 @@
             const summaryMaxPressureElement = document.getElementById('summary_max_pressure');
             const summaryTankVolumeLabel = document.getElementById('summary_tank_volume_label');
             const shutOffHeadDescriptionEl = document.getElementById('shut_off_head_description'); 
-            const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_1_description'); // Corrected ID
+            const reference150PercentDescriptionEl = document.getElementById('reference_150_percent_description'); // Corrected ID
             
             // Containers/Rows for visibility
             const areaNameDisplayContainer = document.getElementById('area_name_display');
