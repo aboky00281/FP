@@ -682,7 +682,6 @@
                 //    -20 = 1000000a + 10000b  (Eq A)
                 // 4. Point (150, 65):
                 //    65 = a*(150)^3 + b*(150)^2 + 120
-                //    65 - 120 = 3375000a + 22500b
                 //    -55 = 3375000a + 22500b  (Eq B)
 
                 // Simplify Eq A: Divide by 10000 => -0.002 = 100a + b  => b = -0.002 - 100a
@@ -863,7 +862,7 @@
                     y: { // This is the left axis (PSI head)
                         type: 'linear',
                         position: 'left',
-                        title: { display: true, text: 'แรงดัน (PSI)' }, // Changed title to PSI
+                        title: { display: true, text: 'Pressure (PSI)' }, // Changed title to Pressure (PSI)
                         beginAtZero: true,
                         max: maxYValuePSI, // This is in PSI
                         ticks: {
