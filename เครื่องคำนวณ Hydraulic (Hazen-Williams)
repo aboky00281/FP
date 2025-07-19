@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เครื่องคำนวณ Hydraulic (Hazen-Williams)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align items to the start to prevent stretching */
+            min-height: 100vh;
+            margin: 0;
+            padding: 1rem;
+            box-sizing: border-box;
+        }
+        .main-container {
+            display: flex;
+            flex-wrap: wrap; /* Allow wrapping on smaller screens */
+            gap: 1.5rem; /* Space between columns */
+            max-width: 600px; /* Adjusted max width for single column */
+            width: 100%;
+        }
+        .panel {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 10px 20px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+            flex: 1; /* Allow panels to grow and shrink */
+            min-width: 300px; /* Minimum width for the panel */
+            position: relative; /* Needed for relative positioning of elements inside */
+        }
+
+        h1 {
+            color: #2d3748;
+            margin-bottom: 1.5rem;
+            font-size: 2.25rem; /* text-4xl */
+            font-weight: 700; /* font-bold */
+        }
+        .input-group {
+            margin-bottom: 1rem;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+            font-weight: 600; /* font-semibold */
+        }
+        .input-group input,
+        .input-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            color: #2d3748;
+            box-sizing: border-box; /* Ensures padding doesn't increase width */
+        }
+        .input-group input:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #4299e1;
+            box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.5);
+        }
+        .button-group {
+            display: flex;
+            gap: 1rem; /* Space between buttons */
+            margin-top: 1rem;
+        }
+        .button-group button {
+            flex: 1; /* Make buttons take equal width */
+            width: auto; /* Override default 100% width */
+            margin-top: 0; /* Reset margin-top from general button style */
+        }
+        button {
+            background-color: #22c55e; /* green-500 */
+            color: white;
+            font-weight: 700; /* font-bold */
+            padding: 1rem 2rem; /* Increased padding */
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+            border: none;
+            width: 100%;
+            margin-top: 1rem;
+            font-size: 1.125rem; /* Slightly larger font */
+        }
+        button:hover {
+            background-color: #16a34a; /* green-600 */
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        .button-clear {
+            background-color: #ef4444; /* red-500 */
+        }
+        .button-clear:hover {
+            background-color: #dc2626; /* red-600 */
+        }
+        #result {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            font-size: 1rem; /* Reduced font size from 1.25rem */
+            background-color: #e0f2fe; /* blue-100 */
+            border: 1px solid #90cdf4; /* blue-300 */
+            border-radius: 0.5rem;
+            color: #2b6cb0; /* blue-800 */
+            font-weight: 600; /* font-semibold */
+            text-align: center;
+        }
+        #result table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 auto; /* Center the table */
+            font-size: 1rem; /* Adjust font size for table content */
+        }
+        #result th, #result td {
+            padding: 0.5rem;
+            border: 1px solid #90cdf4; /* blue-300 */
+            text-align: left;
+            font-size: 0.875rem; /* Reduced font size for table cells */
+        }
+        #result td {
+            white-space: nowrap; /* Prevent text wrapping */
+            overflow: hidden; /* Hide overflow content */
+            text-overflow: ellipsis; /* Show ellipsis for overflow */
+        }
+        #result th {
+            background-color: #bfdbfe; /* blue-200 */
+            font-weight: 700;
+            color: #2b6cb0;
+        }
+        /* Specific style for total pressure row */
+        #result .total-pressure-row td {
+            color: #dc2626; /* Red color for total pressure */
+        }
+        #error-message {
+            color: #e53e3e; /* red-600 */
+            margin-top: 1rem;
+            font-weight: 500;
+            text-align: center;
+        }
+        .formula-display {
+            background-color: #f7fafc;
+            border: 1px dashed #e2e8f0;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+            color: #4a5568;
+            text-align: center; /* Default center alignment for the formula block */
+            overflow-x: auto; /* For small screens */
+        }
+        .formula-display code {
+            font-family: 'Cascadia Code', 'Fira Code', monospace;
+            background-color: #edf2f7;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            text-align: left; /* Added to align code left */
+            display: block; /* Make code block level to apply text-align */
+        }
+        .formula-display ul { /* Target the unordered list within formula-display */
+            text-align: left; /* Align list items to the left */
+            margin-left: 1.5rem; /* Add some left margin for list bullets */
+            list-style-type: disc; /* Ensure disc bullets are visible */
+        }
+        .formula-display p {
+            text-align: left; /* Align the paragraph containing the list to the left */
+        }
+        .version-text {
+            position: fixed; /* Changed to fixed to stick to viewport */
+            top: 1rem; /* Adjust as needed */
+            right: 1rem; /* Adjust as needed */
+            font-size: 0.75rem; /* Reduced font size (text-xs) */
+            color: #6b7280; /* gray-500 */
+            font-weight: 500;
+            z-index: 1000; /* Ensure it's on top of other content */
+            background-color: transparent; /* Removed background */
+            padding: 0; /* Removed padding */
+            border-radius: 0; /* Removed border-radius */
+            box-shadow: none; /* Removed box-shadow */
+        }
+
+        /* Style for the clickable formula title */
+        .formula-toggle-header {
+            font-weight: 600;
+            margin-top: 1.5rem; /* Adjusted margin-top */
+            margin-bottom: 0.5rem;
+            cursor: pointer;
+            color: #4a5568; /* Link-like color */
+            text-decoration: underline;
+            transition: color 0.2s;
+            text-align: center; /* Center the toggle text */
+        }
+        .formula-toggle-header:hover {
+            color: #22c55e; /* Green on hover */
+        }
+        .fraction-container {
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            font-size: 1.1em; /* Slightly larger for clarity */
+        }
+        .fraction-numerator {
+            display: block;
+            border-bottom: 1px solid #4a5568; /* Line for division */
+            padding-bottom: 2px;
+            margin-bottom: 2px;
+        }
+        .fraction-denominator {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="version-text">V.1.2 By วัยรุ่นเซินเจิ้น</div>
+    <div class="main-container">
+        <!-- Hazen-Williams Calculator -->
+        <div class="panel left-panel">
+            <h1>เครื่องคำนวณ Hazen-Williams</h1>
+            <p class="text-gray-600 mb-6">
+                คำนวณการสูญเสียแรงดันสำหรับท่อเดี่ยว
+            </p>
+
+            <div class="input-group">
+                <label for="flowRate">อัตราการไหล (Q) - GPM (แกลลอนต่อนาที):</label>
+                <input type="number" id="flowRate" placeholder="เช่น 250" value="">
+            </div>
+
+            <div class="input-group">
+                <label for="cFactor">ค่าสัมประสิทธิ์ Hazen-Williams (C):</label>
+                <select id="cFactor" onchange="updatePipeDiameterInput()">
+                    <option value="100" data-material="cast_iron">100 - Unlined cast or ductile iron</option>
+                    <option value="100" data-material="black_steel">100 - Black steel (dry systems including preaction)</option>
+                    <option value="120" data-material="black_steel" selected>120 - Black steel (wet systems including deluge)</option>
+                    <option value="100" data-material="galvanized_steel">100 - Galvanized steel (dry systems including preaction)</option>
+                    <option value="120" data-material="galvanized_steel">120 - Galvanized steel (wet systems including deluge)</option>
+                    <option value="150" data-material="plastic">150 - Plastic (listed) all</option>
+                    <option value="140" data-material="cement_lined_iron">140 - Cement-lined cast- or ductile iron</option>
+                    <option value="150" data-material="copper_brass_stainless">150 - Copper tube, brass or stainless steel</option>
+                    <option value="140" data-material="asbestos_cement">140 - Asbestos cement</option>
+                    <option value="140" data-material="concrete">140 - Concrete</option>
+                    <option value="custom" data-material="custom">กำหนดเอง</option>
+                </select>
+                <input type="number" id="customCFactor" class="mt-2 hidden" placeholder="ป้อนค่า C ที่กำหนดเอง" value="140">
+            </div>
+
+            <div class="input-group">
+                <label for="nominalPipeSize">ขนาดท่อระบุ (NPS) - นิ้ว:</label>
+                <select id="nominalPipeSize" onchange="updatePipeDiameterInput()">
+                    <option value="">เลือกขนาดท่อ</option>
+                    <option value="0.125">1/8"</option>
+                    <option value="0.25">1/4"</option>
+                    <option value="0.375">3/8"</option>
+                    <option value="0.5">1/2"</option>
+                    <option value="0.75">3/4"</option>
+                    <option value="1">1"</option>
+                    <option value="1.25">1-1/4"</option>
+                    <option value="1.5">1-1/2"</option>
+                    <option value="2">2"</option>
+                    <option value="2.5">2-1/2"</option>
+                    <option value="3">3"</option>
+                    <option value="3.5">3-1/2"</option>
+                    <option value="4">4"</option>
+                    <option value="5">5"</option>
+                    <option value="6">6"</option>
+                    <option value="8">8"</option>
+                    <option value="10">10"</option>
+                    <option value="12">12"</option>
+                    <option value="14">14"</option>
+                    <option value="16">16"</option>
+                    <option value="18">18"</option>
+                    <option value="20">20"</option>
+                    <option value="24">24"</option>
+                </select>
+            </div>
+
+            <div class="input-group">
+                <label for="pipeDiameter">เส้นผ่านศูนย์กลางภายในท่อ (D) - นิ้ว:</label>
+                <input type="number" id="pipeDiameter" placeholder="ป้อนค่า ID หรือเลือก NPS" value="">
+            </div>
+
+            <div class="input-group">
+                <label for="pipeLength">ความยาวท่อ (L) - เมตร:</label>
+                <input type="number" id="pipeLength" placeholder="เช่น 30.48" value="">
+            </div>
+
+            <div class="input-group">
+                <label for="elevationChange">การเปลี่ยนแปลงความสูง (H) - เมตร :</label>
+                <input type="number" id="elevationChange" placeholder="เช่น 5 (ขึ้นเนิน)" value="" min="0">
+            </div>
+
+            <div class="button-group">
+                <button onclick="calculateHazenWilliams()">คำนวณแรงดันสูญเสียรวม</button>
+                <button onclick="clearHazenWilliamsInputs()" class="button-clear">ล้างข้อมูล</button>
+            </div>
+
+            <div id="error-message" class="hidden">
+                <!-- ข้อความแสดงข้อผิดพลาดจะแสดงที่นี่ -->
+            </div>
+
+            <!-- Result Display Section -->
+            <div id="result" class="hidden">
+                <!-- Results table will be inserted here -->
+            </div>
+
+            <!-- Formula Section -->
+            <p class="formula-toggle-header" onclick="toggleFormulaDisplay()">
+                สูตร Hazen-Williams (หน่วยผสม - US Customary & Metric):
+            </p>
+            <div id="formulaContent" class="formula-display hidden">
+                <p style="text-align: left;">P<sub>total</sub> = P<sub>friction</sub> + P<sub>elevation</sub></p>
+                <p style="text-align: left;">
+                    P<sub>friction</sub> =
+                    <span class="fraction-container">
+                        <span class="fraction-numerator">14.83 * Q<sup>1.852</sup> * L</span>
+                        <span class="fraction-denominator">C<sup>1.852</sup> * D<sup>4.87</sup></span>
+                    </span>
+                </p>
+                <p style="text-align: left;">P<sub>elevation</sub> = H * 1.422</p>
+                <p class="mt-2 text-sm">
+                    โดยที่:
+                    <ul>
+                        <li>P<sub>total</sub> = แรงดันสูญเสียรวม (psi)</li>
+                        <li>P<sub>friction</sub> = แรงดันสูญเสียจากแรงเสียดทาน (psi)</li>
+                        <li>P<sub>elevation</sub> = แรงดันที่เปลี่ยนแปลงจากความสูง (psi)</li>
+                        <li>Q = อัตราการไหล (GPM)</li>
+                        <li>L = ความยาวท่อ (เมตร)</li>
+                        <li>C = ค่าสัมประสิทธิ์ Hazen-Williams</li>
+                        <li>D = เส้นผ่านศูนย์กลางภายในท่อ (นิ้ว)</li>
+                        <li>H = การเปลี่ยนแปลงความสูง (เมตร)</li>
+                    </ul>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data mapping NPS to Inside Diameter for Steel Pipe Sizes - Schedule 40
+        const steelPipeID = {
+            "0.125": 0.269, "0.25": 0.364, "0.375": 0.493, "0.5": 0.622,
+            "0.75": 0.824, "1": 1.049, "1.25": 1.380, "1.5": 1.610,
+            "2": 2.067, "2.5": 2.469, "3": 3.068, "3.5": 3.548,
+            "4": 4.026, "5": 5.047, "6": 6.065, "8": 7.981,
+            "10": 10.020, "12": 11.938, "14": 13.124, "16": 15.000,
+            "18": 16.876, "20": 18.812, "24": 22.624
+        };
+
+        // Data mapping NPS to Inside Diameter for Polyvinyl Chloride (PVC) Pipe Sizes - Schedule 40
+        const pvcPipeID = {
+            "0.125": 0.269, "0.25": 0.364, "0.375": 0.493, "0.5": 0.622,
+            "0.75": 0.824, "1": 1.049, "1.25": 1.380, "1.5": 1.610,
+            "2": 2.067, "2.5": 2.469, "3": 3.068, "3.5": 3.548,
+            "4": 4.026, "5": 5.047, "6": 6.065, "8": 7.981,
+            "10": 10.020, "12": 11.938, "14": 13.126, "16": 15.000,
+            "18": 16.876, "20": 18.814, "24": 22.626
+        };
+
+        // Reusable function to calculate friction loss (P_friction in psi)
+        function calculateFrictionLoss(Q, L, D, C) {
+            // P_friction = (14.83 * Math.pow(Math.abs(Q), 1.852) * L) / (Math.pow(C, 1.852) * Math.pow(D, 4.87));
+            // Constant 14.83 is derived for Q in GPM, L in meters, D in inches, P in psi.
+            if (Q === 0 || L === 0) return 0; // No friction loss if no flow or no length
+            if (D === 0 || C === 0) return Infinity; // Avoid division by zero or invalid C/D
+
+            return (14.83 * Math.pow(Math.abs(Q), 1.852) * L) / (Math.pow(C, 1.852) * Math.pow(D, 4.87));
+        }
+
+        // --- Hazen-Williams Calculator Functions ---
+
+        // Function to update the custom C-factor input field visibility and pipe diameter input
+        function updateCustomCFactor() {
+            const cFactorSelect = document.getElementById('cFactor');
+            const customCFactorInput = document.getElementById('customCFactor');
+            
+            if (cFactorSelect.value === 'custom') {
+                customCFactorInput.classList.remove('hidden');
+                customCFactorInput.value = ''; // Clear custom value when selected
+            } else {
+                customCFactorInput.classList.add('hidden');
+                customCFactorInput.value = cFactorSelect.value; // Set value from dropdown
+            }
+            
+            updatePipeDiameterInput();
+        }
+
+        // Function to update the pipe diameter input based on selected NPS and material
+        function updatePipeDiameterInput() {
+            const cFactorSelect = document.getElementById('cFactor');
+            const nominalPipeSizeSelect = document.getElementById('nominalPipeSize');
+            const pipeDiameterInput = document.getElementById('pipeDiameter');
+            const selectedCFactorOption = cFactorSelect.options[cFactorSelect.selectedIndex];
+            const materialType = selectedCFactorOption.dataset.material;
+            const selectedNPS = nominalPipeSizeSelect.value;
+
+            let diameterValue = '';
+            let isReadOnly = false;
+
+            if (selectedNPS) { // Only attempt to auto-fill if an NPS is selected
+                if (materialType === 'plastic' && pvcPipeID[selectedNPS]) {
+                    diameterValue = pvcPipeID[selectedNPS].toFixed(3);
+                    isReadOnly = true;
+                } else if ((materialType === 'black_steel' || materialType === 'galvanized_steel') && steelPipeID[selectedNPS]) {
+                    diameterValue = steelPipeID[selectedNPS].toFixed(3);
+                    isReadOnly = true;
+                }
+            }
+
+            pipeDiameterInput.value = diameterValue;
+            pipeDiameterInput.readOnly = isReadOnly;
+            pipeDiameterInput.style.backgroundColor = isReadOnly ? '#e9ecef' : '#ffffff';
+            pipeDiameterInput.style.cursor = isReadOnly ? 'not-allowed' : 'auto';
+            pipeDiameterInput.dataset.autoFilled = isReadOnly;
+        }
+
+        // Main function to calculate Hazen-Williams friction loss for single pipe
+        async function calculateHazenWilliams() {
+            const flowRateInput = document.getElementById('flowRate');
+            const pipeLengthInput = document.getElementById('pipeLength');
+            const pipeDiameterInput = document.getElementById('pipeDiameter');
+            const elevationChangeInput = document.getElementById('elevationChange');
+            const cFactorSelect = document.getElementById('cFactor');
+            const customCFactorInput = document.getElementById('customCFactor');
+            const resultDiv = document.getElementById('result');
+            const errorMessageDiv = document.getElementById('error-message');
+
+            // Hide error message before new calculation
+            errorMessageDiv.classList.add('hidden');
+            errorMessageDiv.textContent = '';
+            resultDiv.classList.add('hidden'); /* Hide result div initially */
+
+
+            const Q = parseFloat(flowRateInput.value);
+            const L = parseFloat(pipeLengthInput.value);
+            const D = parseFloat(pipeDiameterInput.value);
+            // Get H, if it's empty or NaN, treat as 0
+            let H = parseFloat(elevationChangeInput.value);
+            if (isNaN(H)) {
+                H = 0;
+            }
+
+
+            let C;
+
+            if (cFactorSelect.value === 'custom') {
+                C = parseFloat(customCFactorInput.value);
+            } else {
+                C = parseFloat(cFactorSelect.value);
+            }
+
+            // Validate inputs: Q, L can be 0. D, C must be > 0. H must be >= 0.
+            if (isNaN(Q) || isNaN(L) || isNaN(D) || isNaN(C) || Q < 0 || L < 0 || D <= 0 || C <= 0 || H < 0) {
+                errorMessageDiv.textContent = 'กรุณาป้อนค่าที่เป็นตัวเลขและมากกว่าศูนย์ในช่อง เส้นผ่านศูนย์กลาง และค่า C (อัตราการไหล, ความยาวท่อ และการเปลี่ยนแปลงความสูงสามารถเป็นบวก หรือศูนย์ได้)';
+                errorMessageDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const P_friction = calculateFrictionLoss(Q, L, D, C);
+
+                const P_elevation = H * 1.422; // 1 meter of water head is approx 1.422 psi
+
+                const P_total = P_friction + P_elevation;
+
+                resultDiv.innerHTML = `
+                    <table class="w-full">
+                        <tr>
+                            <td class="font-bold">แรงดันสูญเสียจากแรงเสียดทาน (P Friction Loss):</td>
+                            <td>${P_friction.toFixed(2)} psi (${(P_friction / 1.422).toFixed(2)} m)</td>
+                        </tr>
+                        <tr>
+                            <td class="font-bold">แรงดันที่เปลี่ยนแปลงจากความสูง (P Elevation):</td>
+                            <td>${P_elevation.toFixed(2)} psi (${(P_elevation / 1.422).toFixed(2)} m)</td>
+                        </tr>
+                        <tr class="total-pressure-row">
+                            <td class="font-bold">แรงดันรวม (P Total):</td>
+                            <td>${P_total.toFixed(2)} psi (${(P_total / 1.422).toFixed(2)} m)</td>
+                        </tr>
+                    </table>
+                `;
+                resultDiv.classList.remove('hidden'); /* Show result div */
+
+            } catch (error) {
+                errorMessageDiv.textContent = `เกิดข้อผิดพลาดในการคำนวณ: ${error.message}`;
+                errorMessageDiv.classList.remove('hidden');
+            }
+        }
+
+        // Function to clear all input fields and results for Hazen-Williams side
+        function clearHazenWilliamsInputs() {
+            document.getElementById('flowRate').value = ''; 
+            document.getElementById('pipeLength').value = ''; 
+            document.getElementById('elevationChange').value = ''; 
+
+            const cFactorSelect = document.getElementById('cFactor');
+            cFactorSelect.value = '120'; // Set default C-factor
+            updateCustomCFactor(); 
+
+            document.getElementById('nominalPipeSize').value = '';
+            const pipeDiameterInput = document.getElementById('pipeDiameter');
+            pipeDiameterInput.value = ''; 
+            pipeDiameterInput.readOnly = false;
+            pipeDiameterInput.style.backgroundColor = '#ffffff';
+            pipeDiameterInput.style.cursor = 'auto';
+            pipeDiameterInput.dataset.autoFilled = false;
+
+            document.getElementById('result').classList.add('hidden'); /* Hide result div on clear */
+            document.getElementById('error-message').classList.add('hidden');
+            document.getElementById('error-message').textContent = '';
+        }
+
+        // Function to toggle visibility of the formula display
+        function toggleFormulaDisplay() {
+            const formulaContent = document.getElementById('formulaContent');
+            formulaContent.classList.toggle('hidden');
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            // Initialize custom C-factor input and pipe diameter based on initial selections
+            updateCustomCFactor();
+            // Call updatePipeDiameterInput again to ensure initial ID is set correctly
+            updatePipeDiameterInput();
+        };
+    </script>
+</body>
+</html>
