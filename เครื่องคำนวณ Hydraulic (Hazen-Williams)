@@ -176,7 +176,7 @@
             position: fixed; /* Changed to fixed to stick to viewport */
             top: 1rem; /* Adjust as needed */
             right: 1rem; /* Adjust as needed */
-            font-size: 0.75rem; /* Reduced font size (text-xs) */
+            font-size: 0.65rem; /* Reduced font size from 0.75rem */
             color: #6b7280; /* gray-500 */
             font-weight: 500;
             z-index: 1000; /* Ensure it's on top of other content */
