@@ -49,6 +49,11 @@
     <!-- Canvas สำหรับพื้นหลังแอนิเมชัน -->
     <canvas id="bg-canvas"></canvas>
 
+    <!-- Credit Text -->
+    <div class="absolute top-10 right-6 z-20">
+        <p class="text-gray-400 text-sm">By วัยรุ่นเซินเจิ้น</p>
+    </div>
+
     <!-- ส่วนคอนเทนเนอร์หลัก (อยู่เหนือ Canvas) -->
     <main class="flex-grow z-10 relative">
         <div class="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
@@ -109,11 +114,6 @@
 
         </div>
     </main>
-
-    <!-- ส่วนท้ายเว็บ -->
-    <footer class="text-center py-6 z-10 relative">
-        <p class="text-gray-500">By วัยรุ่นเซินเจิ้น</p>
-    </footer>
 
     <script>
         // --- JavaScript สำหรับพื้นหลัง "Pendent Sprinkler System" ---
