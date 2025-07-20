@@ -4,276 +4,377 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fire Protection Engineering Hub</title>
-    <!-- Tailwind CSS for styling -->
+    
+    <!-- โหลด Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Sarabun/Inter -->
+    
+    <!-- โหลดฟอนต์ (Sarabun สำหรับภาษาไทย) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- three.js for 3D animation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Custom Styles -->
+    <!-- ไอคอนจาก Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
     <style>
+        /* กำหนดฟอนต์หลัก */
         body {
-            font-family: 'Sarabun', 'Inter', sans-serif;
-            background-color: #0a0a0a; /* Dark background for the whole page */
+            font-family: 'Sarabun', sans-serif;
+            background-color: #0c0a18; /* สีพื้นหลังโทนน้ำเงินเข้ม-ดำ */
+            overflow: hidden; /* ป้องกัน scrollbar ที่ไม่จำเป็น */
         }
-        /* --- Hub Styles --- */
-        #galaxy-bg {
+        
+        /* สไตล์สำหรับ Canvas ที่เป็นพื้นหลัง */
+        #bg-canvas {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            z-index: -1; /* Place canvas behind everything */
+            z-index: -1; /* ทำให้ Canvas อยู่ด้านหลังสุด */
         }
-        .tool-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-        }
-        .tool-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2);
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        /* --- Friction Loss Calculator Styles --- */
-        #calculator-view-friction-loss { background-color: #f0f2f5; }
-        #calculator-view-friction-loss .main-container { display: flex; flex-wrap: wrap; gap: 1.5rem; max-width: 600px; width: 100%; }
-        #calculator-view-friction-loss .panel { background-color: #ffffff; padding: 2rem; border-radius: 0.75rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 10px 20px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; flex: 1; min-width: 300px; position: relative; }
-        #calculator-view-friction-loss .version-text { position: absolute; top: 1.5rem; right: 1.5rem; font-size: 0.75rem; color: #6b7280; font-weight: 500; }
-        #calculator-view-friction-loss h1 { color: #2d3748; margin-bottom: 1.5rem; font-size: 2.25rem; font-weight: 700; }
-        #calculator-view-friction-loss .input-group { margin-bottom: 1rem; text-align: left; }
-        #calculator-view-friction-loss .input-group label { display: block; margin-bottom: 0.5rem; color: #4a5568; font-weight: 600; }
-        #calculator-view-friction-loss .input-group input,
-        #calculator-view-friction-loss .input-group select { width: 100%; padding: 0.75rem; border: 1px solid #cbd5e0; border-radius: 0.5rem; font-size: 1rem; color: #2d3748; box-sizing: border-box; }
-        #calculator-view-friction-loss .button-group { display: flex; gap: 1rem; margin-top: 1rem; }
-        #calculator-view-friction-loss .button-group button { flex: 1; width: auto; margin-top: 0; }
-        #calculator-view-friction-loss button { background-color: #22c55e; color: white; font-weight: 700; padding: 1rem 2rem; border-radius: 0.5rem; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); transition: all 0.3s ease-in-out; cursor: pointer; border: none; width: 100%; margin-top: 1rem; font-size: 1.125rem; }
-        #calculator-view-friction-loss button:hover { background-color: #16a34a; transform: translateY(-2px); box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15); }
-        #calculator-view-friction-loss .button-clear { background-color: #ef4444; }
-        #calculator-view-friction-loss .button-clear:hover { background-color: #dc2626; }
-        #calculator-view-friction-loss #result { margin-top: 2rem; padding: 1.5rem; font-size: 1rem; background-color: #e0f2fe; border: 1px solid #90cdf4; border-radius: 0.5rem; color: #2b6cb0; font-weight: 600; text-align: center; }
-        #calculator-view-friction-loss #result table { width: 100%; border-collapse: collapse; margin: 0 auto; font-size: 1rem; }
-        #calculator-view-friction-loss #result th, #calculator-view-friction-loss #result td { padding: 0.5rem; border: 1px solid #90cdf4; text-align: left; font-size: 0.875rem; }
-        #calculator-view-friction-loss #result .total-pressure-row td { color: #dc2626; }
-        #calculator-view-friction-loss #error-message { color: #e53e3e; margin-top: 1rem; font-weight: 500; text-align: center; }
-        #calculator-view-friction-loss .formula-toggle-header { font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.5rem; cursor: pointer; color: #4a5568; text-decoration: underline; transition: color 0.2s; text-align: center; }
-        #calculator-view-friction-loss .formula-display { background-color: #f7fafc; border: 1px dashed #e2e8f0; padding: 1rem; margin-top: 1.5rem; border-radius: 0.5rem; font-size: 0.9rem; color: #4a5568; text-align: center; overflow-x: auto; }
-        #calculator-view-friction-loss .fraction-container { display: inline-block; vertical-align: middle; text-align: center; font-size: 1.1em; }
-        #calculator-view-friction-loss .fraction-numerator { display: block; border-bottom: 1px solid #4a5568; padding-bottom: 2px; margin-bottom: 2px; }
-        #calculator-view-friction-loss .fraction-denominator { display: block; }
 
-        /* Print specific styles */
-        @media print {
-            body { background-color: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 0; margin: 0; }
-            #tools-hub-view, #message-modal, .btn-back-to-hub, #galaxy-bg { display: none !important; }
-            .calculator-view { display: none !important; }
-            body[data-printing="friction-loss"] #calculator-view-friction-loss { display: block !important; }
-            .container, #calculator-view-friction-loss .main-container { box-shadow: none; border: none; max-width: none; width: 100%; padding: 0; margin: 0; }
-            button, .disclaimer, .print-pdf-buttons, .btn-clear, .modal-overlay, .formula-toggle-header, .version-text { display: none !important; }
-            .print-hide { display: none !important; }
+        /* สไตล์สำหรับกล่องข้อความแบบกระจกฝ้า */
+        .glass-card {
+            background: rgba(10, 10, 20, 0.7); /* เพิ่มความเข้มเล็กน้อย */
+            backdrop-filter: blur(12px); /* เอฟเฟกต์เบลอ */
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1); /* เส้นขอบบางๆ */
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
         }
     </style>
 </head>
-<body class="text-gray-900">
+<body class="text-gray-200 flex flex-col min-h-screen">
 
-    <!-- Main Hub View -->
-    <div id="tools-hub-view" class="p-4 sm:p-6 lg:p-8">
-        <canvas id="galaxy-bg"></canvas>
-        <div class="container mx-auto relative z-10">
-            <header class="text-center mb-8">
-                <h1 class="text-3xl sm:text-4xl font-bold text-red-500">Fire Protection Engineering Hub</h1>
-                <p class="mt-2 text-lg text-gray-300">ศูนย์กลางเครื่องมือสำหรับวิศวกรป้องกันอัคคีภัย (ตามมาตรฐาน NFPA)</p>
-            </header>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div id="tool-friction-loss" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-red-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div><h2 class="text-xl font-semibold text-white">คำนวณแรงเสียดทานในท่อ</h2></div>
-                    <p class="text-gray-400">คำนวณ Friction Loss ในท่อดับเพลิงโดยใช้สูตร Hazen-Williams</p>
-                </div>
-                <div id="tool-pump-sizing" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-green-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2a1 1 0 011 1v8a1 1 0 01-1 1h-2a1 1 0 01-1-1z" /></svg></div><h2 class="text-xl font-semibold text-white">หาขนาดปั๊มน้ำดับเพลิง</h2></div>
-                    <p class="text-gray-400">ช่วยกำหนดขนาดของปั๊มน้ำดับเพลิงตามความต้องการของระบบ (NFPA 20)</p>
-                </div>
-                <div id="tool-hydraulic-calc" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-blue-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-12v4m-2-2h4m-1 4l-3 3m0 0l-3-3m3 3V6" /></svg></div><h2 class="text-xl font-semibold text-white">คำนวณไฮดรอลิก</h2></div>
-                    <p class="text-gray-400">คำนวณหาความดันและอัตราการไหลในระบบท่อย่อย (NFPA 13)</p>
-                </div>
-                <div id="tool-detector-spacing" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-yellow-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg></div><h2 class="text-xl font-semibold text-white">ระยะห่างอุปกรณ์ตรวจจับ</h2></div>
-                    <p class="text-gray-400">คำนวณระยะห่างการติดตั้งอุปกรณ์ตรวจจับควันและความร้อน (NFPA 72)</p>
-                </div>
-                <div id="tool-egress-width" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-purple-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21v-1a6 6 0 00-5.176-5.97M15 21H9" /></svg></div><h2 class="text-xl font-semibold text-white">คำนวณความกว้างทางหนีไฟ</h2></div>
-                    <p class="text-gray-400">คำนวณความกว้างของเส้นทางหนีไฟที่ต้องการตามจำนวนคน (NFPA 101)</p>
-                </div>
-                <div id="tool-code-lookup" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-indigo-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div><h2 class="text-xl font-semibold text-white">ค้นหามาตรฐาน NFPA</h2></div>
-                    <p class="text-gray-400">เครื่องมือช่วยค้นหาข้อมูลและข้อกำหนดในมาตรฐาน NFPA (เร็วๆ นี้)</p>
+    <!-- Canvas สำหรับพื้นหลังแอนิเมชัน -->
+    <canvas id="bg-canvas"></canvas>
+
+    <!-- ส่วนคอนเทนเนอร์หลัก (อยู่เหนือ Canvas) -->
+    <main class="flex-grow z-10 relative">
+        <div class="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
+
+            <div class="text-center mb-12">
+                <!-- ไอคอนหัวเรื่อง -->
+                <i class="ph-fill ph-fire text-6xl text-orange-400 mb-4 inline-block"></i>
+                
+                <!-- หัวข้อหลัก -->
+                <h1 class="text-4xl md:text-5xl font-bold text-white">
+                    Fire Protection Engineering Hub
+                </h1>
+
+                <!-- คำอธิบาย -->
+                <p class="text-lg md:text-xl mt-4 text-gray-300">
+                    ยินดีต้อนรับสู่หน้า HUB คุณสามารถเพิ่มลิงก์ที่นี่ได้
+                </p>
+            </div>
+
+            <!-- ส่วนของเครื่องมือและลิงก์ -->
+            <div class="max-w-2xl mx-auto">
+                <h2 class="text-2xl font-semibold text-orange-400 mb-6 border-b-2 border-gray-700 pb-2">เครื่องมือคำนวณ</h2>
+                
+                <div class="space-y-4">
+                    <!-- ลิงก์ 1: เครื่องคำนวณปั๊มดับเพลิง -->
+                    <a href="https://icvd4cilzlfyco3gkvmnkqv182.on.drv.tw/FP%20%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99%20/Fire%20Pump%20and%20Water%20Tank%20Calculator.html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
+                        <div class="flex items-center">
+                            <div class="bg-orange-600/30 p-3 rounded-lg mr-5">
+                                <i class="ph-bold ph-calculator text-3xl text-orange-300"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-white">เครื่องคำนวณปั๊มดับเพลิงและถังเก็บน้ำ</h3>
+                                <p class="text-gray-300 mt-1">คำนวณขนาดปั๊มและถังเก็บน้ำสำหรับระบบดับเพลิง</p>
+                            </div>
+                            <div class="ml-auto">
+                                <i class="ph-bold ph-caret-right text-2xl text-gray-500 group-hover:text-orange-400 transition-colors"></i>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- ลิงก์ 2: เครื่องคำนวณ Hydraulic -->
+                    <a href="https://icvd4cilzlfyco3gkvmnkq182.on.drv.tw/FP%20%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%8เจ%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E0%B4%E-Williams).html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
+                        <div class="flex items-center">
+                            <div class="bg-blue-600/30 p-3 rounded-lg mr-5">
+                                <i class="ph-bold ph-function text-3xl text-blue-300"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold text-white">เครื่องคำนวณ Hydraulic (Hazen-Williams)</h3>
+                                <p class="text-gray-300 mt-1">คำนวณการสูญเสียแรงดันในท่อด้วยสมการ Hazen-Williams</p>
+                            </div>
+                             <div class="ml-auto">
+                                <i class="ph-bold ph-caret-right text-2xl text-gray-500 group-hover:text-blue-400 transition-colors"></i>
+                            </div>
+                        </div>
+                    </a>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Friction Loss Calculator View -->
-    <div id="calculator-view-friction-loss" class="hidden calculator-view p-4 flex justify-center items-start min-h-screen">
-        <div class="main-container">
-            <div class="panel">
-                <button class="btn-back-to-hub absolute top-4 left-4 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-lg flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-                </button>
-                <div class="version-text">V.1.2 By วัยรุ่นเซินเจิ้น</div>
-                <h1 class="text-center pt-8">เครื่องคำนวณ Hazen-Williams</h1>
-                <p class="text-gray-600 mb-6 text-center">คำนวณการสูญเสียแรงดันสำหรับท่อเดี่ยว</p>
-                <!-- Hazen-Williams form content... -->
-                <div class="input-group"><label for="flowRate">อัตราการไหล (Q) - GPM:</label><input type="number" id="flowRate" placeholder="เช่น 250"></div>
-                <div class="input-group"><label for="cFactor">ค่าสัมประสิทธิ์ Hazen-Williams (C):</label><select id="cFactor" onchange="updateCustomCFactor()"><option value="100" data-material="cast_iron">100 - Unlined cast or ductile iron</option><option value="100" data-material="black_steel">100 - Black steel (dry systems)</option><option value="120" data-material="black_steel" selected>120 - Black steel (wet systems)</option><option value="100" data-material="galvanized_steel">100 - Galvanized steel (dry systems)</option><option value="120" data-material="galvanized_steel">120 - Galvanized steel (wet systems)</option><option value="150" data-material="plastic">150 - Plastic (listed) all</option><option value="140" data-material="cement_lined_iron">140 - Cement-lined cast- or ductile iron</option><option value="150" data-material="copper_brass_stainless">150 - Copper tube, brass or stainless steel</option><option value="custom" data-material="custom">กำหนดเอง</option></select><input type="number" id="customCFactor" class="mt-2 hidden" placeholder="ป้อนค่า C ที่กำหนดเอง"></div>
-                <div class="input-group"><label for="nominalPipeSize">ขนาดท่อระบุ (NPS) - นิ้ว:</label><select id="nominalPipeSize" onchange="updatePipeDiameterInput()"><option value="">เลือกขนาดท่อ</option><option value="0.5">1/2"</option><option value="0.75">3/4"</option><option value="1">1"</option><option value="1.25">1-1/4"</option><option value="1.5">1-1/2"</option><option value="2">2"</option><option value="2.5">2-1/2"</option><option value="3">3"</option><option value="4">4"</option><option value="5">5"</option><option value="6">6"</option><option value="8">8"</option><option value="10">10"</option><option value="12">12"</option></select></div>
-                <div class="input-group"><label for="pipeDiameter">เส้นผ่านศูนย์กลางภายในท่อ (D) - นิ้ว:</label><input type="number" id="pipeDiameter" placeholder="ป้อนค่า ID หรือเลือก NPS"></div>
-                <div class="input-group"><label for="pipeLength">ความยาวท่อ (L) - เมตร:</label><input type="number" id="pipeLength" placeholder="เช่น 30.48"></div>
-                <div class="input-group"><label for="elevationChange">การเปลี่ยนแปลงความสูง (H) - เมตร:</label><input type="number" id="elevationChange" placeholder="เช่น 5 (ขึ้นเนิน)" min="0"></div>
-                <div class="button-group"><button onclick="calculateHazenWilliams()">คำนวณ</button><button onclick="clearHazenWilliamsInputs()" class="button-clear">ล้างข้อมูล</button></div>
-                <div id="error-message" class="hidden"></div>
-                <div id="result" class="hidden"></div>
-                <p class="formula-toggle-header" onclick="toggleFormulaDisplay()">แสดง/ซ่อนสูตร</p>
-                <div id="formulaContent" class="formula-display hidden"><p>P<sub>total</sub> = P<sub>friction</sub> + P<sub>elevation</sub></p><p>P<sub>friction</sub> = <span class="fraction-container"><span class="fraction-numerator">14.83 * Q<sup>1.852</sup> * L</span><span class="fraction-denominator">C<sup>1.852</sup> * D<sup>4.87</sup></span></span></p><p>P<sub>elevation</sub> = H * 1.422</p></div>
-            </div>
         </div>
-    </div>
-    
-    <!-- Modals -->
-    <div id="message-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center hidden z-50">
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-11/12 max-w-sm text-center"><h3 id="modal-title" class="text-xl font-semibold mb-4"></h3><p id="modal-message" class="text-gray-600 dark:text-gray-400 mb-6"></p><button id="modal-close-btn" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded w-full">ปิด</button></div>
-    </div>
-    <div id="imagePopupModal" class="fixed inset-0 bg-black bg-opacity-75 flex justify-center items-center z-50 hidden">
-        <div class="bg-white p-4 rounded-lg shadow-xl relative max-w-3xl max-h-full overflow-auto"><button class="absolute top-2 right-2 text-gray-700 hover:text-gray-900 text-2xl font-bold" onclick="closeImagePopup()">&times;</button><img id="popupImage" src="" alt="NFPA Table" class="w-full h-auto rounded-lg"></div>
-    </div>
+    </main>
+
+    <!-- ส่วนท้ายเว็บ -->
+    <footer class="text-center py-6 z-10 relative">
+        <p class="text-gray-500">By วัยรุ่นเซินเจิ้น</p>
+    </footer>
 
     <script>
-        // --- DOM Elements ---
-        const allViews = document.querySelectorAll('.calculator-view, #tools-hub-view');
-        const modal = document.getElementById('message-modal');
-        const modalTitle = document.getElementById('modal-title');
-        const modalMessage = document.getElementById('modal-message');
-        const modalCloseBtn = document.getElementById('modal-close-btn');
+        // --- JavaScript สำหรับพื้นหลัง "Pendent Sprinkler System" ---
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
 
-        // --- View Switching Logic ---
-        function switchView(targetId) {
-            allViews.forEach(view => {
-                const isTarget = view.id === targetId;
-                view.classList.toggle('hidden', !isTarget);
-                
-                // Special handling for galaxy background
-                const galaxyCanvas = document.getElementById('galaxy-bg');
-                if (galaxyCanvas) {
-                    galaxyCanvas.style.display = (targetId === 'tools-hub-view') ? 'block' : 'none';
+        let width, height;
+        let fireParticles = [];
+        let waterParticles = [];
+        let pipeWaterParticles = []; 
+        let branchPipeWaterParticles = []; 
+        let sprinklers = [];
+
+        const fireColors = ['#ff4800', '#ff7f00', '#ffd000', '#ff5a00'];
+        const waterColors = ['#00aaff', '#0077ff', '#add8e6', '#b0e0e6'];
+
+        function setupSystem() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            
+            sprinklers = []; 
+            
+            const mainPipeY = 25; 
+            const sprinklerY = mainPipeY + 40;
+            const radius = 8;
+
+            sprinklers.push({
+                x: width * 0.25,
+                y: sprinklerY,
+                mainPipeY: mainPipeY,
+                radius: radius
+            });
+            sprinklers.push({
+                x: width * 0.75,
+                y: sprinklerY,
+                mainPipeY: mainPipeY,
+                radius: radius
+            });
+            
+            pipeWaterParticles = [];
+            for(let i=0; i<400; i++) { 
+                pipeWaterParticles.push(new PipeWaterParticle(mainPipeY, 16));
+            }
+            branchPipeWaterParticles = [];
+            sprinklers.forEach(s => {
+                for(let i=0; i<100; i++) {
+                    branchPipeWaterParticles.push(new BranchPipeWaterParticle(s, 10));
                 }
             });
         }
 
-        // --- Hub Functions ---
-        function showComingSoonModal(title) {
-            modalTitle.textContent = title;
-            modalMessage.textContent = 'ฟังก์ชันนี้กำลังอยู่ในการพัฒนา จะพร้อมใช้งานเร็วๆ นี้';
-            modal.classList.remove('hidden');
-        }
-        function hideModal() {
-            modal.classList.add('hidden');
-        }
-
-        // --- Event Listeners for Hub ---
-        modalCloseBtn.addEventListener('click', hideModal);
-        modal.addEventListener('click', (event) => { if (event.target === modal) hideModal(); });
-        
-        document.querySelectorAll('.btn-back-to-hub').forEach(btn => btn.addEventListener('click', () => switchView('tools-hub-view')));
-        document.getElementById('tool-friction-loss').addEventListener('click', () => switchView('calculator-view-friction-loss'));
-        
-        ['tool-pump-sizing', 'tool-hydraulic-calc', 'tool-detector-spacing', 'tool-egress-width', 'tool-code-lookup'].forEach(id => {
-            document.getElementById(id).addEventListener('click', (e) => {
-                const toolName = e.currentTarget.querySelector('h2').textContent;
-                showComingSoonModal(toolName);
-            });
-        });
-        
-        // --- FRICTION LOSS CALCULATOR SCRIPT ---
-        const steelPipeID = { "0.5": 0.622, "0.75": 0.824, "1": 1.049, "1.25": 1.380, "1.5": 1.610, "2": 2.067, "2.5": 2.469, "3": 3.068, "4": 4.026, "5": 5.047, "6": 6.065, "8": 7.981, "10": 10.020, "12": 11.938 };
-        const pvcPipeID = { "0.5": 0.622, "0.75": 0.824, "1": 1.049, "1.25": 1.380, "1.5": 1.610, "2": 2.067, "2.5": 2.469, "3": 3.068, "4": 4.026, "5": 5.047, "6": 6.065, "8": 7.981, "10": 10.020, "12": 11.938 };
-        function calculateFrictionLoss(Q, L, D, C) { if (Q === 0 || L === 0) return 0; if (D === 0 || C === 0) return Infinity; return (14.83 * Math.pow(Math.abs(Q), 1.852) * L) / (Math.pow(C, 1.852) * Math.pow(D, 4.87)); }
-        function updateCustomCFactor() { const cFactorSelect = document.getElementById('cFactor'); const customCFactorInput = document.getElementById('customCFactor'); if (cFactorSelect.value === 'custom') { customCFactorInput.classList.remove('hidden'); } else { customCFactorInput.classList.add('hidden'); } updatePipeDiameterInput(); }
-        function updatePipeDiameterInput() { const cFactorSelect = document.getElementById('cFactor'); const nominalPipeSizeSelect = document.getElementById('nominalPipeSize'); const pipeDiameterInput = document.getElementById('pipeDiameter'); const materialType = cFactorSelect.options[cFactorSelect.selectedIndex].dataset.material; const selectedNPS = nominalPipeSizeSelect.value; let diameterValue = ''; if (selectedNPS) { if (materialType === 'plastic' && pvcPipeID[selectedNPS]) { diameterValue = pvcPipeID[selectedNPS].toFixed(3); } else if ((materialType === 'black_steel' || materialType === 'galvanized_steel') && steelPipeID[selectedNPS]) { diameterValue = steelPipeID[selectedNPS].toFixed(3); } } pipeDiameterInput.value = diameterValue; }
-        function calculateHazenWilliams() { const Q = parseFloat(document.getElementById('flowRate').value); const L = parseFloat(document.getElementById('pipeLength').value); const D = parseFloat(document.getElementById('pipeDiameter').value); let H = parseFloat(document.getElementById('elevationChange').value); if (isNaN(H)) H = 0; let C = document.getElementById('cFactor').value === 'custom' ? parseFloat(document.getElementById('customCFactor').value) : parseFloat(document.getElementById('cFactor').value); const resultDiv = document.getElementById('result'); const errorDiv = document.getElementById('error-message'); errorDiv.classList.add('hidden'); resultDiv.classList.add('hidden'); if (isNaN(Q) || isNaN(L) || isNaN(D) || isNaN(C) || Q < 0 || L < 0 || D <= 0 || C <= 0 || H < 0) { errorDiv.textContent = 'กรุณาป้อนค่าที่ถูกต้อง'; errorDiv.classList.remove('hidden'); return; } const P_friction = calculateFrictionLoss(Q, L, D, C); const P_elevation = H * 1.422; const P_total = P_friction + P_elevation; resultDiv.innerHTML = `<table><tr><td>แรงดันสูญเสีย (Friction):</td><td>${P_friction.toFixed(2)} psi</td></tr><tr><td>แรงดัน (Elevation):</td><td>${P_elevation.toFixed(2)} psi</td></tr><tr class="total-pressure-row"><td>แรงดันรวม (Total):</td><td>${P_total.toFixed(2)} psi</td></tr></table>`; resultDiv.classList.remove('hidden'); }
-        function clearHazenWilliamsInputs() { document.getElementById('flowRate').value = ''; document.getElementById('cFactor').value = '120'; document.getElementById('nominalPipeSize').value = ''; document.getElementById('pipeDiameter').value = ''; document.getElementById('pipeLength').value = ''; document.getElementById('elevationChange').value = ''; document.getElementById('result').classList.add('hidden'); document.getElementById('error-message').classList.add('hidden'); updateCustomCFactor(); }
-        function toggleFormulaDisplay() { document.getElementById('formulaContent').classList.toggle('hidden'); }
-        
-        // --- Galaxy Background Animation ---
-        let scene, camera, renderer, stars, starGeo;
-
-        function initGalaxy() {
-            scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
-            camera.position.z = 1;
-            camera.rotation.x = Math.PI / 2;
-
-            renderer = new THREE.WebGLRenderer({
-                canvas: document.querySelector("#galaxy-bg"),
-            });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-
-            starGeo = new THREE.BufferGeometry();
-            const starVertices = [];
-            for (let i = 0; i < 6000; i++) {
-                const x = (Math.random() - 0.5) * 2000;
-                const y = (Math.random() - 0.5) * 2000;
-                const z = (Math.random() - 0.5) * 2000;
-                starVertices.push(x, y, z);
+        // --- Particle Classes ---
+        class FireParticle {
+            constructor() {
+                this.x = Math.random() * width;
+                this.y = height + Math.random() * 50;
+                this.vx = (Math.random() - 0.5) * 1.5;
+                this.vy = -(Math.random() * 2.5 + 1.5);
+                this.radius = Math.random() * 3 + 2;
+                this.color = fireColors[Math.floor(Math.random() * fireColors.length)];
+                this.life = Math.random() * 80 + 100;
+                this.initialLife = this.life;
             }
-            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+            update() { this.x += this.vx; this.y += this.vy; this.life--; this.vy *= 0.985; }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius * (this.life / this.initialLife), 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.life / this.initialLife;
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
 
-            let sprite = new THREE.TextureLoader().load( 'https://placehold.co/16x16/ffffff/ffffff.png' );
-            let starMaterial = new THREE.PointsMaterial({
-                color: 0xaaaaaa,
-                size: 0.7,
-                map: sprite
+        class WaterParticle {
+            constructor(sprinkler) {
+                this.x = sprinkler.x;
+                this.y = sprinkler.y + sprinkler.radius * 1.7;
+
+                const sprayAngleWidth = Math.PI * 1.2; 
+                const baseAngle = Math.PI / 2; 
+
+                const angle = baseAngle + (Math.random() - 0.5) * sprayAngleWidth;
+                
+                const speed = Math.random() * 6 + 4;
+
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                
+                this.gravity = 0.4; 
+                this.radius = Math.random() * 1.2 + 0.5;
+                this.life = Math.random() * 80 + 60;
+                this.color = waterColors[Math.floor(Math.random() * waterColors.length)];
+            }
+            update() { this.vy += this.gravity; this.x += this.vx; this.y += this.vy; this.life--; }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = (this.life / 140) * 0.7;
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+        
+        class PipeWaterParticle {
+            constructor(pipeY, pipeHeight) {
+                this.x = Math.random() * width;
+                this.y = pipeY - pipeHeight / 2 + Math.random() * pipeHeight;
+                this.vx = Math.random() * 2.0 + 1.0; 
+                this.radius = Math.random() * 2.0 + 0.5;
+                this.color = waterColors[Math.floor(Math.random() * 2)];
+                this.opacity = Math.random() * 0.5 + 0.2;
+            }
+            update() {
+                this.x += this.vx;
+                if (this.x > width) { this.x = 0; }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.opacity;
+                ctx.fill();
+            }
+        }
+
+        class BranchPipeWaterParticle {
+            constructor(sprinkler, pipeWidth) {
+                this.sprinkler = sprinkler;
+                this.pipeWidth = pipeWidth;
+                this.x = this.sprinkler.x - this.pipeWidth / 2 + Math.random() * this.pipeWidth;
+                this.y = this.sprinkler.mainPipeY + Math.random() * (this.sprinkler.y - this.sprinkler.mainPipeY);
+                this.vy = Math.random() * 1.5 + 0.5; 
+                this.radius = Math.random() * 1.5 + 0.5;
+                this.color = waterColors[Math.floor(Math.random() * 2)];
+                this.opacity = Math.random() * 0.5 + 0.2;
+            }
+            update() {
+                this.y += this.vy;
+                if (this.y > this.sprinkler.y) {
+                    this.y = this.sprinkler.mainPipeY;
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.opacity;
+                ctx.fill();
+            }
+        }
+
+        function init() {
+            setupSystem();
+            animate();
+        }
+
+        function drawPipeSystem() {
+            if (sprinklers.length === 0) return;
+            
+            const mainPipeY = sprinklers[0].mainPipeY;
+            const mainPipeHeight = 16;
+
+            const gradient = ctx.createLinearGradient(0, mainPipeY - mainPipeHeight / 2, 0, mainPipeY + mainPipeHeight / 2);
+            gradient.addColorStop(0, '#e55e5a');
+            gradient.addColorStop(0.5, '#d9534f');
+            gradient.addColorStop(1, '#c9302c');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, mainPipeY - mainPipeHeight / 2, width, mainPipeHeight);
+            
+            pipeWaterParticles.forEach(p => p.draw());
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.fillRect(0, mainPipeY - mainPipeHeight / 2, width, 2);
+            
+            branchPipeWaterParticles.forEach(p => p.draw());
+
+            sprinklers.forEach(s => {
+                const branchGradient = ctx.createLinearGradient(s.x - 5, 0, s.x + 5, 0);
+                branchGradient.addColorStop(0, '#d9534f');
+                branchGradient.addColorStop(0.5, '#c9302c');
+                branchGradient.addColorStop(1, '#a94442');
+                ctx.fillStyle = branchGradient;
+                ctx.fillRect(s.x - 5, s.mainPipeY, 10, s.y - s.mainPipeY);
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fillRect(s.x - 5, s.mainPipeY, 2, s.y - s.mainPipeY);
+
+                ctx.fillStyle = '#a9a9a9'; 
+                ctx.fillRect(s.x - 4, s.y - s.radius, 8, s.radius);
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3; 
+                ctx.beginPath();
+                ctx.moveTo(s.x - s.radius * 0.8, s.y);
+                ctx.lineTo(s.x - s.radius * 0.5, s.y + s.radius * 1.5);
+                ctx.lineTo(s.x, s.y + s.radius * 1.8);
+                ctx.moveTo(s.x + s.radius * 0.8, s.y);
+                ctx.lineTo(s.x + s.radius * 0.5, s.y + s.radius * 1.5);
+                ctx.lineTo(s.x, s.y + s.radius * 1.8);
+                ctx.stroke();
+                ctx.strokeStyle = '#ff0000';
+                ctx.lineWidth = 2; 
+                ctx.beginPath();
+                ctx.moveTo(s.x, s.y);
+                ctx.lineTo(s.x, s.y + s.radius * 1.7);
+                ctx.stroke();
             });
-
-            stars = new THREE.Points(starGeo, starMaterial);
-            scene.add(stars);
-
-            window.addEventListener("resize", onWindowResize, false);
-
-            animateGalaxy();
         }
 
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        }
+        function animate() {
+            ctx.clearRect(0, 0, width, height);
+            ctx.globalAlpha = 1;
 
-        function animateGalaxy() {
-            starGeo.attributes.position.array.forEach((_, index) => {
-                if (index % 3 === 1) { // y-coordinate
-                    starGeo.attributes.position.array[index] -= 0.2;
-                    if (starGeo.attributes.position.array[index] < -1000) {
-                        starGeo.attributes.position.array[index] = 1000;
+            pipeWaterParticles.forEach(p => p.update());
+            branchPipeWaterParticles.forEach(p => p.update());
+            
+            drawPipeSystem();
+
+            if (waterParticles.length < 4000) { 
+                sprinklers.forEach(s => {
+                    for(let i = 0; i < 20; i++) { 
+                        waterParticles.push(new WaterParticle(s));
+                    }
+                });
+            }
+            for (let i = waterParticles.length - 1; i >= 0; i--) {
+                const p = waterParticles[i];
+                p.update();
+                p.draw();
+                if (p.life <= 0 || p.y > height) {
+                    waterParticles.splice(i, 1);
+                }
+            }
+            
+            if (fireParticles.length < 250) {
+                fireParticles.push(new FireParticle());
+            }
+            for (let i = fireParticles.length - 1; i >= 0; i--) {
+                const p = fireParticles[i];
+                p.update();
+                let extinguished = false;
+                for (let j = 0; j < waterParticles.length; j++) {
+                    const wp = waterParticles[j];
+                    if (Math.hypot(p.x - wp.x, p.y - wp.y) < p.radius + wp.radius + 15) {
+                        p.life -= 5; 
+                        break;
                     }
                 }
-            });
-            starGeo.attributes.position.needsUpdate = true;
-            stars.rotation.y += 0.0002;
+                if (p.life <= 0) {
+                    fireParticles.splice(i, 1);
+                } else {
+                    p.draw();
+                }
+            }
 
-            renderer.render(scene, camera);
-            requestAnimationFrame(animateGalaxy);
+            requestAnimationFrame(animate);
         }
         
-        // Initial setup
-        document.addEventListener('DOMContentLoaded', () => {
-             switchView('tools-hub-view');
-             updateCustomCFactor();
-             initGalaxy();
-        });
+        window.addEventListener('resize', setupSystem);
+        init();
+
     </script>
 </body>
 </html>
