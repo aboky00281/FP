@@ -10,43 +10,34 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Chart.js and Datalabels Plugin -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <!-- three.js for 3D animation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     
     <!-- Custom Styles -->
     <style>
         body {
             font-family: 'Sarabun', 'Inter', sans-serif;
-            background-color: #f0f4f8;
+            background-color: #0a0a0a; /* Dark background for the whole page */
         }
         /* --- Hub Styles --- */
-        #tools-hub-view .container {
-            position: relative;
+        #galaxy-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1; /* Place canvas behind everything */
         }
         .tool-card {
-            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
         }
         .tool-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.2), 0 4px 6px -4px rgb(0 0 0 / 0.2);
+            background-color: rgba(255, 255, 255, 0.1);
         }
-        
-        /* --- Pump Calculator Styles --- */
-        #calculator-view-pump-sizing { background-color: #f0f4f8; }
-        #calculator-view-pump-sizing .container { background-color: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); max-width: 600px; width: 100%; border: 1px solid #e2e8f0; position: relative; }
-        #calculator-view-pump-sizing .version-text { position: absolute; top: 20px; right: 20px; font-size: 10px; color: #94a3b8; font-weight: 300; }
-        #calculator-view-pump-sizing .form-group { margin-bottom: 20px; }
-        #calculator-view-pump-sizing label { display: block; margin-bottom: 8px; font-weight: 600; color: #334155; }
-        #calculator-view-pump-sizing input[type="number"],
-        #calculator-view-pump-sizing input[type="text"],
-        #calculator-view-pump-sizing select { width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 16px; color: #475569; box-sizing: border-box; }
-        #calculator-view-pump-sizing .btn-primary { width: 100%; padding: 12px 20px; background-color: #22c55e; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 700; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s ease; }
-        #calculator-view-pump-sizing .btn-primary:hover { background-color: #16a34a; transform: translateY(-2px); }
-        #calculator-view-pump-sizing .btn-secondary { padding: 12px 20px; background-color: #3b82f6; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 700; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s ease; }
-        #calculator-view-pump-sizing .btn-clear { width: 100%; padding: 12px 20px; background-color: #ef4444; color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: 700; cursor: pointer; transition: background-color 0.3s ease, transform 0.2s ease; }
-        #calculator-view-pump-sizing .results-section { margin-top: 30px; padding: 20px; background-color: #f8fafc; border: 1px dashed #94a3b8; border-radius: 8px; }
-        #calculator-view-pump-sizing .small-text { font-size: 13px; color: #64748b; margin-top: 5px; display: block; }
         
         /* --- Friction Loss Calculator Styles --- */
         #calculator-view-friction-loss { background-color: #f0f2f5; }
@@ -78,9 +69,8 @@
         /* Print specific styles */
         @media print {
             body { background-color: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; padding: 0; margin: 0; }
-            #tools-hub-view, #message-modal, .btn-back-to-hub { display: none !important; }
+            #tools-hub-view, #message-modal, .btn-back-to-hub, #galaxy-bg { display: none !important; }
             .calculator-view { display: none !important; }
-            body[data-printing="pump-sizing"] #calculator-view-pump-sizing,
             body[data-printing="friction-loss"] #calculator-view-friction-loss { display: block !important; }
             .container, #calculator-view-friction-loss .main-container { box-shadow: none; border: none; max-width: none; width: 100%; padding: 0; margin: 0; }
             button, .disclaimer, .print-pdf-buttons, .btn-clear, .modal-overlay, .formula-toggle-header, .version-text { display: none !important; }
@@ -88,39 +78,40 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 dark:bg-gray-900">
+<body class="text-gray-900">
 
     <!-- Main Hub View -->
     <div id="tools-hub-view" class="p-4 sm:p-6 lg:p-8">
-        <div class="container mx-auto">
+        <canvas id="galaxy-bg"></canvas>
+        <div class="container mx-auto relative z-10">
             <header class="text-center mb-8">
-                <h1 class="text-3xl sm:text-4xl font-bold text-red-600 dark:text-red-500">Fire Protection Engineering Hub</h1>
-                <p class="mt-2 text-lg text-gray-600 dark:text-gray-400">ศูนย์กลางเครื่องมือสำหรับวิศวกรป้องกันอัคคีภัย (ตามมาตรฐาน NFPA)</p>
+                <h1 class="text-3xl sm:text-4xl font-bold text-red-500">Fire Protection Engineering Hub</h1>
+                <p class="mt-2 text-lg text-gray-300">ศูนย์กลางเครื่องมือสำหรับวิศวกรป้องกันอัคคีภัย (ตามมาตรฐาน NFPA)</p>
             </header>
             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                <div id="tool-friction-loss" class="tool-card bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-red-100 dark:bg-red-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div><h2 class="text-xl font-semibold text-gray-900 dark:text-white">คำนวณแรงเสียดทานในท่อ</h2></div>
-                    <p class="text-gray-600 dark:text-gray-400">คำนวณ Friction Loss ในท่อดับเพลิงโดยใช้สูตร Hazen-Williams</p>
+                <div id="tool-friction-loss" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
+                    <div class="flex items-center mb-4"><div class="p-3 bg-red-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div><h2 class="text-xl font-semibold text-white">คำนวณแรงเสียดทานในท่อ</h2></div>
+                    <p class="text-gray-400">คำนวณ Friction Loss ในท่อดับเพลิงโดยใช้สูตร Hazen-Williams</p>
                 </div>
-                <div id="tool-pump-sizing" class="tool-card bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-green-100 dark:bg-green-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2a1 1 0 011 1v8a1 1 0 01-1 1h-2a1 1 0 01-1-1z" /></svg></div><h2 class="text-xl font-semibold text-gray-900 dark:text-white">หาขนาดปั๊มน้ำดับเพลิง</h2></div>
-                    <p class="text-gray-600 dark:text-gray-400">ช่วยกำหนดขนาดของปั๊มน้ำดับเพลิงตามความต้องการของระบบ (NFPA 20)</p>
+                <div id="tool-pump-sizing" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
+                    <div class="flex items-center mb-4"><div class="p-3 bg-green-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2a1 1 0 011 1v8a1 1 0 01-1 1h-2a1 1 0 01-1-1z" /></svg></div><h2 class="text-xl font-semibold text-white">หาขนาดปั๊มน้ำดับเพลิง</h2></div>
+                    <p class="text-gray-400">ช่วยกำหนดขนาดของปั๊มน้ำดับเพลิงตามความต้องการของระบบ (NFPA 20)</p>
                 </div>
-                <div id="tool-hydraulic-calc" class="tool-card bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-blue-100 dark:bg-blue-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-12v4m-2-2h4m-1 4l-3 3m0 0l-3-3m3 3V6" /></svg></div><h2 class="text-xl font-semibold text-gray-900 dark:text-white">คำนวณไฮดรอลิก</h2></div>
-                    <p class="text-gray-600 dark:text-gray-400">คำนวณหาความดันและอัตราการไหลในระบบท่อย่อย (NFPA 13)</p>
+                <div id="tool-hydraulic-calc" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
+                    <div class="flex items-center mb-4"><div class="p-3 bg-blue-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-12v4m-2-2h4m-1 4l-3 3m0 0l-3-3m3 3V6" /></svg></div><h2 class="text-xl font-semibold text-white">คำนวณไฮดรอลิก</h2></div>
+                    <p class="text-gray-400">คำนวณหาความดันและอัตราการไหลในระบบท่อย่อย (NFPA 13)</p>
                 </div>
-                <div id="tool-detector-spacing" class="tool-card bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-yellow-100 dark:bg-yellow-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-600 dark:text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg></div><h2 class="text-xl font-semibold text-gray-900 dark:text-white">ระยะห่างอุปกรณ์ตรวจจับ</h2></div>
-                    <p class="text-gray-600 dark:text-gray-400">คำนวณระยะห่างการติดตั้งอุปกรณ์ตรวจจับควันและความร้อน (NFPA 72)</p>
+                <div id="tool-detector-spacing" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
+                    <div class="flex items-center mb-4"><div class="p-3 bg-yellow-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg></div><h2 class="text-xl font-semibold text-white">ระยะห่างอุปกรณ์ตรวจจับ</h2></div>
+                    <p class="text-gray-400">คำนวณระยะห่างการติดตั้งอุปกรณ์ตรวจจับควันและความร้อน (NFPA 72)</p>
                 </div>
-                <div id="tool-egress-width" class="tool-card bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-purple-100 dark:bg-purple-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-600 dark:text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21v-1a6 6 0 00-5.176-5.97M15 21H9" /></svg></div><h2 class="text-xl font-semibold text-gray-900 dark:text-white">คำนวณความกว้างทางหนีไฟ</h2></div>
-                    <p class="text-gray-600 dark:text-gray-400">คำนวณความกว้างของเส้นทางหนีไฟที่ต้องการตามจำนวนคน (NFPA 101)</p>
+                <div id="tool-egress-width" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
+                    <div class="flex items-center mb-4"><div class="p-3 bg-purple-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21v-1a6 6 0 00-5.176-5.97M15 21H9" /></svg></div><h2 class="text-xl font-semibold text-white">คำนวณความกว้างทางหนีไฟ</h2></div>
+                    <p class="text-gray-400">คำนวณความกว้างของเส้นทางหนีไฟที่ต้องการตามจำนวนคน (NFPA 101)</p>
                 </div>
-                <div id="tool-code-lookup" class="tool-card bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 cursor-pointer">
-                    <div class="flex items-center mb-4"><div class="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-600 dark:text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div><h2 class="text-xl font-semibold text-gray-900 dark:text-white">ค้นหามาตรฐาน NFPA</h2></div>
-                    <p class="text-gray-600 dark:text-gray-400">เครื่องมือช่วยค้นหาข้อมูลและข้อกำหนดในมาตรฐาน NFPA (เร็วๆ นี้)</p>
+                <div id="tool-code-lookup" class="tool-card bg-slate-800/50 rounded-lg shadow-lg p-6 cursor-pointer">
+                    <div class="flex items-center mb-4"><div class="p-3 bg-indigo-900/50 rounded-full mr-4"><svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div><h2 class="text-xl font-semibold text-white">ค้นหามาตรฐาน NFPA</h2></div>
+                    <p class="text-gray-400">เครื่องมือช่วยค้นหาข้อมูลและข้อกำหนดในมาตรฐาน NFPA (เร็วๆ นี้)</p>
                 </div>
             </div>
         </div>
@@ -130,12 +121,13 @@
     <div id="calculator-view-friction-loss" class="hidden calculator-view p-4 flex justify-center items-start min-h-screen">
         <div class="main-container">
             <div class="panel">
-                <div class="version-text">V.1.2 By วัยรุ่นเซินเจิ้น</div>
-                <button class="btn-back-to-hub absolute top-4 left-4 bg-gray-200 hover:bg-gray-300 text-gray-700 w-10 h-10 rounded-full flex items-center justify-center">
+                <button class="btn-back-to-hub absolute top-4 left-4 bg-red-500 hover:bg-red-600 text-white w-8 h-8 rounded-lg flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
                 </button>
+                <div class="version-text">V.1.2 By วัยรุ่นเซินเจิ้น</div>
                 <h1 class="text-center pt-8">เครื่องคำนวณ Hazen-Williams</h1>
                 <p class="text-gray-600 mb-6 text-center">คำนวณการสูญเสียแรงดันสำหรับท่อเดี่ยว</p>
+                <!-- Hazen-Williams form content... -->
                 <div class="input-group"><label for="flowRate">อัตราการไหล (Q) - GPM:</label><input type="number" id="flowRate" placeholder="เช่น 250"></div>
                 <div class="input-group"><label for="cFactor">ค่าสัมประสิทธิ์ Hazen-Williams (C):</label><select id="cFactor" onchange="updateCustomCFactor()"><option value="100" data-material="cast_iron">100 - Unlined cast or ductile iron</option><option value="100" data-material="black_steel">100 - Black steel (dry systems)</option><option value="120" data-material="black_steel" selected>120 - Black steel (wet systems)</option><option value="100" data-material="galvanized_steel">100 - Galvanized steel (dry systems)</option><option value="120" data-material="galvanized_steel">120 - Galvanized steel (wet systems)</option><option value="150" data-material="plastic">150 - Plastic (listed) all</option><option value="140" data-material="cement_lined_iron">140 - Cement-lined cast- or ductile iron</option><option value="150" data-material="copper_brass_stainless">150 - Copper tube, brass or stainless steel</option><option value="custom" data-material="custom">กำหนดเอง</option></select><input type="number" id="customCFactor" class="mt-2 hidden" placeholder="ป้อนค่า C ที่กำหนดเอง"></div>
                 <div class="input-group"><label for="nominalPipeSize">ขนาดท่อระบุ (NPS) - นิ้ว:</label><select id="nominalPipeSize" onchange="updatePipeDiameterInput()"><option value="">เลือกขนาดท่อ</option><option value="0.5">1/2"</option><option value="0.75">3/4"</option><option value="1">1"</option><option value="1.25">1-1/4"</option><option value="1.5">1-1/2"</option><option value="2">2"</option><option value="2.5">2-1/2"</option><option value="3">3"</option><option value="4">4"</option><option value="5">5"</option><option value="6">6"</option><option value="8">8"</option><option value="10">10"</option><option value="12">12"</option></select></div>
@@ -148,29 +140,6 @@
                 <p class="formula-toggle-header" onclick="toggleFormulaDisplay()">แสดง/ซ่อนสูตร</p>
                 <div id="formulaContent" class="formula-display hidden"><p>P<sub>total</sub> = P<sub>friction</sub> + P<sub>elevation</sub></p><p>P<sub>friction</sub> = <span class="fraction-container"><span class="fraction-numerator">14.83 * Q<sup>1.852</sup> * L</span><span class="fraction-denominator">C<sup>1.852</sup> * D<sup>4.87</sup></span></span></p><p>P<sub>elevation</sub> = H * 1.422</p></div>
             </div>
-        </div>
-    </div>
-
-    <!-- Pump Sizing Calculator View -->
-    <div id="calculator-view-pump-sizing" class="hidden calculator-view p-4 sm:p-6 lg:p-8 flex justify-center items-start min-h-screen">
-        <div class="container text-gray-900">
-            <div class="version-text">V.1.82 By วัยรุ่นเซินเจิ้น</div>
-            <button class="btn-back-to-hub absolute top-4 left-4 bg-gray-200 hover:bg-gray-300 text-gray-700 w-10 h-10 rounded-full flex items-center justify-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
-            </button>
-            <h1 class="text-3xl font-bold text-center text-gray-800 mb-6 pt-8">คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ <br> (NFPA Guidance)</h1>
-            <p class="disclaimer mb-6">เครื่องมือนี้ใช้สำหรับการประมาณการเบื้องต้นเท่านั้น...</p>
-            <!-- Rest of the pump calculator HTML... -->
-             <div class="form-group" id="area_name_group"><label for="area_name_pump">ชื่อ/รายละเอียดพื้นที่:</label><input type="text" id="area_name_pump" placeholder="เช่น ห้อง Generator Room ชั้น 1" class="rounded-lg shadow-sm"></div>
-            <div class="form-group" id="hazard_class_group_pump"><label for="hazard_class_pump">เลือกประเภทอันตราย (Occupancy Hazard Classification):</label><select id="hazard_class_pump" class="rounded-lg shadow-sm"><option value="light">Light Hazard (อันตรายน้อย)</option><option value="ordinary1">Ordinary Hazard Group 1 (อันตรายปานกลาง กลุ่ม 1)</option><option value="ordinary2">Ordinary Hazard Group 2 (อันตรายปานกลาง กลุ่ม 2)</option><option value="extra1">Extra Hazard Group 1 (อันตรายมาก กลุ่ม 1)</option><option value="extra2">Extra Hazard Group 2 (อันตรายมาก กลุ่ม 2)</option></select></div>
-            <div class="form-group" id="design_area_group_pump"><label for="design_area_pump">พื้นที่ป้องกัน (Design Area - ตร.ม.):</label><input type="number" id="design_area_pump" placeholder="เช่น 139.4 ตร.ม." min="0.1" step="0.1" class="rounded-lg shadow-sm"><small class="small-text print-hide">อ้างอิง NFPA 13 (2025) <span class="text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showImagePopup('https://img2.pic.in.th/pic/Screenshot-2025-07-16-004620.png')">Table 19.2.3.1.1</span> <br> Light/Ordinary Hazard ไม่เกิน 140 ตร.ม. <br> Extra Hazard ไม่เกิน 230 ตร.ม.</small></div>
-            <div class="form-group" id="duration_group_pump"><label for="duration_pump">ระยะเวลาการจ่ายน้ำขั้นต่ำ (นาที):</label><select id="duration_pump" class="rounded-lg shadow-sm"><option value="30">30 นาที</option><option value="60">60 นาที</option><option value="90">90 นาที</option><option value="120">120 นาที</option></select><small class="small-text print-hide">อ้างอิง NFPA 13 (2025) <span class="text-blue-600 hover:text-blue-800 cursor-pointer" onclick="showImagePopup('https://img5.pic.in.th/file/secure-sv1/Screenshot-2025-07-16-003636.png')">Table 19.2.3.1.2</span></small></div>
-            <div class="flex flex-row justify-between gap-x-4 mb-4"><button onclick="calculatePump()" class="btn-primary rounded-lg shadow-md w-1/2">คำนวณ</button><button onclick="clearPumpData()" class="btn-clear rounded-lg shadow-md w-1/2">ล้างข้อมูล</button></div>
-            <div class="pt-8"><div id="results_pump" class="results-section"><h2>ผลการคำนวณ:</h2><p id="area_name_display_pump" style="display:none;"><span>สำหรับพื้นที่:</span> <span id="display_area_name_pump"></span></p><table class="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden"><thead><tr class="bg-gray-100"><th class="py-2 px-4 border-b border-gray-300 text-left text-gray-700 font-normal">รายการ</th><th class="py-2 px-4 border-b border-gray-300 text-left text-gray-700 font-normal">ค่า</th></tr></thead><tbody><tr><td class="py-2 px-4 border-b border-gray-300 text-base">อัตราการไหล (Sprinkler)</td><td class="py-2 px-4 border-b border-gray-300 text-base"><span id="sprinkler_flow">0.00</span> GPM</td></tr><tr id="hose_allowance_row"><td class="py-2 px-4 border-b border-gray-300 text-base">อัตราการไหล (Hose)</td><td class="py-2 px-4 border-b border-gray-300 text-base"><span id="hose_allowance">0.00</span> GPM</td></tr><tr id="total_flow_row"><td class="py-2 px-4 border-b border-gray-300 text-base">อัตราการไหลรวม</td><td class="py-2 px-4 border-b border-gray-300 text-red-600 text-base"><span id="total_flow">0.00</span> GPM</td></tr><tr id="actual_duration_row"><td class="py-2 px-4 border-b border-gray-300 text-base">เวลากักเก็บน้ำ</td><td class="py-2 px-4 border-b border-gray-300 text-base"><span id="actual_duration">0</span> นาที</td></tr><tr id="tank_volume_row"><td class="py-2 px-4 border-b border-gray-300 text-base">ขนาดถังเก็บน้ำ</td><td class="py-2 px-4 border-b border-gray-300 text-base"><span id="tank_volume">0.00</span> ลบ.ม.</td></tr></tbody></table><div class="warning hidden" id="warning_message_pump"></div></div></div>
-            <div id="pump_definition_section" class="pt-8"><h3 class="text-xl font-bold text-center text-gray-700 mb-4">กำหนดขนาดปั้ม</h3><div class="form-group" id="pump_type_group"><label for="pump_type">เลือกชนิดปั๊ม:</label><select id="pump_type" class="rounded-lg shadow-sm"><option value="horizontal">Horizontal Split Case</option><option value="vertical">Vertical Turbine</option></select></div><div class="form-group"><label for="pump_rated_flow">อัตราไหลของปั๊ม (GPM):</label><input type="number" id="pump_rated_flow" placeholder="เช่น 750 GPM" min="0" step="10" class="rounded-lg shadow-sm"></div><div class="form-group"><label for="system_demand_head">แรงดันของระบบ (PSI):</label><input type="number" id="system_demand_head" placeholder="เช่น 100 PSI" min="0" step="1" class="rounded-lg shadow-sm"></div><div class="flex justify-center mb-4"><button onclick="calculatePump()" class="btn-primary rounded-lg shadow-md w-1/2">สร้างกราฟ</button></div></div>
-            <div id="chart_section" class="pt-8"><canvas id="pumpCurveChart"></canvas><p class="chart-disclaimer hidden">* กราฟนี้เป็นเพียงการจำลอง</p><div id="graph_summary" class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg hidden"><h4 class="text-lg font-semibold text-blue-800 mb-3">คำอธิบายกราฟ:</h4><div id="graph_summary_content"><ul class="list-none ml-5 text-gray-700 text-xs"><li><span style="color: rgba(0, 170, 170, 1);">━</span> Performance Curve</li><li><span style="color: rgba(255, 0, 0, 1);">▲</span> Water Demand</li><li><span style="color: rgba(0, 0, 255, 1);">🔵</span> Rated Point</li><li id="shut_off_head_description"><span style="color: rgb(128, 0, 0);">🔴</span> Shut-off Head</li><li id="reference_150_percent_description"><span style="color: rgba(153, 102, 255, 1);">🟣</span> 150% Flow, 65% Head</li></ul></div></div></div>
-            <div id="calculation_summary_section" class="pt-8"><h3 class="text-xl font-bold text-center text-gray-700 mb-4">ตารางสรุปผล</h3><table id="calculation_summary_table" class="w-full border-collapse border border-gray-300 rounded-lg overflow-hidden"><thead><tr class="bg-gray-100"><th class="py-2 px-4 border-b border-gray-300 text-left text-gray-700 font-normal">รายการ</th><th class="py-2 px-4 border-b border-gray-300 text-left text-gray-700 font-normal">ค่า</th></tr></thead><tbody><tr><td class="py-2 px-4 border-b border-gray-300 text-base">อัตราการไหล (Sprinkler)</td><td class="py-2 px-4 border-b border-gray-300 text-base"><span id="summary_sprinkler_flow">0.00</span> GPM</td></tr><tr><td class="py-2 px-4 border-b border-gray-300 text-base">อัตราการไหล (Hose)</td><td class="py-2 px-4 border-b border-gray-300 text-base"><span id="summary_hose_allowance">0.00</span> GPM</td></tr><tr id="summary_total_flow_row"><td class="py-2 px-4 border-b border-gray-300 text-base">อัตราการไหลรวม</td><td class="py-2 px-4 border-b border-gray-300 text-red-600 text-base"><span id="summary_total_flow">0.00</span> GPM</td></tr><tr id="summary_demand_head_table_row"><td class="py-2 px-4 border-b border-gray-300 text-base">แรงดันที่ต้องการ</td><td class="py-2 px-4 border-b border-gray-300 text-red-600 text-base"><span id="summary_demand_head_table">0.00</span> PSI</td></tr><tr><td class="py-2 px-4 border-b border-gray-300 text-base">เวลากักเก็บน้ำ</td><td class="py-2 px-4 border-b border-gray-300 text-base"><span id="summary_actual_duration">0</span> นาที</td></tr><tr><td class="py-2 px-4 border-b border-gray-300 text-base" id="summary_tank_volume_label">ขนาดถังเก็บน้ำ</td><td class="py-2 px-4 border-b border-gray-300 text-base"><span id="summary_tank_volume">0.00</span> ลบ.ม.</td></tr><tr><td class="py-2 px-4 border-b border-gray-300 text-base">อัตราไหลของปั๊ม</td><td class="py-2 px-4 border-b border-gray-300 text-green-600 text-base"><span id="summary_recommended_pump_flow">0.00</span> GPM</td></tr><tr><td class="py-2 px-4 border-b border-gray-300 text-base">แรงดันปั้ม</td><td class="py-2 px-4 border-b border-gray-300 text-green-600 text-base"><span id="summary_estimated_pressure">0.00</span> PSI</td></tr><tr><td class="py-2 px-4 border-b border-gray-300 text-base">แรงดันสูงสุด (Max. churn)</td><td class="py-2 px-4 border-b border-gray-300 text-green-600 text-base"><span id="summary_max_pressure">0.00</span> PSI</td></tr></tbody></table></div>
-            <div class="print-pdf-buttons mt-6 flex flex-col space-y-4 justify-center items-center"><button onclick="printPumpChart()" class="btn-secondary rounded-lg shadow-md w-1/2">พิมพ์ (Print)</button><small class="small-text text-center">สำหรับการส่งออกเป็น PDF โปรดเลือก "บันทึกเป็น PDF"</small></div>
         </div>
     </div>
     
@@ -193,10 +162,13 @@
         // --- View Switching Logic ---
         function switchView(targetId) {
             allViews.forEach(view => {
-                if (view.id === targetId) {
-                    view.classList.remove('hidden');
-                } else {
-                    view.classList.add('hidden');
+                const isTarget = view.id === targetId;
+                view.classList.toggle('hidden', !isTarget);
+                
+                // Special handling for galaxy background
+                const galaxyCanvas = document.getElementById('galaxy-bg');
+                if (galaxyCanvas) {
+                    galaxyCanvas.style.display = (targetId === 'tools-hub-view') ? 'block' : 'none';
                 }
             });
         }
@@ -216,29 +188,14 @@
         modal.addEventListener('click', (event) => { if (event.target === modal) hideModal(); });
         
         document.querySelectorAll('.btn-back-to-hub').forEach(btn => btn.addEventListener('click', () => switchView('tools-hub-view')));
-        document.getElementById('tool-pump-sizing').addEventListener('click', () => switchView('calculator-view-pump-sizing'));
         document.getElementById('tool-friction-loss').addEventListener('click', () => switchView('calculator-view-friction-loss'));
         
-        ['tool-hydraulic-calc', 'tool-detector-spacing', 'tool-egress-width', 'tool-code-lookup'].forEach(id => {
+        ['tool-pump-sizing', 'tool-hydraulic-calc', 'tool-detector-spacing', 'tool-egress-width', 'tool-code-lookup'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
                 const toolName = e.currentTarget.querySelector('h2').textContent;
                 showComingSoonModal(toolName);
             });
         });
-
-        // --- PUMP CALCULATOR SCRIPT ---
-        const NFPA_DATA = { 'light': { density_gpm_sqft: 0.10, hose_allowance_gpm: 100 }, 'ordinary1': { density_gpm_sqft: 0.15, hose_allowance_gpm: 250 }, 'ordinary2': { density_gpm_sqft: 0.20, hose_allowance_gpm: 250 }, 'extra1': { density_gpm_sqft: 0.30, hose_allowance_gpm: 500 }, 'extra2': { density_gpm_sqft: 0.40, hose_allowance_gpm: 500 } };
-        let pumpCurveChart;
-        window.SQ_M_TO_SQ_FT = 10.7639;
-        window.US_GALLONS_TO_CUBIC_METERS = 0.00378541;
-        window.DEFAULT_PUMP_RATED_HEAD_PSI = 100;
-        Chart.register(ChartDataLabels);
-        function showImagePopup(imageUrl) { document.getElementById('popupImage').src = imageUrl; document.getElementById('imagePopupModal').classList.remove('hidden'); }
-        function closeImagePopup() { document.getElementById('imagePopupModal').classList.add('hidden'); }
-        function calculatePump() { /* ... Pump calculation logic ... */ }
-        function clearPumpData() { /* ... Pump clear logic ... */ }
-        function updatePumpCurveChart(pumpRatedFlow, totalRequiredFlow, systemDemandHeadEffective, pumpType) { /* ... Chart update logic ... */ }
-        function printPumpChart() { document.body.dataset.printing = 'pump-sizing'; window.print(); delete document.body.dataset.printing; }
         
         // --- FRICTION LOSS CALCULATOR SCRIPT ---
         const steelPipeID = { "0.5": 0.622, "0.75": 0.824, "1": 1.049, "1.25": 1.380, "1.5": 1.610, "2": 2.067, "2.5": 2.469, "3": 3.068, "4": 4.026, "5": 5.047, "6": 6.065, "8": 7.981, "10": 10.020, "12": 11.938 };
@@ -250,10 +207,72 @@
         function clearHazenWilliamsInputs() { document.getElementById('flowRate').value = ''; document.getElementById('cFactor').value = '120'; document.getElementById('nominalPipeSize').value = ''; document.getElementById('pipeDiameter').value = ''; document.getElementById('pipeLength').value = ''; document.getElementById('elevationChange').value = ''; document.getElementById('result').classList.add('hidden'); document.getElementById('error-message').classList.add('hidden'); updateCustomCFactor(); }
         function toggleFormulaDisplay() { document.getElementById('formulaContent').classList.toggle('hidden'); }
         
+        // --- Galaxy Background Animation ---
+        let scene, camera, renderer, stars, starGeo;
+
+        function initGalaxy() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+            camera.position.z = 1;
+            camera.rotation.x = Math.PI / 2;
+
+            renderer = new THREE.WebGLRenderer({
+                canvas: document.querySelector("#galaxy-bg"),
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+
+            starGeo = new THREE.BufferGeometry();
+            const starVertices = [];
+            for (let i = 0; i < 6000; i++) {
+                const x = (Math.random() - 0.5) * 2000;
+                const y = (Math.random() - 0.5) * 2000;
+                const z = (Math.random() - 0.5) * 2000;
+                starVertices.push(x, y, z);
+            }
+            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
+
+            let sprite = new THREE.TextureLoader().load( 'https://placehold.co/16x16/ffffff/ffffff.png' );
+            let starMaterial = new THREE.PointsMaterial({
+                color: 0xaaaaaa,
+                size: 0.7,
+                map: sprite
+            });
+
+            stars = new THREE.Points(starGeo, starMaterial);
+            scene.add(stars);
+
+            window.addEventListener("resize", onWindowResize, false);
+
+            animateGalaxy();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animateGalaxy() {
+            starGeo.attributes.position.array.forEach((_, index) => {
+                if (index % 3 === 1) { // y-coordinate
+                    starGeo.attributes.position.array[index] -= 0.2;
+                    if (starGeo.attributes.position.array[index] < -1000) {
+                        starGeo.attributes.position.array[index] = 1000;
+                    }
+                }
+            });
+            starGeo.attributes.position.needsUpdate = true;
+            stars.rotation.y += 0.0002;
+
+            renderer.render(scene, camera);
+            requestAnimationFrame(animateGalaxy);
+        }
+        
         // Initial setup
         document.addEventListener('DOMContentLoaded', () => {
              switchView('tools-hub-view');
              updateCustomCFactor();
+             initGalaxy();
         });
     </script>
 </body>
