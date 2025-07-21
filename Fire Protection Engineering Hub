@@ -74,7 +74,7 @@
                 
                 <div class="space-y-4">
                     <!-- ลิงก์ 1: เครื่องคำนวณปั๊มดับเพลิง (อัปเดตแล้ว) -->
-                    <a href="https://icvd4cilzlfyco3gkvmnkq187.on.drv.tw/FP%20%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99%20/Fire%20Pump%20and%20Water%20Tank%20Calculator.html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
+                    <a href="https://icvd4cilzlfyco3gkvmnkq188.on.drv.tw/FP%20%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99%20/Fire%20Pump%20and%20Water%20Tank%20Calculator.html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
                         <div class="flex items-center">
                             <div class="bg-orange-600/30 p-3 rounded-lg mr-5">
                                 <i class="ph-bold ph-calculator text-3xl text-orange-300"></i>
@@ -89,8 +89,8 @@
                         </div>
                     </a>
 
-                    <!-- ลิงก์ 2: เครื่องคำนวณ Hydraulic (อัปเดตแล้ว) -->
-                    <a href="https://icvd4cilzlfyco3gkvmnkq187.on.drv.tw/FP%20%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99%20/%E0%B9%80%E0%B8%84%E0%B8%A3%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%87%E0%B8%84%E0%B8%B3%E0%B8%99%E0%B8%A7%E0%B8%93%20Hydraulic%20(Hazen-Williams).html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
+                    <!-- ลิงก์ 2: เครื่องคำนวณ Hydraulic -->
+                    <a href="https://icvd4cilzlfyco3gkvmnkq188.on.drv.tw/FP%20%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99%20/%E0%B9%80%E0%B8%84%E0%B8%A3%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%87%E0%B8%84%E0%B8%B3%E0%B8%99%E0%B8%A7%E0%B8%93%20Hydraulic%20(Hazen-Williams).html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
                         <div class="flex items-center">
                             <div class="bg-blue-600/30 p-3 rounded-lg mr-5">
                                 <i class="ph-bold ph-function text-3xl text-blue-300"></i>
@@ -112,6 +112,11 @@
         </div>
     </main>
 
+    <!-- ปุ่มเล่นใหม่ -->
+    <div id="replay-button" class="fixed bottom-6 right-6 z-20 cursor-pointer p-3 bg-gray-700/50 backdrop-blur-sm rounded-full hover:bg-gray-600/70 transition-colors">
+        <i class="ph-bold ph-arrow-clockwise text-2xl text-white"></i>
+    </div>
+
     <script>
         // --- JavaScript สำหรับพื้นหลัง "Pendent Sprinkler System" ---
         const canvas = document.getElementById('bg-canvas');
@@ -123,6 +128,9 @@
         let pipeWaterParticles = []; 
         let branchPipeWaterParticles = []; 
         let sprinklers = [];
+        let isFireActive = false;
+        let isFireGenerating = false;
+        let fireTimeoutId, sprinklerTimeoutId, stopFireGenerationTimeoutId;
 
         const fireColors = ['#ff4800', '#ff7f00', '#ffd000', '#ff5a00'];
         const waterColors = ['#00aaff', '#0077ff', '#add8e6', '#b0e0e6'];
@@ -141,25 +149,19 @@
                 x: width * 0.25,
                 y: sprinklerY,
                 mainPipeY: mainPipeY,
-                radius: radius
+                radius: radius,
+                isActive: false
             });
             sprinklers.push({
                 x: width * 0.75,
                 y: sprinklerY,
                 mainPipeY: mainPipeY,
-                radius: radius
+                radius: radius,
+                isActive: false
             });
             
             pipeWaterParticles = [];
-            for(let i=0; i<400; i++) { 
-                pipeWaterParticles.push(new PipeWaterParticle(mainPipeY, 16));
-            }
             branchPipeWaterParticles = [];
-            sprinklers.forEach(s => {
-                for(let i=0; i<100; i++) {
-                    branchPipeWaterParticles.push(new BranchPipeWaterParticle(s, 10));
-                }
-            });
         }
 
         // --- Particle Classes ---
@@ -168,7 +170,7 @@
                 this.x = Math.random() * width;
                 this.y = height + Math.random() * 50;
                 this.vx = (Math.random() - 0.5) * 1.5;
-                this.vy = -(Math.random() * 2.5 + 1.5);
+                this.vy = -(Math.random() * 4 + 3); 
                 this.radius = Math.random() * 3 + 2;
                 this.color = fireColors[Math.floor(Math.random() * fireColors.length)];
                 this.life = Math.random() * 80 + 100;
@@ -219,7 +221,7 @@
         class PipeWaterParticle {
             constructor(pipeY, pipeHeight) {
                 this.x = Math.random() * width;
-                this.y = pipeY - pipeHeight / 2 + Math.random() * pipeHeight;
+                this.y = pipeY - (pipeHeight/2 - 2) + Math.random() * (pipeHeight - 4);
                 this.vx = Math.random() * 2.0 + 1.0; 
                 this.radius = Math.random() * 2.0 + 0.5;
                 this.color = waterColors[Math.floor(Math.random() * 2)];
@@ -239,11 +241,12 @@
         }
 
         class BranchPipeWaterParticle {
-            constructor(sprinkler, pipeWidth) {
+            constructor(sprinkler, pipeWidth, mainPipeHeight) {
                 this.sprinkler = sprinkler;
                 this.pipeWidth = pipeWidth;
-                this.x = this.sprinkler.x - this.pipeWidth / 2 + Math.random() * this.pipeWidth;
-                this.y = this.sprinkler.mainPipeY + Math.random() * (this.sprinkler.y - this.sprinkler.mainPipeY);
+                this.mainPipeHeight = mainPipeHeight;
+                this.x = this.sprinkler.x - (this.pipeWidth/2 - 2) + Math.random() * (this.pipeWidth - 4);
+                this.y = this.sprinkler.mainPipeY + this.mainPipeHeight / 2 + Math.random() * (this.sprinkler.y - (this.sprinkler.mainPipeY + this.mainPipeHeight / 2));
                 this.vy = Math.random() * 1.5 + 0.5; 
                 this.radius = Math.random() * 1.5 + 0.5;
                 this.color = waterColors[Math.floor(Math.random() * 2)];
@@ -252,7 +255,7 @@
             update() {
                 this.y += this.vy;
                 if (this.y > this.sprinkler.y) {
-                    this.y = this.sprinkler.mainPipeY;
+                    this.y = this.sprinkler.mainPipeY + this.mainPipeHeight / 2;
                 }
             }
             draw() {
@@ -264,8 +267,45 @@
             }
         }
 
+        function startSequence() {
+            isFireActive = false;
+            isFireGenerating = false;
+            sprinklers.forEach(s => s.isActive = false);
+            pipeWaterParticles = [];
+            branchPipeWaterParticles = [];
+            waterParticles = [];
+            fireParticles = [];
+
+            fireTimeoutId = setTimeout(() => {
+                isFireActive = true;
+                isFireGenerating = true;
+                sprinklerTimeoutId = setTimeout(() => {
+                    sprinklers.forEach(s => s.isActive = true);
+                    for(let i=0; i<400; i++) { 
+                        pipeWaterParticles.push(new PipeWaterParticle(sprinklers[0].mainPipeY, 16));
+                    }
+                    sprinklers.forEach(s => {
+                        for(let i=0; i<100; i++) {
+                            branchPipeWaterParticles.push(new BranchPipeWaterParticle(s, 10, 16));
+                        }
+                    });
+                    stopFireGenerationTimeoutId = setTimeout(() => {
+                        isFireGenerating = false;
+                    }, 7000); 
+                }, 6000); 
+            }, 3000); 
+        }
+
+        function resetAnimation() {
+            clearTimeout(fireTimeoutId);
+            clearTimeout(sprinklerTimeoutId);
+            clearTimeout(stopFireGenerationTimeoutId);
+            startSequence();
+        }
+
         function init() {
             setupSystem();
+            startSequence();
             animate();
         }
 
@@ -274,6 +314,12 @@
             
             const mainPipeY = sprinklers[0].mainPipeY;
             const mainPipeHeight = 16;
+            const branchPipeWidth = 10;
+
+            if(sprinklers.some(s => s.isActive)) {
+                pipeWaterParticles.forEach(p => p.draw());
+                branchPipeWaterParticles.forEach(p => p.draw());
+            }
 
             const gradient = ctx.createLinearGradient(0, mainPipeY - mainPipeHeight / 2, 0, mainPipeY + mainPipeHeight / 2);
             gradient.addColorStop(0, '#e55e5a');
@@ -282,22 +328,31 @@
             ctx.fillStyle = gradient;
             ctx.fillRect(0, mainPipeY - mainPipeHeight / 2, width, mainPipeHeight);
             
-            pipeWaterParticles.forEach(p => p.draw());
-
             ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
             ctx.fillRect(0, mainPipeY - mainPipeHeight / 2, width, 2);
             
-            branchPipeWaterParticles.forEach(p => p.draw());
-
             sprinklers.forEach(s => {
-                const branchGradient = ctx.createLinearGradient(s.x - 5, 0, s.x + 5, 0);
+                const branchStartY = s.mainPipeY + mainPipeHeight / 2;
+                
+                const couplingWidth = branchPipeWidth + 6;
+                const couplingHeight = 10;
+                const couplingY = branchStartY - couplingHeight / 2;
+                const couplingGradient = ctx.createLinearGradient(s.x - couplingWidth / 2, 0, s.x + couplingWidth / 2, 0);
+                couplingGradient.addColorStop(0, '#d9534f');
+                couplingGradient.addColorStop(0.5, '#c9302c');
+                couplingGradient.addColorStop(1, '#a94442');
+                ctx.fillStyle = couplingGradient;
+                ctx.fillRect(s.x - couplingWidth / 2, couplingY, couplingWidth, couplingHeight);
+
+                const branchGradient = ctx.createLinearGradient(s.x - branchPipeWidth / 2, 0, s.x + branchPipeWidth / 2, 0);
                 branchGradient.addColorStop(0, '#d9534f');
                 branchGradient.addColorStop(0.5, '#c9302c');
                 branchGradient.addColorStop(1, '#a94442');
                 ctx.fillStyle = branchGradient;
-                ctx.fillRect(s.x - 5, s.mainPipeY, 10, s.y - s.mainPipeY);
+                ctx.fillRect(s.x - branchPipeWidth / 2, branchStartY, branchPipeWidth, s.y - branchStartY);
+                
                 ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-                ctx.fillRect(s.x - 5, s.mainPipeY, 2, s.y - s.mainPipeY);
+                ctx.fillRect(s.x - branchPipeWidth / 2, branchStartY, 2, s.y - branchStartY);
 
                 ctx.fillStyle = '#a9a9a9'; 
                 ctx.fillRect(s.x - 4, s.y - s.radius, 8, s.radius);
@@ -311,12 +366,15 @@
                 ctx.lineTo(s.x + s.radius * 0.5, s.y + s.radius * 1.5);
                 ctx.lineTo(s.x, s.y + s.radius * 1.8);
                 ctx.stroke();
-                ctx.strokeStyle = '#ff0000';
-                ctx.lineWidth = 2; 
-                ctx.beginPath();
-                ctx.moveTo(s.x, s.y);
-                ctx.lineTo(s.x, s.y + s.radius * 1.7);
-                ctx.stroke();
+                
+                if (!s.isActive) {
+                    ctx.strokeStyle = '#ff0000';
+                    ctx.lineWidth = 2; 
+                    ctx.beginPath();
+                    ctx.moveTo(s.x, s.y);
+                    ctx.lineTo(s.x, s.y + s.radius * 1.7);
+                    ctx.stroke();
+                }
             });
         }
 
@@ -324,18 +382,20 @@
             ctx.clearRect(0, 0, width, height);
             ctx.globalAlpha = 1;
 
-            pipeWaterParticles.forEach(p => p.update());
-            branchPipeWaterParticles.forEach(p => p.update());
+            if (sprinklers.some(s => s.isActive)) {
+                pipeWaterParticles.forEach(p => p.update());
+                branchPipeWaterParticles.forEach(p => p.update());
+            }
             
             drawPipeSystem();
 
-            if (waterParticles.length < 4000) { 
-                sprinklers.forEach(s => {
+            sprinklers.forEach(s => {
+                if (s.isActive && waterParticles.length < 4000) { 
                     for(let i = 0; i < 20; i++) { 
                         waterParticles.push(new WaterParticle(s));
                     }
-                });
-            }
+                }
+            });
             for (let i = waterParticles.length - 1; i >= 0; i--) {
                 const p = waterParticles[i];
                 p.update();
@@ -345,24 +405,25 @@
                 }
             }
             
-            if (fireParticles.length < 250) {
-                fireParticles.push(new FireParticle());
-            }
-            for (let i = fireParticles.length - 1; i >= 0; i--) {
-                const p = fireParticles[i];
-                p.update();
-                let extinguished = false;
-                for (let j = 0; j < waterParticles.length; j++) {
-                    const wp = waterParticles[j];
-                    if (Math.hypot(p.x - wp.x, p.y - wp.y) < p.radius + wp.radius + 15) {
-                        p.life -= 5; 
-                        break;
-                    }
+            if (isFireActive) {
+                if (fireParticles.length < 250 && isFireGenerating) {
+                    fireParticles.push(new FireParticle());
                 }
-                if (p.life <= 0) {
-                    fireParticles.splice(i, 1);
-                } else {
-                    p.draw();
+                for (let i = fireParticles.length - 1; i >= 0; i--) {
+                    const p = fireParticles[i];
+                    p.update();
+                    for (let j = 0; j < waterParticles.length; j++) {
+                        const wp = waterParticles[j];
+                        if (Math.hypot(p.x - wp.x, p.y - wp.y) < p.radius + wp.radius + 15) {
+                            p.life -= 0.8; 
+                            break;
+                        }
+                    }
+                    if (p.life <= 0) {
+                        fireParticles.splice(i, 1);
+                    } else {
+                        p.draw();
+                    }
                 }
             }
 
@@ -371,6 +432,7 @@
         
         window.addEventListener('resize', setupSystem);
         init();
+        document.getElementById('replay-button').addEventListener('click', resetAnimation);
 
     </script>
 </body>
