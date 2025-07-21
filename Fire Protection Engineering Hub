@@ -73,8 +73,8 @@
                 <h2 class="text-2xl font-semibold text-orange-400 mb-6 border-b-2 border-gray-700 pb-2">เครื่องมือคำนวณ</h2>
                 
                 <div class="space-y-4">
-                    <!-- ลิงก์ 1: เครื่องคำนวณปั๊มดับเพลิง -->
-                    <a href="https://icvd4cilzlfyco3gkvmnkqv182.on.drv.tw/FP%20%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99%20/Fire%20Pump%20and%20Water%20Tank%20Calculator.html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
+                    <!-- ลิงก์ 1: เครื่องคำนวณปั๊มดับเพลิง (อัปเดตแล้ว) -->
+                    <a href="https://icvd4cilzlfyco3gkvmnkq182.on.drv.tw/FP%20%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99%20/Fire%20Pump%20and%20Water%20Tank%20Calculator.html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
                         <div class="flex items-center">
                             <div class="bg-orange-600/30 p-3 rounded-lg mr-5">
                                 <i class="ph-bold ph-calculator text-3xl text-orange-300"></i>
@@ -89,7 +89,7 @@
                         </div>
                     </a>
 
-                    <!-- ลิงก์ 2: เครื่องคำนวณ Hydraulic (อัปเดตแล้ว) -->
+                    <!-- ลิงก์ 2: เครื่องคำนวณ Hydraulic -->
                     <a href="https://icvd4cilzlfyco3gkvmnkq182.on.drv.tw/FP%20%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99%20/%E0%B9%80%E0%B8%84%E0%B8%A3%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%87%E0%B8%84%E0%B8%B3%E0%B8%99%E0%B8%A7%E0%B8%93%20Hydraulic%20(Hazen-Williams).html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
                         <div class="flex items-center">
                             <div class="bg-blue-600/30 p-3 rounded-lg mr-5">
