@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>คำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (NFPA Guidance) V.3.2</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fixed Chart.js Versions for Stability -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'sans-serif'],
+                        heading: ['Prompt', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1', // Indigo 500
+                            600: '#4f46e5', // Indigo 600
+                            700: '#4338ca', // Indigo 700
+                            900: '#312e81',
+                        },
+                        secondary: {
+                            500: '#0ea5e9', // Sky 500
+                            600: '#0284c7', // Sky 600
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f8fafc;
+            background-image: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%), 
+                              radial-gradient(at 100% 100%, rgba(14, 165, 233, 0.05) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+
+        .input-field {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #e2e8f0;
+        }
+        .input-field:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+            outline: none;
+            transform: translateY(-1px);
+        }
+
+        /* Print Styling Override */
+        @media print {
+            body { 
+                background: white !important; 
+                background-image: none !important;
+                height: auto;
+                overflow: visible;
+            }
+            .no-print { display: none !important; }
+            .print-break-before { page-break-before: always; }
+            
+            /* Reset container styles for print to prevent clipping */
+            .shadow-xl, .shadow-lg, .shadow-md, .shadow-sm { box-shadow: none !important; }
+            .bg-gradient-to-r { background: none !important; color: black !important; }
+            .text-white { color: black !important; }
+            .overflow-hidden { overflow: visible !important; } 
+            .rounded-3xl, .rounded-2xl, .rounded-xl { border-radius: 0 !important; }
+            .border { border: 1px solid #eee !important; }
+            
+            .max-w-5xl { max-width: 100% !important; width: 100% !important; margin: 0 !important; }
+            
+            canvas { max-height: 400px !important; width: 100% !important; }
+            table { border-collapse: collapse !important; width: 100% !important; }
+            th, td { border: 1px solid #94a3b8 !important; }
+            
+            .p-6, .p-8, .p-10 { padding: 10px !important; }
+            .gap-8 { gap: 1rem !important; }
+            .grid-cols-1, .lg\:grid-cols-12, .lg\:col-span-5, .lg\:col-span-7 { 
+                display: block !important; 
+                width: 100% !important; 
+            }
+            
+            section, #results, #chart_section {
+                margin-bottom: 20px !important;
+                border: 1px solid #ccc !important;
+                padding: 15px !important;
+                background-color: transparent !important;
+            }
+
+            /* Specific style for Calculation Summary to force new page */
+            #calculation_summary_section {
+                page-break-before: always !important;
+                break-before: always !important;
+                margin-top: 20px !important;
+                border: 1px solid #ccc !important;
+                padding: 15px !important;
+                background-color: transparent !important;
+                display: block !important;
+            }
+        }
+    </style>
+</head>
+<body class="text-slate-600 antialiased min-h-screen flex flex-col items-center py-6 md:py-10 px-4">
+
+    <!-- Version Badge -->
+    <div class="fixed top-4 right-4 bg-white/90 backdrop-blur text-xs font-medium text-slate-500 px-3 py-1.5 rounded-full border border-slate-200 shadow-sm z-50 no-print flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+        V.3.2 By วัยรุ่นเซินเจิ้น
+    </div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-5xl bg-white/80 backdrop-blur-sm rounded-[2rem] shadow-2xl shadow-slate-200/50 overflow-hidden border border-white">
+        
+        <!-- Header -->
+        <header class="bg-gradient-to-br from-primary-600 to-indigo-700 p-8 md:p-10 text-white relative overflow-hidden">
+            <!-- Abstract Shapes -->
+            <div class="absolute top-0 right-0 -mt-16 -mr-16 w-64 h-64 bg-white opacity-5 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 -mb-16 -ml-16 w-64 h-64 bg-secondary-500 opacity-10 rounded-full blur-3xl"></div>
+            
+            <div class="relative z-10 text-center md:text-left md:flex md:justify-between md:items-end">
+                <div>
+                    <h1 class="font-heading text-3xl md:text-4xl font-bold tracking-tight mb-2 text-white drop-shadow-sm">
+                        Fire Pump Calculator
+                    </h1>
+                    <p class="text-primary-100 text-sm md:text-base font-light opacity-90">
+                        โปรแกรมคำนวณขนาดปั๊มดับเพลิงและถังเก็บน้ำ (อ้างอิงมาตรฐาน NFPA)
+                    </p>
+                </div>
+                <div class="mt-6 md:mt-0 text-center md:text-right">
+                    <span class="inline-flex items-center bg-white/10 px-4 py-1.5 rounded-full text-xs font-medium backdrop-blur-md border border-white/20 text-white shadow-sm">
+                        <svg class="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        For Preliminary Estimation
+                    </span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Grid -->
+        <div class="p-6 md:p-8 lg:p-10 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+            
+            <!-- LEFT COLUMN: Inputs -->
+            <div class="lg:col-span-5 space-y-6">
+                
+                <!-- Section 1: System Parameters -->
+                <section class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+                    <h2 class="font-heading flex items-center text-lg font-bold text-slate-800 mb-5 pb-3 border-b border-slate-50">
+                        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center mr-3 text-sm font-bold shadow-sm">1</div>
+                        ข้อมูลพื้นที่ (Design Criteria)
+                    </h2>
+                    
+                    <div class="space-y-5">
+                        <div class="form-group">
+                            <label for="area_name" class="block text-sm font-semibold text-slate-700 mb-2">ชื่อพื้นที่ / โซน</label>
+                            <input type="text" id="area_name" placeholder="เช่น อาคาร A ชั้น 1" class="input-field w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-700 placeholder-slate-400 focus:bg-white">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="hazard_class" class="block text-sm font-semibold text-slate-700 mb-2">ประเภทความอันตราย</label>
+                            <div class="relative">
+                                <select id="hazard_class" onchange="checkWarnings()" class="input-field w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-700 appearance-none cursor-pointer focus:bg-white">
+                                    <option value="light">Light Hazard</option>
+                                    <option value="ordinary1">Ordinary Hazard Group 1</option>
+                                    <option value="ordinary2">Ordinary Hazard Group 2</option>
+                                    <option value="extra1">Extra Hazard Group 1</option>
+                                    <option value="extra2">Extra Hazard Group 2</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="form-group">
+                                <label for="design_area" class="block text-sm font-semibold text-slate-700 mb-2">พื้นที่ (ตร.ม.)</label>
+                                <input type="number" id="design_area" placeholder="139.4" min="0.1" step="0.1" class="input-field w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-700 focus:bg-white text-center">
+                            </div>
+                            <div class="form-group">
+                                <label for="duration" class="block text-sm font-semibold text-slate-700 mb-2">ระยะเวลา (นาที)</label>
+                                <div class="relative">
+                                    <select id="duration" onchange="checkWarnings()" class="input-field w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-700 appearance-none cursor-pointer focus:bg-white text-center">
+                                        <option value="30">30 นาที</option>
+                                        <option value="60">60 นาที</option>
+                                        <option value="90">90 นาที</option>
+                                        <option value="120">120 นาที</option>
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-500">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Warning Box (Initially Hidden) -->
+                        <div id="warning_box" class="hidden bg-orange-50 border border-orange-100 rounded-xl p-4 flex items-start gap-3 shadow-sm animate-fade-in-down">
+                            <div class="bg-orange-100 p-1.5 rounded-full flex-shrink-0 text-orange-500">
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+                            </div>
+                            <div class="text-sm text-orange-800">
+                                <p class="font-bold mb-0.5">ข้อควรระวัง</p>
+                                <p id="warning_text" class="text-orange-700/80 leading-relaxed"></p>
+                            </div>
+                        </div>
+
+                        <div class="text-xs text-slate-500 mt-2 bg-slate-50 p-4 rounded-xl border border-slate-100/50">
+                            <p class="mb-1.5 font-medium text-slate-600 flex items-center">
+                                <svg class="w-3.5 h-3.5 mr-1.5 text-primary-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                                Design Area Reference (NFPA 13)
+                            </p>
+                            <ul class="list-none space-y-1 pl-5 text-slate-400">
+                                <li class="relative before:content-[''] before:block before:w-1.5 before:h-1.5 before:bg-slate-300 before:rounded-full before:absolute before:-left-3.5 before:top-1.5">Light/Ordinary: Max ~140 ตร.ม.</li>
+                                <li class="relative before:content-[''] before:block before:w-1.5 before:h-1.5 before:bg-slate-300 before:rounded-full before:absolute before:-left-3.5 before:top-1.5">Extra Hazard: Max ~230 ตร.ม.</li>
+                            </ul>
+                            <a onclick="showImagePopup('https://img2.pic.in.th/pic/Screenshot-2025-07-16-004620.png')" class="text-primary-600 hover:text-primary-800 cursor-pointer mt-2 inline-flex items-center font-medium hover:underline">
+                                ดูตารางอ้างอิง NFPA Table 19.2.3.1.1
+                                <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                            </a>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Section 2: Pump Parameters -->
+                <section class="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+                    <h2 class="font-heading flex items-center text-lg font-bold text-slate-800 mb-5 pb-3 border-b border-slate-50">
+                        <div class="w-8 h-8 rounded-lg bg-primary-50 text-primary-600 flex items-center justify-center mr-3 text-sm font-bold shadow-sm">2</div>
+                        ข้อมูลปั๊ม (Pump Spec)
+                    </h2>
+                    
+                    <div class="space-y-5">
+                        <div class="form-group">
+                            <label for="pump_type" class="block text-sm font-semibold text-slate-700 mb-2">ชนิดปั๊ม</label>
+                            <div class="relative">
+                                <select id="pump_type" class="input-field w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-700 appearance-none cursor-pointer focus:bg-white">
+                                    <option value="horizontal">Horizontal Split Case Fire Pump</option>
+                                    <option value="vertical">Vertical Turbine Fire Pump</option>
+                                </select>
+                                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="form-group">
+                                <label for="pump_rated_flow" class="block text-sm font-semibold text-slate-700 mb-2">Rated Flow (GPM)</label>
+                                <input type="number" id="pump_rated_flow" placeholder="เช่น 750" min="0" step="10" class="input-field w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-700 focus:bg-white text-center">
+                            </div>
+                            <div class="form-group">
+                                <label for="system_demand_head" class="block text-sm font-semibold text-slate-700 mb-2">System Head (PSI)</label>
+                                <input type="number" id="system_demand_head" placeholder="เช่น 100" min="0" step="1" class="input-field w-full px-4 py-3 rounded-xl bg-slate-50 text-slate-700 focus:bg-white text-center">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Actions -->
+                <div class="flex gap-3 pt-2 no-print">
+                    <button onclick="calculate()" class="flex-1 bg-gradient-to-r from-primary-600 to-indigo-600 hover:from-primary-700 hover:to-indigo-700 text-white font-bold py-3.5 px-6 rounded-xl shadow-lg shadow-primary-200 transition-all transform hover:-translate-y-0.5 active:translate-y-0 active:shadow-md flex items-center justify-center text-lg">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                        คำนวณผลลัพธ์
+                    </button>
+                    <button onclick="clearData()" class="px-5 py-3.5 rounded-xl border border-slate-200 bg-white text-slate-500 font-semibold hover:border-red-200 hover:text-red-500 hover:bg-red-50 transition-all shadow-sm hover:shadow">
+                        ล้างค่า
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- RIGHT COLUMN: Results & Chart -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- Results Card -->
+                <div id="results" class="bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-200/50 overflow-hidden relative group">
+                    <div class="absolute top-0 left-0 w-1.5 h-full bg-primary-500"></div>
+                    <div class="bg-slate-50/50 px-6 py-5 border-b border-slate-100 flex justify-between items-center">
+                        <h2 class="font-heading text-lg font-bold text-slate-800 flex items-center">
+                            <svg class="w-5 h-5 mr-2.5 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            สรุปผลการคำนวณ
+                        </h2>
+                        <span id="display_area_name" class="text-sm font-medium text-primary-700 bg-primary-50 px-3 py-1 rounded-full hidden border border-primary-100"></span>
+                    </div>
+
+                    <div class="p-0">
+                        <table class="w-full text-sm text-left">
+                            <tbody class="divide-y divide-slate-100">
+                                <tr class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="px-6 py-4 text-slate-500 font-medium">น้ำดับเพลิง (Sprinkler Flow)</td>
+                                    <td class="px-6 py-4 font-bold text-slate-700 text-right text-base"><span id="sprinkler_flow">0.00</span> GPM</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="px-6 py-4 text-slate-500 font-medium">ท่อยืน (Hose Allowance)</td>
+                                    <td class="px-6 py-4 font-bold text-slate-700 text-right text-base"><span id="hose_allowance">0.00</span> GPM</td>
+                                </tr>
+                                <tr class="bg-primary-50/30">
+                                    <td class="px-6 py-5 font-bold text-primary-900">รวมอัตราการไหล (Total Demand)</td>
+                                    <td class="px-6 py-5 font-bold text-primary-600 text-right text-xl"><span id="total_flow">0.00</span> GPM</td>
+                                </tr>
+                                <tr class="hover:bg-slate-50/80 transition-colors">
+                                    <td class="px-6 py-4 text-slate-500 font-medium">ขนาดถังเก็บน้ำ (Tank Volume)</td>
+                                    <td class="px-6 py-4 font-bold text-slate-800 text-right text-base"><span id="tank_volume">0.00</span> ลบ.ม.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pump Chart Card -->
+                <div id="chart_section" class="bg-white rounded-2xl border border-slate-200 shadow-md p-6 relative">
+                     <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-heading text-lg font-bold text-slate-800">Pump Performance Curve</h3>
+                        <span class="text-[10px] uppercase tracking-wider font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-md border border-slate-200">NFPA 20 Simulation</span>
+                    </div>
+                    
+                    <div class="relative h-72 md:h-96 w-full bg-white rounded-xl border border-slate-100 p-2 shadow-inner">
+                        <canvas id="pumpCurveChart"></canvas>
+                        <!-- Chart Error Message Overlay (Initially Hidden) -->
+                        <div id="chart_placeholder_msg" class="absolute inset-0 flex flex-col items-center justify-center text-slate-300 bg-white/50 backdrop-blur-sm rounded-xl transition-opacity duration-300 hidden z-10">
+                            <svg class="w-12 h-12 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"></path></svg>
+                            <span class="text-sm font-medium">กรุณากรอกข้อมูล Rated Flow และ Head เพื่อแสดงกราฟ</span>
+                        </div>
+                    </div>
+
+                    <p class="chart-disclaimer text-xs text-center text-slate-400 mt-4 no-print bg-slate-50 py-2 rounded-lg border border-slate-100">
+                        * กราฟนี้เป็นการจำลอง (Simulation) ตามทฤษฎีเท่านั้น โปรดตรวจสอบกับผู้ผลิตจริง (Manufacturer Curve)
+                    </p>
+
+                    <!-- Graph Legend/Details (Still useful to keep as key) -->
+                    <div id="graph_summary" class="hidden mt-6 bg-slate-50/80 rounded-xl p-5 border border-slate-200/60">
+                        <h4 class="text-sm font-bold text-slate-700 mb-4 border-b border-slate-200 pb-2">คำอธิบายกราฟ</h4>
+                         <div class="grid grid-cols-2 gap-4 text-xs">
+                            <div class="flex items-center">
+                                <span class="w-3 h-3 rounded-full bg-primary-600 mr-2.5 shadow-sm flex-shrink-0"></span>
+                                <span class="text-slate-600">Performance Curve</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-b-[10px] border-b-red-500 mr-2.5 flex-shrink-0 drop-shadow-sm"></span>
+                                <span class="text-slate-700 font-semibold">Demand Point</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-3 h-3 rounded-full bg-green-500 mr-2.5 shadow-sm flex-shrink-0"></span>
+                                <span class="text-slate-600">Rated Point (100%)</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-2.5 h-2.5 bg-red-700 mr-2.5 shadow-sm flex-shrink-0"></span>
+                                <span class="text-slate-600">Churn Point</span>
+                            </div>
+                            <div class="flex items-center">
+                                <span class="w-2.5 h-2.5 bg-purple-500 mr-2.5 shadow-sm flex-shrink-0 transform rotate-45"></span>
+                                <span class="text-slate-600">Overload Point (150%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Hidden Calculation Summary Section (Kept for Print Compatibility) -->
+                <div id="calculation_summary_section" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden hidden print:block mt-8">
+                     <div class="bg-slate-100 px-6 py-3 border-b border-slate-200">
+                        <h3 class="font-bold text-slate-800">ตารางสรุปผลสำหรับพิมพ์</h3>
+                    </div>
+                    <table id="calculation_summary_table" class="w-full text-sm">
+                        <tbody class="divide-y divide-slate-100">
+                            <tr>
+                                <td class="px-6 py-3 text-slate-600">Sprinkler Flow</td>
+                                <td class="px-6 py-3 text-right"><span id="summary_sprinkler_flow">0.00</span> GPM</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3 text-slate-600">Hose Allowance</td>
+                                <td class="px-6 py-3 text-right"><span id="summary_hose_allowance">0.00</span> GPM</td>
+                            </tr>
+                            <tr class="bg-slate-50 font-semibold">
+                                <td class="px-6 py-3 text-slate-800">Total Demand Flow</td>
+                                <td class="px-6 py-3 text-right text-brand-600"><span id="summary_total_flow">0.00</span> GPM</td>
+                            </tr>
+                             <tr>
+                                <td class="px-6 py-3 text-slate-600">Required Head</td>
+                                <td class="px-6 py-3 text-right"><span id="summary_demand_head_table">0.00</span> PSI</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3 text-slate-600">Tank Duration</td>
+                                <td class="px-6 py-3 text-right"><span id="summary_actual_duration">0</span> min</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3 text-slate-600">Tank Volume</td>
+                                <td class="px-6 py-3 text-right font-bold"><span id="summary_tank_volume">0.00</span> m³</td>
+                            </tr>
+                            <tr class="border-t-2 border-slate-100">
+                                <td class="px-6 py-3 text-slate-800 font-medium">Recommended Pump Flow</td>
+                                <td class="px-6 py-3 text-right text-green-600 font-bold"><span id="summary_recommended_pump_flow">0.00</span></td>
+                            </tr>
+                             <tr>
+                                <td class="px-6 py-3 text-slate-800 font-medium">Estimated Pressure</td>
+                                <td class="px-6 py-3 text-right text-green-600"><span id="summary_estimated_pressure">0.00</span> PSI</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3 text-slate-800 font-medium">Max Churn Pressure</td>
+                                <td class="px-6 py-3 text-right text-green-600"><span id="summary_max_pressure">0.00</span> PSI</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Updated Action Button: Show Summary Table Modal -->
+                <div class="text-center mt-6 no-print">
+                    <button onclick="showSummaryModal()" class="inline-flex items-center justify-center bg-slate-800 hover:bg-slate-700 text-white font-bold py-3.5 px-8 rounded-xl shadow-lg hover:shadow-xl transition-all transform hover:-translate-y-0.5 active:translate-y-0">
+                        <svg class="w-5 h-5 mr-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        ตารางสรุปผล (Summary Table)
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="bg-white/50 backdrop-blur-sm border-t border-slate-200 mt-12 p-8 text-center text-slate-400 text-xs w-full">
+            <p>© 2026 Fire Protection Tools. Designed for educational purpose.</p>
+        </footer>
+    </div>
+
+    <!-- Hidden elements for calculation logic (id preservation) -->
+    <div class="hidden">
+        <span id="actual_duration">0</span>
+    </div>
+
+    <!-- Image Popup Modal -->
+    <div id="imagePopupModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center z-[100] hidden transition-opacity" onclick="closeImagePopup()">
+        <div class="bg-white p-2 rounded-2xl shadow-2xl relative max-w-4xl max-h-[90vh] overflow-auto transform scale-100 transition-transform" onclick="event.stopPropagation()">
+            <button class="absolute top-4 right-4 bg-white/50 hover:bg-white text-slate-800 rounded-full p-2 transition" onclick="closeImagePopup()">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+            <img id="popupImage" src="" alt="Reference Table" class="rounded-xl max-w-full h-auto shadow-inner">
+        </div>
+    </div>
+
+    <!-- New Summary Table Modal -->
+    <div id="summaryModal" class="fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex justify-center items-center z-[100] hidden transition-opacity no-print" onclick="closeSummaryModal()">
+        <div class="bg-white p-0 rounded-2xl shadow-2xl relative max-w-2xl w-full max-h-[90vh] overflow-auto transform scale-100 transition-transform" onclick="event.stopPropagation()">
+            
+            <!-- Modal Header -->
+            <div class="px-6 py-5 bg-gradient-to-r from-primary-600 to-indigo-600 text-white flex justify-between items-center rounded-t-2xl">
+                <h3 class="text-xl font-bold flex items-center">
+                    <svg class="w-6 h-6 mr-2.5 opacity-90" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                    ตารางสรุปผลการคำนวณ
+                </h3>
+                <button class="text-white/80 hover:text-white transition" onclick="closeSummaryModal()">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <div class="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                    <table class="w-full text-sm text-left">
+                        <tbody class="divide-y divide-slate-100">
+                            <tr>
+                                <td class="px-6 py-3.5 bg-slate-50 text-slate-600 w-1/2 font-medium">Sprinkler Flow</td>
+                                <td class="px-6 py-3.5 text-right font-medium text-slate-800"><span id="modal_summary_sprinkler_flow">0.00</span> GPM</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3.5 bg-slate-50 text-slate-600 font-medium">Hose Allowance</td>
+                                <td class="px-6 py-3.5 text-right font-medium text-slate-800"><span id="modal_summary_hose_allowance">0.00</span> GPM</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3.5 bg-primary-50 text-primary-900 font-bold">Total Demand Flow</td>
+                                <td class="px-6 py-3.5 text-right text-primary-700 font-bold bg-white"><span id="modal_summary_total_flow">0.00</span> GPM</td>
+                            </tr>
+                             <tr>
+                                <td class="px-6 py-3.5 bg-slate-50 text-slate-600 font-medium">Required Head</td>
+                                <td class="px-6 py-3.5 text-right font-medium text-slate-800"><span id="modal_summary_demand_head_table">0.00</span> PSI</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3.5 bg-slate-50 text-slate-600 font-medium">Tank Duration</td>
+                                <td class="px-6 py-3.5 text-right font-medium text-slate-800"><span id="modal_summary_actual_duration">0</span> min</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3.5 bg-slate-50 text-slate-600 font-medium">Tank Volume</td>
+                                <td class="px-6 py-3.5 text-right font-bold text-slate-800"><span id="modal_summary_tank_volume">0.00</span> m³</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3.5 bg-green-50 text-green-900 font-bold border-t-2 border-slate-100">Recommended Pump</td>
+                                <td class="px-6 py-3.5 text-right text-green-700 font-bold border-t-2 border-slate-100 bg-white"><span id="modal_summary_recommended_pump_flow">0.00</span></td>
+                            </tr>
+                             <tr>
+                                <td class="px-6 py-3.5 bg-slate-50 text-slate-700 font-medium">Estimated Pressure</td>
+                                <td class="px-6 py-3.5 text-right text-green-600 font-bold"><span id="modal_summary_estimated_pressure">0.00</span> PSI</td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-3.5 bg-slate-50 text-slate-700 font-medium">Max Churn Pressure</td>
+                                <td class="px-6 py-3.5 text-right text-green-600 font-bold"><span id="modal_summary_max_pressure">0.00</span> PSI</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-8 flex justify-end gap-3 no-print">
+                    <button onclick="window.print()" class="flex items-center bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-5 rounded-lg shadow transition transform hover:-translate-y-0.5">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                        พิมพ์รายงาน (Print / Save as PDF)
+                    </button>
+                    <button onclick="closeSummaryModal()" class="px-5 py-2.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 font-medium transition">
+                        ปิดหน้าต่าง
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check if Chart is loaded properly
+        if (typeof Chart !== 'undefined') {
+            // Register DataLabels Plugin only if Chart is defined
+             if (typeof ChartDataLabels !== 'undefined') {
+                 Chart.register(ChartDataLabels);
+                 
+                 // Global defaults for Chart.js to look more "Engineering"
+                 Chart.defaults.font.family = "'Sarabun', sans-serif";
+                 Chart.defaults.color = '#475569';
+                 Chart.defaults.scale.grid.color = '#e2e8f0'; // Light gray grid
+                 Chart.defaults.scale.grid.tickLength = 8;
+             }
+        } else {
+            console.error('Chart.js library failed to load.');
+        }
+
+        // Constants for Hazard Classification (NFPA 13 approximations)
+        const hazardData = {
+            'light': { density: 0.10, hose: 100 },
+            'ordinary1': { density: 0.15, hose: 250 },
+            'ordinary2': { density: 0.20, hose: 250 },
+            'extra1': { density: 0.30, hose: 500 },
+            'extra2': { density: 0.40, hose: 500 }
+        };
+
+        // Min Duration Map for Warnings
+        const hazardMinDuration = {
+            'light': 30,
+            'ordinary1': 60,
+            'ordinary2': 60,
+            'extra1': 90,
+            'extra2': 120
+        };
+
+        let pumpChart = null;
+
+        function checkWarnings() {
+            const hazardType = document.getElementById('hazard_class').value;
+            const duration = parseInt(document.getElementById('duration').value);
+            const warningBox = document.getElementById('warning_box');
+            const warningText = document.getElementById('warning_text');
+
+            if (hazardMinDuration[hazardType] > duration) {
+                warningText.textContent = `Warning: ประเภทความอันตรายนี้ ควรใช้ระยะเวลาอย่างน้อย ${hazardMinDuration[hazardType]} นาที (ตามมาตรฐาน)`;
+                warningBox.classList.remove('hidden');
+            } else {
+                warningBox.classList.add('hidden');
+            }
+        }
+
+        function calculate() {
+            // Check warnings first
+            checkWarnings();
+
+            // 1. Get Inputs
+            const hazardType = document.getElementById('hazard_class').value;
+            const designAreaSqM = parseFloat(document.getElementById('design_area').value);
+            const duration = parseInt(document.getElementById('duration').value);
+            const areaName = document.getElementById('area_name').value;
+            
+            // Pump Inputs
+            const pumpType = document.getElementById('pump_type').value;
+            const pumpRatedFlow = parseFloat(document.getElementById('pump_rated_flow').value) || 0;
+            const systemDemandHead = parseFloat(document.getElementById('system_demand_head').value) || 0;
+
+            // 2. Validation
+            if (!designAreaSqM || designAreaSqM <= 0) {
+                alert("กรุณาระบุพื้นที่ป้องกัน (Design Area) ที่ถูกต้อง");
+                return;
+            }
+
+            // 3. Display Area Name
+            const displayAreaName = document.getElementById('display_area_name');
+            if (areaName.trim() !== "") {
+                displayAreaName.textContent = areaName;
+                displayAreaName.classList.remove('hidden');
+            } else {
+                displayAreaName.classList.add('hidden');
+            }
+
+            // 4. Calculations
+            // Convert sq.m to sq.ft (1 sq.m = 10.7639 sq.ft)
+            const designAreaSqFt = designAreaSqM * 10.7639;
+            const density = hazardData[hazardType].density;
+            const hoseAllowance = hazardData[hazardType].hose;
+
+            // Sprinkler Flow (GPM) = Area (sq.ft) * Density (gpm/sq.ft)
+            let sprinklerFlow = designAreaSqFt * density;
+            // Round up to 2 decimals
+            sprinklerFlow = Math.ceil(sprinklerFlow * 100) / 100;
+
+            const totalFlow = sprinklerFlow + hoseAllowance;
+
+            // Tank Volume (Gallons) = Total Flow * Duration
+            const tankVolumeGallons = totalFlow * duration;
+            // Convert to Cubic Meters (1 Gallon = 0.00378541 m3)
+            const tankVolumeM3 = tankVolumeGallons * 0.00378541;
+
+            // 5. Update UI Results
+            document.getElementById('sprinkler_flow').textContent = sprinklerFlow.toFixed(2);
+            document.getElementById('hose_allowance').textContent = hoseAllowance.toFixed(2);
+            document.getElementById('total_flow').textContent = totalFlow.toFixed(2);
+            document.getElementById('tank_volume').textContent = tankVolumeM3.toFixed(2);
+            
+            // Hidden fields for print/logic consistency
+            document.getElementById('actual_duration').textContent = duration;
+
+            // Update Summary Table (Print View)
+            document.getElementById('summary_sprinkler_flow').textContent = sprinklerFlow.toFixed(2);
+            document.getElementById('summary_hose_allowance').textContent = hoseAllowance.toFixed(2);
+            document.getElementById('summary_total_flow').textContent = totalFlow.toFixed(2);
+            document.getElementById('summary_actual_duration').textContent = duration;
+            document.getElementById('summary_tank_volume').textContent = tankVolumeM3.toFixed(2);
+
+            // Pump Estimations in Summary
+            document.getElementById('summary_demand_head_table').textContent = systemDemandHead.toFixed(2);
+            
+            // Suggest Pump Flow - UPDATED LOGIC to user specific standard sizes
+            const standardPumpSizes = [250, 500, 750, 1000, 1250, 1500, 1750, 2000, 2500, 3000, 4000, 5000];
+            let recommendedFlow = standardPumpSizes.find(size => size >= totalFlow);
+            
+            if (!recommendedFlow) {
+                 recommendedFlow = Math.ceil(totalFlow / 500) * 500; // Fallback for very large values
+            }
+
+            document.getElementById('summary_recommended_pump_flow').textContent = totalFlow.toFixed(0) + " (Select Pump >= " + recommendedFlow + " GPM)";
+            
+            document.getElementById('summary_estimated_pressure').textContent = systemDemandHead > 0 ? systemDemandHead.toFixed(2) : "-";
+            
+            // Max Churn Calculation based on Pump Type
+            let churnFactor = 1.2; // Default 120%
+            if (pumpType === 'horizontal') {
+                churnFactor = 1.15; // 115% for Horizontal Split Case
+            }
+            
+            document.getElementById('summary_max_pressure').textContent = systemDemandHead > 0 ? (systemDemandHead * churnFactor).toFixed(2) : "-";
+
+            // 6. Chart Generation
+            const placeholderMsg = document.getElementById('chart_placeholder_msg');
+            
+            if (pumpRatedFlow > 0 && systemDemandHead > 0) {
+                generateChart(pumpRatedFlow, systemDemandHead, totalFlow, churnFactor);
+                document.getElementById('graph_summary').classList.remove('hidden');
+                placeholderMsg.classList.add('hidden');
+            } else {
+                if(pumpChart) pumpChart.destroy();
+                document.getElementById('graph_summary').classList.add('hidden');
+                placeholderMsg.classList.remove('hidden');
+                
+                // If user pressed calculate but missed pump info, alert them gently
+                alert("คำนวณถังเก็บน้ำเรียบร้อยแล้ว \nหากต้องการดูกราฟปั๊ม กรุณากรอก 'Rated Flow' และ 'System Head' ในส่วนที่ 2");
+            }
+        }
+
+        function generateChart(ratedFlow, ratedPressure, demandFlow, churnFactor) {
+            if (typeof Chart === 'undefined') {
+                console.error("Chart.js not loaded");
+                return;
+            }
+
+            const ctx = document.getElementById('pumpCurveChart').getContext('2d');
+            
+            // Use churnFactor passed from calculate()
+            const churnPressure = ratedPressure * churnFactor;
+            const overloadFlow = ratedFlow * 1.5;
+            const overloadPressure = ratedPressure * 0.65;
+
+            // NEW: Power Function Interpolation (P = Churn - k * Q^n)
+            // This ensures a smooth, monotonically decreasing curve without humps
+            
+            // 1. Calculate n
+            // Formula derived from passing through (RatedFlow, RatedPressure) and (OverloadFlow, OverloadPressure)
+            // relative to ChurnPressure
+            const ratioY = (churnPressure - overloadPressure) / (churnPressure - ratedPressure);
+            const ratioX = overloadFlow / ratedFlow; // 1.5
+            
+            // Avoid log(0) or division by zero in edge cases
+            let n = 2; // Default fallback
+            if (ratioY > 0 && ratioX > 0) {
+                n = Math.log(ratioY) / Math.log(ratioX);
+            }
+
+            // 2. Calculate k
+            const k = (churnPressure - ratedPressure) / Math.pow(ratedFlow, n);
+
+            const curveData = [];
+            
+            // Generate points
+            for (let f = 0; f <= overloadFlow * 1.1; f += 25) {
+                let p = churnPressure - k * Math.pow(f, n);
+                if (p < 0) p = 0;
+                curveData.push({x: f, y: p});
+            }
+
+            if (pumpChart) {
+                pumpChart.destroy();
+            }
+
+            // Style constants
+            const curveColor = '#4f46e5'; // Primary Indigo
+            const gridColor = '#e2e8f0';
+
+            pumpChart = new Chart(ctx, {
+                type: 'scatter',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Pump Curve',
+                            data: curveData,
+                            showLine: true,
+                            borderColor: curveColor,
+                            backgroundColor: 'transparent',
+                            borderWidth: 3,
+                            pointRadius: 0,
+                            fill: false,
+                            tension: 0.4,
+                            datalabels: { display: false } // Hide labels for curve
+                        },
+                        {
+                            label: 'System Demand',
+                            data: [{x: demandFlow, y: ratedPressure}],
+                            backgroundColor: '#ef4444', // Red
+                            pointStyle: 'triangle',
+                            pointRadius: 12, // Bigger
+                            pointHoverRadius: 14,
+                            borderColor: '#ffffff',
+                            borderWidth: 2,
+                            datalabels: {
+                                align: 'top',
+                                anchor: 'end',
+                                offset: 6,
+                                color: '#333',
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                borderColor: '#cbd5e1',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                font: { weight: 'bold', size: 11 },
+                                formatter: function(value) { 
+                                    return 'Demand\n' + value.x.toFixed(0) + ' GPM\n' + value.y.toFixed(0) + ' PSI'; 
+                                }
+                            }
+                        },
+                        {
+                            label: 'Rated Point',
+                            data: [{x: ratedFlow, y: ratedPressure}],
+                            backgroundColor: '#10b981', // Emerald Green
+                            pointStyle: 'circle',
+                            pointRadius: 8,
+                            pointHoverRadius: 10,
+                            borderColor: '#ffffff',
+                            borderWidth: 2,
+                            datalabels: {
+                                align: 'bottom',
+                                anchor: 'start',
+                                offset: 8,
+                                color: '#333',
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                borderColor: '#cbd5e1',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                font: { weight: 'bold', size: 11 },
+                                formatter: function(value) { 
+                                    return 'Rated\n' + value.x.toFixed(0) + ' GPM\n' + value.y.toFixed(0) + ' PSI';
+                                }
+                            }
+                        },
+                        {
+                            label: 'Shutoff',
+                            data: [{x: 0, y: churnPressure}],
+                            backgroundColor: '#b91c1c', // Dark Red
+                            pointStyle: 'rect', // Square
+                            pointRadius: 8,
+                            borderColor: '#ffffff',
+                            borderWidth: 2,
+                            datalabels: {
+                                align: 'right',
+                                anchor: 'center',
+                                offset: 12,
+                                color: '#333',
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                borderColor: '#cbd5e1',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                font: { weight: 'bold', size: 11 },
+                                formatter: function(value) { 
+                                    return 'Churn\n' + value.x.toFixed(0) + ' GPM\n' + value.y.toFixed(0) + ' PSI';
+                                }
+                            }
+                        },
+                        {
+                            label: 'Overload',
+                            data: [{x: overloadFlow, y: overloadPressure}],
+                            backgroundColor: '#a855f7', // Purple
+                            pointStyle: 'rectRot', // Diamond
+                            pointRadius: 8,
+                            borderColor: '#ffffff',
+                            borderWidth: 2,
+                            datalabels: {
+                                align: 'bottom',
+                                anchor: 'start',
+                                offset: 8,
+                                color: '#333',
+                                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                borderColor: '#cbd5e1',
+                                borderWidth: 1,
+                                borderRadius: 4,
+                                font: { weight: 'bold', size: 11 },
+                                formatter: function(value) { 
+                                    return '150% Cap\n' + value.x.toFixed(0) + ' GPM\n' + value.y.toFixed(0) + ' PSI';
+                                }
+                            }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            type: 'linear',
+                            position: 'bottom',
+                            title: {
+                                display: true,
+                                text: 'Flow Rate (GPM)',
+                                font: { size: 13, weight: 'bold' }
+                            },
+                            min: 0,
+                            grid: { 
+                                color: gridColor,
+                                tickColor: gridColor
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Pressure (PSI)',
+                                font: { size: 13, weight: 'bold' }
+                            },
+                            min: 0,
+                            grid: { 
+                                color: gridColor,
+                                tickColor: gridColor
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false 
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#1e293b',
+                            bodyColor: '#475569',
+                            borderColor: '#e2e8f0',
+                            borderWidth: 1,
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 13 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + context.parsed.x.toFixed(0) + ' GPM, ' + context.parsed.y.toFixed(0) + ' PSI';
+                                }
+                            }
+                        },
+                        datalabels: {
+                            // Default global settings are overridden by per-dataset settings
+                        }
+                    }
+                }
+            });
+        }
+
+        function clearData() {
+            // Reset inputs
+            document.getElementById('area_name').value = '';
+            document.getElementById('hazard_class').value = 'light';
+            document.getElementById('design_area').value = '';
+            document.getElementById('duration').value = '30';
+            document.getElementById('pump_rated_flow').value = '';
+            document.getElementById('system_demand_head').value = '';
+            document.getElementById('warning_box').classList.add('hidden');
+
+            // Reset Result Table
+            const zeros = ['sprinkler_flow', 'hose_allowance', 'total_flow', 'tank_volume', 
+                         'summary_sprinkler_flow', 'summary_hose_allowance', 'summary_total_flow', 
+                         'summary_tank_volume', 'summary_demand_head_table', 'summary_recommended_pump_flow',
+                         'summary_estimated_pressure', 'summary_max_pressure'];
+            
+            zeros.forEach(id => {
+                const el = document.getElementById(id);
+                if(el) el.textContent = "0.00";
+            });
+
+            document.getElementById('actual_duration').textContent = "0";
+            document.getElementById('summary_actual_duration').textContent = "0";
+            document.getElementById('display_area_name').classList.add('hidden');
+
+            // Destroy chart
+            if (pumpChart) {
+                pumpChart.destroy();
+                pumpChart = null;
+            }
+            document.getElementById('graph_summary').classList.add('hidden');
+            document.getElementById('chart_placeholder_msg').classList.remove('hidden');
+        }
+
+        function showImagePopup(url) {
+            const modal = document.getElementById('imagePopupModal');
+            const img = document.getElementById('popupImage');
+            img.src = url;
+            modal.classList.remove('hidden');
+            // Small delay to allow display block to apply before opacity transition
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+            }, 10);
+        }
+
+        function closeImagePopup() {
+            const modal = document.getElementById('imagePopupModal');
+            modal.classList.remove('opacity-100');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+
+        function showSummaryModal() {
+            // Copy values from hidden calculation summary table to modal table
+            const fields = [
+                'sprinkler_flow', 'hose_allowance', 'total_flow', 
+                'demand_head_table', 'actual_duration', 'tank_volume',
+                'recommended_pump_flow', 'estimated_pressure', 'max_pressure'
+            ];
+            
+            fields.forEach(field => {
+                const source = document.getElementById('summary_' + field);
+                const target = document.getElementById('modal_summary_' + field);
+                if (source && target) {
+                    target.textContent = source.textContent;
+                }
+            });
+
+            const modal = document.getElementById('summaryModal');
+            modal.classList.remove('hidden');
+            // Small delay to allow display block to apply before opacity transition
+            setTimeout(() => {
+                modal.classList.add('opacity-100');
+                modal.querySelector('div').classList.remove('scale-95');
+                modal.querySelector('div').classList.add('scale-100');
+            }, 10);
+        }
+
+        function closeSummaryModal() {
+            const modal = document.getElementById('summaryModal');
+            modal.classList.remove('opacity-100');
+            modal.querySelector('div').classList.remove('scale-100');
+            modal.querySelector('div').classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+            }, 200);
+        }
+    </script>
+</body>
+</html>
