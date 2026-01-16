@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>เครื่องคำนวณ Hydraulic (Hazen-Williams)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'Inter', 'sans-serif'],
+                        mono: ['Cascadia Code', 'Fira Code', 'monospace'],
+                    },
+                    colors: {
+                        primary: '#3b82f6', // blue-500
+                        success: '#22c55e', // green-500
+                        danger: '#ef4444', // red-500
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom tweaks for things Tailwind doesn't cover easily */
+        body {
+            background: linear-gradient(135deg, #f0f2f5 0%, #e2e8f0 100%);
+        }
+        .fraction-container {
+            display: inline-block;
+            vertical-align: middle;
+            text-align: center;
+            font-size: 1.1em;
+        }
+        .fraction-numerator {
+            display: block;
+            border-bottom: 2px solid #4a5568;
+            padding-bottom: 2px;
+            margin-bottom: 2px;
+        }
+        .fraction-denominator {
+            display: block;
+        }
+        /* Smooth fade in for results */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.4s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Version Tag -->
+    <div class="fixed top-4 right-4 text-xs font-medium text-gray-500 bg-white/80 backdrop-blur px-2 py-1 rounded shadow-sm z-50 border border-gray-200">
+        V.1.4 By วัยรุ่นเซินเจิ้น
+    </div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+        
+        <!-- Header -->
+        <div class="bg-slate-800 p-6 sm:p-8 text-white">
+            <h1 class="font-bold text-2xl sm:text-3xl mb-2 leading-tight">เครื่องคำนวณ Friction Loss</h1>
+            <p class="text-slate-300 text-sm font-light opacity-90">
+                คำนวณการสูญเสียแรงดันในท่อดับเพลิงด้วยสูตร Hazen-Williams
+            </p>
+        </div>
+
+        <div class="p-6 sm:p-8 space-y-6">
+            
+            <!-- Input Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                
+                <!-- Flow Rate -->
+                <div class="col-span-1 sm:col-span-2">
+                    <label for="flowRate" class="block text-sm font-semibold text-gray-700 mb-2">อัตราการไหล (Q) - GPM</label>
+                    <div class="relative">
+                        <input type="number" id="flowRate" class="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="เช่น 250">
+                        <span class="absolute right-4 top-3 text-gray-400 text-sm pointer-events-none">GPM</span>
+                    </div>
+                </div>
+
+                <!-- C-Factor -->
+                <div class="col-span-1 sm:col-span-2">
+                    <label for="cFactor" class="block text-sm font-semibold text-gray-700 mb-2">ค่าสัมประสิทธิ์ (C)</label>
+                    <select id="cFactor" onchange="updateCustomCFactor()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white cursor-pointer">
+                        <option value="120" data-material="black_steel" selected>120 - Black steel (Wet/Deluge)</option>
+                        <option value="100" data-material="black_steel">100 - Black steel (Dry/Preaction)</option>
+                        <option value="120" data-material="galvanized_steel">120 - Galvanized steel (Wet/Deluge)</option>
+                        <option value="100" data-material="galvanized_steel">100 - Galvanized steel (Dry/Preaction)</option>
+                        <option value="100" data-material="cast_iron">100 - Unlined cast/ductile iron</option>
+                        <option value="150" data-material="plastic">150 - Plastic (Listed) all</option>
+                        <option value="140" data-material="cement_lined_iron">140 - Cement-lined cast/ductile iron</option>
+                        <option value="150" data-material="copper_brass_stainless">150 - Copper, Brass, Stainless Steel</option>
+                        <option value="140" data-material="asbestos_cement">140 - Asbestos cement</option>
+                        <option value="140" data-material="concrete">140 - Concrete</option>
+                        <option value="custom" data-material="custom">กำหนดเอง (Custom)</option>
+                    </select>
+                    <input type="number" id="customCFactor" class="mt-3 w-full px-4 py-3 border border-blue-200 bg-blue-50 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none hidden text-blue-800" placeholder="ระบุค่า C ที่ต้องการ" value="140">
+                </div>
+
+                <!-- Nominal Pipe Size -->
+                <div>
+                    <label for="nominalPipeSize" class="block text-sm font-semibold text-gray-700 mb-2">ขนาดท่อระบุ (NPS)</label>
+                    <select id="nominalPipeSize" onchange="updatePipeDiameterInput()" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all bg-white cursor-pointer">
+                        <option value="">เลือกขนาด</option>
+                        <option value="1">1"</option>
+                        <option value="1.25">1-1/4"</option>
+                        <option value="1.5">1-1/2"</option>
+                        <option value="2">2"</option>
+                        <option value="3">3"</option>
+                        <option value="4">4"</option>
+                        <option value="6">6"</option>
+                        <option value="8">8"</option>
+                        <option value="10">10"</option>
+                        <option value="12">12"</option>
+                    </select>
+                </div>
+
+                <!-- Internal Diameter -->
+                <div>
+                    <label for="pipeDiameter" class="block text-sm font-semibold text-gray-700 mb-2">ID ท่อจริง (นิ้ว)</label>
+                    <div class="relative">
+                        <input type="number" id="pipeDiameter" class="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="ระบุ ID">
+                        <span class="absolute right-4 top-3 text-gray-400 text-sm pointer-events-none">inch</span>
+                    </div>
+                </div>
+
+                <!-- Length -->
+                <div>
+                    <label for="pipeLength" class="block text-sm font-semibold text-gray-700 mb-2">ความยาวท่อ (L)</label>
+                    <div class="relative">
+                        <input type="number" id="pipeLength" class="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="เช่น 30.5">
+                        <span class="absolute right-4 top-3 text-gray-400 text-sm pointer-events-none">m</span>
+                    </div>
+                </div>
+
+                <!-- Elevation -->
+                <div>
+                    <label for="elevationChange" class="block text-sm font-semibold text-gray-700 mb-2">ความสูง (H)</label>
+                    <div class="relative">
+                        <input type="number" id="elevationChange" class="w-full pl-4 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all" placeholder="เช่น 5" min="0">
+                        <span class="absolute right-4 top-3 text-gray-400 text-sm pointer-events-none">m</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 pt-4 border-t border-gray-100">
+                <button onclick="calculateHazenWilliams()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-green-200 transform hover:-translate-y-0.5 transition-all active:scale-95">
+                    คำนวณผลลัพธ์
+                </button>
+                <button onclick="clearHazenWilliamsInputs()" class="sm:flex-none bg-white border border-red-200 text-red-500 hover:bg-red-50 font-semibold py-3 px-6 rounded-lg transition-colors">
+                    ล้างข้อมูล
+                </button>
+            </div>
+
+            <!-- Error Message -->
+            <div id="error-message" class="hidden p-4 bg-red-50 border-l-4 border-red-500 text-red-700 rounded text-sm font-medium animate-fade-in"></div>
+
+            <!-- Result Section -->
+            <div id="result" class="hidden animate-fade-in">
+                <div class="bg-blue-50 rounded-xl p-6 border border-blue-100 shadow-inner relative">
+                    <button onclick="copyResults()" class="absolute top-4 right-4 text-blue-400 hover:text-blue-600 p-1 rounded transition-colors" title="Copy Results">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    </button>
+                    
+                    <h3 class="text-blue-900 font-bold text-lg mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                        ผลการคำนวณ
+                    </h3>
+
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center border-b border-blue-200 pb-2">
+                            <span class="text-blue-800 text-sm">Friction Loss (P<sub>f</sub>):</span>
+                            <div class="text-right">
+                                <div class="font-bold text-blue-900 text-lg" id="res-friction-psi">0.00 psi</div>
+                                <div class="text-xs text-blue-600" id="res-friction-m">0.00 m</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-blue-200 pb-2">
+                            <span class="text-blue-800 text-sm">Elevation Head (P<sub>e</sub>):</span>
+                            <div class="text-right">
+                                <div class="font-bold text-blue-900 text-lg" id="res-elevation-psi">0.00 psi</div>
+                                <div class="text-xs text-blue-600" id="res-elevation-m">0.00 m</div>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center pt-1">
+                            <span class="text-red-700 font-bold">Total Pressure Loss:</span>
+                            <div class="text-right">
+                                <div class="font-extrabold text-red-600 text-2xl" id="res-total-psi">0.00 psi</div>
+                                <div class="text-sm text-red-400 font-medium" id="res-total-m">0.00 m</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collapsible Formula -->
+            <div class="border-t border-gray-100 pt-4">
+                <button onclick="toggleFormulaDisplay()" class="flex items-center justify-center w-full text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors focus:outline-none group">
+                    <span>ดูสูตรการคำนวณ (Formula Reference)</span>
+                    <svg id="arrow-icon" class="w-4 h-4 ml-2 transform transition-transform group-hover:translate-y-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+                
+                <div id="formulaContent" class="hidden mt-4 bg-slate-50 rounded-lg p-5 border border-slate-200 text-slate-600 text-sm font-mono overflow-x-auto">
+                     <p class="font-bold mb-2 text-center text-slate-800">P<sub>total</sub> = P<sub>friction</sub> + P<sub>elevation</sub></p>
+                    <div class="flex justify-center items-center my-3">
+                         <span class="mr-3">P<sub>friction</sub> =</span>
+                         <div class="fraction-container">
+                             <span class="fraction-numerator">14.83 &times; Q<sup>1.852</sup> &times; L</span>
+                             <span class="fraction-denominator">C<sup>1.852</sup> &times; D<sup>4.87</sup></span>
+                         </div>
+                    </div>
+                    <p class="text-center mb-4">P<sub>elevation</sub> = H &times; 1.422</p>
+                    
+                    <div class="bg-white p-3 rounded border border-slate-200">
+                        <ul class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                            <li><span class="font-bold">Q</span> : Flow Rate (GPM)</li>
+                            <li><span class="font-bold">L</span> : Length (m)</li>
+                            <li><span class="font-bold">D</span> : Inside Diameter (inch)</li>
+                            <li><span class="font-bold">C</span> : Hazen-Williams Coeff.</li>
+                            <li><span class="font-bold">H</span> : Elevation Change (m)</li>
+                            <li><span class="font-bold">Constant</span> : 14.83 (Unit Conv.)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Data mapping NPS to Inside Diameter for Steel Pipe Sizes - Schedule 40
+        const steelPipeID = {
+            "0.125": 0.269, "0.25": 0.364, "0.375": 0.493, "0.5": 0.622,
+            "0.75": 0.824, "1": 1.049, "1.25": 1.380, "1.5": 1.610,
+            "2": 2.067, "2.5": 2.469, "3": 3.068, "3.5": 3.548,
+            "4": 4.026, "5": 5.047, "6": 6.065, "8": 7.981,
+            "10": 10.020, "12": 11.938, "14": 13.124, "16": 15.000,
+            "18": 16.876, "20": 18.812, "24": 22.624
+        };
+
+        // Data mapping NPS to Inside Diameter for PVC Pipe Sizes - Schedule 40
+        const pvcPipeID = {
+            "0.125": 0.269, "0.25": 0.364, "0.375": 0.493, "0.5": 0.622,
+            "0.75": 0.824, "1": 1.049, "1.25": 1.380, "1.5": 1.610,
+            "2": 2.067, "2.5": 2.469, "3": 3.068, "3.5": 3.548,
+            "4": 4.026, "5": 5.047, "6": 6.065, "8": 7.981,
+            "10": 10.020, "12": 11.938, "14": 13.126, "16": 15.000,
+            "18": 16.876, "20": 18.814, "24": 22.626
+        };
+
+        function calculateFrictionLoss(Q, L, D, C) {
+            if (Q === 0 || L === 0) return 0;
+            if (D === 0 || C === 0) return Infinity;
+            return (14.83 * Math.pow(Math.abs(Q), 1.852) * L) / (Math.pow(C, 1.852) * Math.pow(D, 4.87));
+        }
+
+        function updateCustomCFactor() {
+            const cFactorSelect = document.getElementById('cFactor');
+            const customCFactorInput = document.getElementById('customCFactor');
+            
+            if (cFactorSelect.value === 'custom') {
+                customCFactorInput.classList.remove('hidden');
+                customCFactorInput.focus();
+                customCFactorInput.value = '';
+            } else {
+                customCFactorInput.classList.add('hidden');
+                customCFactorInput.value = cFactorSelect.value;
+            }
+            updatePipeDiameterInput();
+        }
+
+        function updatePipeDiameterInput() {
+            const cFactorSelect = document.getElementById('cFactor');
+            const nominalPipeSizeSelect = document.getElementById('nominalPipeSize');
+            const pipeDiameterInput = document.getElementById('pipeDiameter');
+            const selectedCFactorOption = cFactorSelect.options[cFactorSelect.selectedIndex];
+            const materialType = selectedCFactorOption.dataset.material;
+            const selectedNPS = nominalPipeSizeSelect.value;
+
+            let diameterValue = '';
+            let isReadOnly = false;
+
+            if (selectedNPS) {
+                if (materialType === 'plastic' && pvcPipeID[selectedNPS]) {
+                    diameterValue = pvcPipeID[selectedNPS].toFixed(3);
+                    isReadOnly = true;
+                } else if ((materialType === 'black_steel' || materialType === 'galvanized_steel') && steelPipeID[selectedNPS]) {
+                    diameterValue = steelPipeID[selectedNPS].toFixed(3);
+                    isReadOnly = true;
+                }
+            }
+
+            pipeDiameterInput.value = diameterValue;
+            pipeDiameterInput.readOnly = isReadOnly;
+            
+            // Visual feedback for read-only state
+            if (isReadOnly) {
+                pipeDiameterInput.classList.add('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                pipeDiameterInput.classList.remove('bg-white');
+            } else {
+                pipeDiameterInput.classList.remove('bg-gray-100', 'text-gray-500', 'cursor-not-allowed');
+                pipeDiameterInput.classList.add('bg-white');
+            }
+        }
+
+        async function calculateHazenWilliams() {
+            const flowRateInput = document.getElementById('flowRate');
+            const pipeLengthInput = document.getElementById('pipeLength');
+            const pipeDiameterInput = document.getElementById('pipeDiameter');
+            const elevationChangeInput = document.getElementById('elevationChange');
+            const cFactorSelect = document.getElementById('cFactor');
+            const customCFactorInput = document.getElementById('customCFactor');
+            const resultDiv = document.getElementById('result');
+            const errorMessageDiv = document.getElementById('error-message');
+
+            // Reset UI
+            errorMessageDiv.classList.add('hidden');
+            errorMessageDiv.textContent = '';
+            resultDiv.classList.add('hidden');
+
+            const Q = parseFloat(flowRateInput.value);
+            const L = parseFloat(pipeLengthInput.value);
+            const D = parseFloat(pipeDiameterInput.value);
+            let H = parseFloat(elevationChangeInput.value);
+            if (isNaN(H)) H = 0;
+
+            let C = (cFactorSelect.value === 'custom') ? parseFloat(customCFactorInput.value) : parseFloat(cFactorSelect.value);
+
+            // Validation
+            if (isNaN(Q) || isNaN(L) || isNaN(D) || isNaN(C) || Q < 0 || L < 0 || D <= 0 || C <= 0 || H < 0) {
+                errorMessageDiv.innerHTML = '⚠️ <b>ข้อผิดพลาด:</b> กรุณาตรวจสอบข้อมูลที่กรอก <ul class="list-disc ml-5 mt-1"><li>ต้องเป็นตัวเลขทั้งหมด</li><li>เส้นผ่านศูนย์กลาง (D) และ C ต้องมากกว่า 0</li></ul>';
+                errorMessageDiv.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const P_friction = calculateFrictionLoss(Q, L, D, C);
+                const P_elevation = H * 1.422;
+                const P_total = P_friction + P_elevation;
+
+                // Update results
+                document.getElementById('res-friction-psi').textContent = `${P_friction.toFixed(2)} psi`;
+                document.getElementById('res-friction-m').textContent = `${(P_friction / 1.422).toFixed(2)} m`;
+                
+                document.getElementById('res-elevation-psi').textContent = `${P_elevation.toFixed(2)} psi`;
+                document.getElementById('res-elevation-m').textContent = `${(P_elevation / 1.422).toFixed(2)} m`;
+
+                document.getElementById('res-total-psi').textContent = `${P_total.toFixed(2)} psi`;
+                document.getElementById('res-total-m').textContent = `${(P_total / 1.422).toFixed(2)} m`;
+
+                resultDiv.classList.remove('hidden');
+                
+                // Scroll to result on mobile
+                if(window.innerWidth < 640) {
+                    resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+
+            } catch (error) {
+                errorMessageDiv.textContent = `เกิดข้อผิดพลาด: ${error.message}`;
+                errorMessageDiv.classList.remove('hidden');
+            }
+        }
+
+        function clearHazenWilliamsInputs() {
+            const inputs = ['flowRate', 'pipeLength', 'elevationChange', 'customCFactor'];
+            inputs.forEach(id => document.getElementById(id).value = '');
+            
+            document.getElementById('cFactor').value = '120';
+            updateCustomCFactor();
+            
+            document.getElementById('nominalPipeSize').value = '';
+            document.getElementById('pipeDiameter').value = '';
+            updatePipeDiameterInput(); // Reset style
+
+            document.getElementById('result').classList.add('hidden');
+            document.getElementById('error-message').classList.add('hidden');
+        }
+
+        function toggleFormulaDisplay() {
+            const content = document.getElementById('formulaContent');
+            const icon = document.getElementById('arrow-icon');
+            content.classList.toggle('hidden');
+            icon.classList.toggle('rotate-180');
+        }
+
+        function copyResults() {
+             const pf = document.getElementById('res-friction-psi').textContent;
+             const pe = document.getElementById('res-elevation-psi').textContent;
+             const pt = document.getElementById('res-total-psi').textContent;
+             
+             const text = `Hazen-Williams Result:\nFriction Loss: ${pf}\nElevation Head: ${pe}\nTotal Loss: ${pt}`;
+             
+             // Fallback for clipboard
+             const textArea = document.createElement("textarea");
+             textArea.value = text;
+             document.body.appendChild(textArea);
+             textArea.select();
+             try {
+                document.execCommand('copy');
+                alert("คัดลอกผลลัพธ์แล้ว!");
+             } catch (err) {
+                console.error('Unable to copy', err);
+             }
+             document.body.removeChild(textArea);
+        }
+
+        window.onload = function() {
+            updateCustomCFactor();
+            updatePipeDiameterInput();
+        };
+    </script>
+</body>
+</html>
