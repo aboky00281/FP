@@ -1,0 +1,1141 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Trash2, Calculator, FileText, Droplets, Upload, Ruler, Maximize, Target, ZoomIn, ZoomOut, Edit3, Check, Info, PlayCircle, Eraser, Magnet, Flame, AlertTriangle } from 'lucide-react';
+
+const pipeSpecs = [
+  { nominal: "1", internal: 1.049, color: "#3b82f6" },    
+  { nominal: "1.25", internal: 1.380, color: "#10b981" }, 
+  { nominal: "1.5", internal: 1.610, color: "#f59e0b" },  
+  { nominal: "2", internal: 2.067, color: "#ef4444" },    
+  { nominal: "2.5", internal: 2.469, color: "#8b5cf6" },  
+  { nominal: "3", internal: 3.068, color: "#ec4899" },    
+  { nominal: "4", internal: 4.026, color: "#06b6d4" },    
+  { nominal: "6", internal: 6.065, color: "#14b8a6" },    
+  { nominal: "8", internal: 7.981, color: "#475569" },    
+];
+
+const hazardClasses = [
+  { id: "LH", label: "Light Hazard", density: 0.10 },
+  { id: "OH1", label: "Ordinary Hazard Group 1", density: 0.15 },
+  { id: "OH2", label: "Ordinary Hazard Group 2", density: 0.20 },
+  { id: "EH1", label: "Extra Hazard Group 1", density: 0.30 },
+  { id: "EH2", label: "Extra Hazard Group 2", density: 0.40 },
+];
+
+const App = () => {
+  const [kFactor, setKFactor] = useState(5.6);
+  const [cFactor, setCFactor] = useState(120);
+  const [selectedHazard, setSelectedHazard] = useState("EH2");
+  const [designDensity, setDesignDensity] = useState(0.40);
+  const [areaPerHead, setAreaPerHead] = useState(100); 
+
+  const [pdfUrl, setPdfUrl] = useState(null);
+  const [isPdf, setIsPdf] = useState(false);
+  const [mode, setMode] = useState('pan'); 
+  const [selectedPipeSize, setSelectedPipeSize] = useState("1.25");
+  
+  const [scalePoints, setScalePoints] = useState([]);
+  const [pixelsPerMeter, setPixelsPerMeter] = useState(null); 
+  const [realWorldDist, setRealWorldDist] = useState(''); 
+  const [showScaleDialog, setShowScaleDialog] = useState(false);
+  
+  const [drawnPipes, setDrawnPipes] = useState([]);
+  const [tempPipe, setTempPipe] = useState(null);
+  const [placedSprinklers, setPlacedSprinklers] = useState([]);
+  
+  const [snapPoint, setSnapPoint] = useState(null); 
+  const [startSnapInfo, setStartSnapInfo] = useState(null);
+
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const containerRef = useRef(null);
+
+  const [results, setResults] = useState([]);
+  const [totalDemand, setTotalDemand] = useState({ flow: 0, pressure: 0 });
+  const [nodesList, setNodesList] = useState([]);
+  const [visualNodes, setVisualNodes] = useState([]);
+
+  const safeNum = (val, fallback = 0) => {
+    const n = parseFloat(val);
+    return isNaN(n) ? fallback : n;
+  };
+
+  const safeFixed = (val, dec = 2) => safeNum(val).toFixed(dec);
+
+  // --- Effect to Update Visual Nodes when Pipes Change ---
+  useEffect(() => {
+    const nodes = {};
+    const getNodeKey = (pt) => `${Math.round(pt.x)},${Math.round(pt.y)}`;
+    const getOrCreateNode = (pt) => {
+        const key = getNodeKey(pt);
+        if (!nodes[key]) nodes[key] = { id: key, x: pt.x, y: pt.y, degree: 0 };
+        return nodes[key];
+    };
+
+    drawnPipes.forEach(p => {
+        const n1 = getOrCreateNode(p.start);
+        const n2 = getOrCreateNode(p.end);
+        n1.degree += 1;
+        n2.degree += 1;
+    });
+
+    setVisualNodes(Object.values(nodes));
+  }, [drawnPipes]);
+
+  const handleHazardChange = (e) => {
+    const hazardId = e.target.value;
+    setSelectedHazard(hazardId);
+    const hazard = hazardClasses.find(h => h.id === hazardId);
+    if (hazard) setDesignDensity(hazard.density);
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (pdfUrl && pdfUrl.startsWith('blob:')) URL.revokeObjectURL(pdfUrl);
+    setPdfUrl(URL.createObjectURL(file));
+    setIsPdf(file.type === "application/pdf");
+    setScalePoints([]);
+    setDrawnPipes([]);
+    setPlacedSprinklers([]);
+    setResults([]);
+    setVisualNodes([]);
+    setTotalDemand({ flow: 0, pressure: 0 });
+    setTransform({ x: 0, y: 0, scale: 1 });
+    setMode('pan');
+  };
+
+  const getCanvasCoords = (e) => {
+    if (!containerRef.current) return { x: 0, y: 0 };
+    const rect = containerRef.current.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left - transform.x) / transform.scale,
+      y: (e.clientY - rect.top - transform.y) / transform.scale
+    };
+  };
+
+  const projectPointToSegment = (P, A, B) => {
+    const distAB2 = Math.pow(B.x - A.x, 2) + Math.pow(B.y - A.y, 2);
+    if (distAB2 === 0) return A;
+    let t = ((P.x - A.x) * (B.x - A.x) + (P.y - A.y) * (B.y - A.y)) / distAB2;
+    t = Math.max(0, Math.min(1, t));
+    return {
+        x: A.x + t * (B.x - A.x),
+        y: A.y + t * (B.y - A.y)
+    };
+  };
+
+  const getSnappedCoords = (rawCoords) => {
+    if (mode !== 'draw' && mode !== 'sprinkler') return { coords: rawCoords, isSnapped: false, snapType: null, snapTarget: null };
+    const snapThreshold = 15 / transform.scale; 
+    let closestPoint = null;
+    let minDistance = Infinity;
+    let snapType = null;
+    let snapTarget = null;
+
+    // 1. Check Endpoints (Nodes)
+    drawnPipes.forEach(pipe => {
+      [pipe.start, pipe.end].forEach(pt => {
+        const dist = Math.sqrt(Math.pow(pt.x - rawCoords.x, 2) + Math.pow(pt.y - rawCoords.y, 2));
+        if (dist < snapThreshold && dist < minDistance) {
+          minDistance = dist;
+          closestPoint = pt;
+          snapType = 'node';
+          snapTarget = pipe;
+        }
+      });
+    });
+
+    // 2. Check Edges
+    if (!closestPoint) {
+        drawnPipes.forEach(pipe => {
+            const projected = projectPointToSegment(rawCoords, pipe.start, pipe.end);
+            const dist = Math.sqrt(Math.pow(projected.x - rawCoords.x, 2) + Math.pow(projected.y - rawCoords.y, 2));
+            if (dist < snapThreshold && dist < minDistance) {
+                minDistance = dist;
+                closestPoint = projected;
+                snapType = 'edge';
+                snapTarget = pipe;
+            }
+        });
+    }
+
+    if (closestPoint) return { coords: closestPoint, isSnapped: true, snapType, snapTarget };
+    return { coords: rawCoords, isSnapped: false, snapType: null, snapTarget: null };
+  };
+
+  // Function to split a pipe at a specific point
+  const splitPipeAtPoint = (pipes, targetPipe, splitPoint) => {
+      const remainingPipes = pipes.filter(p => p.id !== targetPipe.id);
+      
+      const dist1 = Math.sqrt(Math.pow(splitPoint.x - targetPipe.start.x, 2) + Math.pow(splitPoint.y - targetPipe.start.y, 2));
+      const dist2 = Math.sqrt(Math.pow(targetPipe.end.x - splitPoint.x, 2) + Math.pow(targetPipe.end.y - splitPoint.y, 2));
+      
+      const newSegments = [];
+      if (dist1 > 0.1) {
+          newSegments.push({
+              ...targetPipe,
+              id: Date.now() + Math.random(),
+              end: splitPoint,
+              pixelLength: dist1
+          });
+      }
+      if (dist2 > 0.1) {
+          newSegments.push({
+              ...targetPipe,
+              id: Date.now() + Math.random() + 1,
+              start: splitPoint,
+              pixelLength: dist2
+          });
+      }
+      
+      return [...remainingPipes, ...newSegments];
+  };
+
+  const handleMouseDown = (e) => {
+    if (showScaleDialog) return;
+    const rawCoords = getCanvasCoords(e);
+    const snapInfo = getSnappedCoords(rawCoords);
+    const { coords, isSnapped, snapType, snapTarget } = snapInfo;
+    
+    if (mode === 'pan') {
+      setIsDragging(true);
+      setDragStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
+    } else if (mode === 'scale') {
+      setIsDragging(true);
+      setScalePoints([coords, coords]);
+    } else if (mode === 'draw') {
+      setIsDragging(true);
+      setStartSnapInfo(isSnapped ? { type: snapType, target: snapTarget, coords: coords } : null);
+      setTempPipe({ start: coords, end: coords, size: selectedPipeSize });
+    }
+  };
+
+  const handleMouseMove = (e) => {
+    if (showScaleDialog) return;
+    const rawCoords = getCanvasCoords(e);
+    const { coords, isSnapped } = getSnappedCoords(rawCoords);
+    setSnapPoint(isSnapped ? coords : null);
+
+    if (isDragging) {
+      if (mode === 'pan') {
+        setTransform(prev => ({
+          ...prev,
+          x: e.clientX - dragStart.x,
+          y: e.clientY - dragStart.y
+        }));
+      } else if (mode === 'scale') {
+        setScalePoints(prev => [prev[0], rawCoords]); 
+      } else if (mode === 'draw') {
+        setTempPipe(prev => ({ ...prev, end: coords }));
+      }
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (showScaleDialog) return;
+
+    if (mode === 'scale' && isDragging) {
+      const dx = scalePoints[1].x - scalePoints[0].x;
+      const dy = scalePoints[1].y - scalePoints[0].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist > 5) {
+        setShowScaleDialog(true);
+        setRealWorldDist(''); 
+        setIsDragging(false); 
+        return; 
+      } else {
+        setScalePoints([]);
+      }
+    } else if (mode === 'draw' && isDragging && tempPipe) {
+        const endSnapInfo = getSnappedCoords(tempPipe.end); 
+        const finalEnd = endSnapInfo.isSnapped ? endSnapInfo.coords : tempPipe.end;
+        
+        const dx = finalEnd.x - tempPipe.start.x;
+        const dy = finalEnd.y - tempPipe.start.y;
+        const pixelLen = Math.sqrt(dx * dx + dy * dy);
+      
+        if (pixelLen > 2) {
+            let nextPipes = [...drawnPipes];
+            let actualStart = tempPipe.start;
+            let actualEnd = finalEnd;
+
+            if (startSnapInfo && startSnapInfo.type === 'edge' && startSnapInfo.target) {
+                const targetPipe = nextPipes.find(p => p.id === startSnapInfo.target.id);
+                if (targetPipe) {
+                    nextPipes = splitPipeAtPoint(nextPipes, targetPipe, startSnapInfo.coords);
+                    actualStart = startSnapInfo.coords; 
+                }
+            }
+
+            if (endSnapInfo.isSnapped && endSnapInfo.snapType === 'edge' && endSnapInfo.snapTarget) {
+                 const targetPipe = nextPipes.find(p => p.id === endSnapInfo.snapTarget.id);
+                 if (targetPipe) {
+                     nextPipes = splitPipeAtPoint(nextPipes, targetPipe, endSnapInfo.coords);
+                     actualEnd = endSnapInfo.coords;
+                 }
+            }
+
+            nextPipes.push({
+                id: Date.now(),
+                start: actualStart,
+                end: actualEnd,
+                size: tempPipe.size,
+                pixelLength: pixelLen
+            });
+
+            setDrawnPipes(nextPipes);
+        }
+        setTempPipe(null);
+        setStartSnapInfo(null);
+    }
+    setIsDragging(false);
+  };
+
+  const handleCanvasClick = (e) => {
+    if (showScaleDialog) return;
+    const rawCoords = getCanvasCoords(e);
+    const { coords, isSnapped, snapType, snapTarget } = getSnappedCoords(rawCoords);
+
+    if (mode === 'sprinkler') {
+      setPlacedSprinklers([...placedSprinklers, { ...coords, id: Date.now() }]);
+      
+      if (isSnapped && snapType === 'edge' && snapTarget) {
+          const newPipes = splitPipeAtPoint(drawnPipes, snapTarget, coords);
+          setDrawnPipes(newPipes);
+      }
+    } else if (mode === 'delete') {
+        const clickThreshold = 10 / transform.scale;
+        const pipeToDelete = drawnPipes.find(pipe => {
+            const dist = distanceToSegment(rawCoords, pipe.start, pipe.end);
+            return dist < clickThreshold;
+        });
+
+        if (pipeToDelete) {
+            setDrawnPipes(drawnPipes.filter(p => p.id !== pipeToDelete.id));
+        } else {
+            const sprinklerToDelete = placedSprinklers.find(s => {
+                const dist = Math.sqrt(Math.pow(s.x - rawCoords.x, 2) + Math.pow(s.y - rawCoords.y, 2));
+                return dist < clickThreshold;
+            });
+            if (sprinklerToDelete) {
+                setPlacedSprinklers(placedSprinklers.filter(s => s.id !== sprinklerToDelete.id));
+            }
+        }
+    }
+  };
+
+  const applyScale = () => {
+    if (scalePoints.length < 2) return;
+    const dx = scalePoints[1].x - scalePoints[0].x;
+    const dy = scalePoints[1].y - scalePoints[0].y;
+    const pixelDist = Math.sqrt(dx * dx + dy * dy);
+    const rDist = parseFloat(realWorldDist);
+    if (pixelDist > 0 && rDist > 0) {
+      setPixelsPerMeter(pixelDist / rDist);
+      setMode('pan');
+      setShowScaleDialog(false);
+      setScalePoints([]);
+    } else {
+      alert("กรุณาระบุระยะทางที่ถูกต้อง");
+    }
+  };
+
+  const adjustZoom = (delta) => {
+    if (!containerRef.current) return;
+    const zoomStep = 0.15;
+    const oldScale = transform.scale;
+    const newScale = Math.min(Math.max(oldScale + (delta > 0 ? zoomStep : -zoomStep), 0.1), 10);
+    const rect = containerRef.current.getBoundingClientRect();
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const worldX = (centerX - transform.x) / oldScale;
+    const worldY = (centerY - transform.y) / oldScale;
+    const newX = centerX - worldX * newScale;
+    const newY = centerY - worldY * newScale;
+    setTransform({ x: newX, y: newY, scale: newScale });
+  };
+
+  const distanceToSegment = (P, A, B) => {
+    const distAB2 = Math.pow(B.x - A.x, 2) + Math.pow(B.y - A.y, 2);
+    if (distAB2 === 0) return Math.sqrt(Math.pow(P.x - A.x, 2) + Math.pow(P.y - A.y, 2));
+    let t = ((P.x - A.x) * (B.x - A.x) + (P.y - A.y) * (B.y - A.y)) / distAB2;
+    t = Math.max(0, Math.min(1, t));
+    return Math.sqrt(Math.pow(P.x - (A.x + t * (B.x - A.x)), 2) + Math.pow(P.y - (A.y + t * (B.y - A.y)), 2));
+  };
+
+  const getSprinklersOnPipe = (pipe, sprinklers, scale) => {
+    const threshold = 5 / scale; 
+    return sprinklers.filter(s => distanceToSegment(s, pipe.start, pipe.end) < threshold);
+  };
+
+  const calculateLoss = (Q, L_ft, d_in, C) => {
+    if (Q <= 0 || L_ft <= 0) return 0;
+    return (4.52 * Math.pow(Q, 1.85) * L_ft) / (Math.pow(C, 1.85) * Math.pow(d_in, 4.87));
+  };
+
+  const handleCalculate = () => {
+    if (!pixelsPerMeter) {
+        alert("กรุณากำหนดสเกล (Set Scale) ก่อนคำนวณ");
+        return;
+    }
+    if (drawnPipes.length === 0) {
+      alert("กรุณาวาดท่ออย่างน้อย 1 เส้น");
+      return;
+    }
+
+    const M_TO_FT = 3.28084;
+    const K = safeNum(kFactor, 5.6);
+    const C = safeNum(cFactor, 120);
+    const RISER_NIPPLE_FT = 0.1 * M_TO_FT; 
+    const NIPPLE_ID = 1.049; 
+
+    const density = safeNum(designDensity, 0.40); 
+    const areaFt2 = safeNum(areaPerHead, 100); 
+    const qMinHead = density * areaFt2;
+    const minP_Req = Math.pow(qMinHead / K, 2);
+    const startPressureReq = Math.max(7, minP_Req);
+
+    // 1. Build Graph
+    const nodes = {}; 
+    const getNodeKey = (pt) => `${Math.round(pt.x)},${Math.round(pt.y)}`;
+    const getOrCreateNode = (pt) => {
+        const key = getNodeKey(pt);
+        if (!nodes[key]) nodes[key] = { id: key, x: pt.x, y: pt.y, connections: [], heads: [] };
+        return nodes[key];
+    };
+
+    drawnPipes.forEach(p => {
+        const n1 = getOrCreateNode(p.start);
+        const n2 = getOrCreateNode(p.end);
+        const spec = pipeSpecs.find(s => s.nominal === p.size) || pipeSpecs[0];
+        
+        const edge = {
+            id: p.id,
+            u: n1.id,
+            v: n2.id,
+            pipe: p,
+            size: p.size,
+            heads: [], // Heads are assigned by location
+            d_in: spec.internal,
+            len_ft: (p.pixelLength / pixelsPerMeter) * M_TO_FT,
+            flow: 0,
+            loss: 0,
+            velocity: 0,
+            headsAssigned: [] 
+        };
+        n1.connections.push({ target: n2.id, edge });
+        n2.connections.push({ target: n1.id, edge });
+    });
+
+    setNodesList(Object.values(nodes));
+
+    // 2. Assign Sprinklers
+    const tolerance = 5 / transform.scale; 
+    placedSprinklers.forEach(s => {
+        // Try assigning to Node first
+        let assigned = false;
+        for (const nodeId in nodes) {
+            const node = nodes[nodeId];
+            const dist = Math.sqrt(Math.pow(s.x - node.x, 2) + Math.pow(s.y - node.y, 2));
+            if (dist < tolerance) {
+                node.heads.push(s);
+                assigned = true;
+                break;
+            }
+        }
+        
+        // If not node, assign to closest edge logic is complex without direct edge ref.
+        // We iterate edges via drawnPipes for simplicity, but need to map back to graph edge.
+        // Actually, we can just check if nodes have heads. 
+        // With auto-split, heads should always be at Nodes (Junctions or Endpoints).
+    });
+
+    // 2. Determine Source
+    let sourceId = null;
+    let maxDia = -1;
+    const allNodes = Object.values(nodes);
+    
+    // Find endpoints (nodes with degree 1)
+    const endPoints = allNodes.filter(n => n.connections.length === 1);
+    
+    // Priority: Endpoint connected to the LARGEST pipe is the Source
+    if (endPoints.length > 0) {
+        endPoints.forEach(n => {
+            const pipeSize = parseFloat(n.connections[0].edge.size);
+            if (pipeSize > maxDia) {
+                maxDia = pipeSize;
+                sourceId = n.id;
+            }
+        });
+    }
+    
+    // Fallback: Max diameter node if no endpoints (loop)
+    if (!sourceId) {
+        allNodes.forEach(n => {
+             const localMax = n.connections.reduce((m, c) => Math.max(m, parseFloat(c.edge.size)), 0);
+             if (localMax > maxDia) {
+                 maxDia = localMax;
+                 sourceId = n.id;
+             }
+        });
+    }
+    
+    if (!sourceId && allNodes.length > 0) sourceId = allNodes[0].id;
+
+    // 3. Traverse Tree BFS
+    const parentMap = {};
+    const processingOrder = [];
+    const visited = new Set([sourceId]);
+    const queue = [sourceId];
+
+    while(queue.length > 0) {
+        const uId = queue.shift();
+        processingOrder.push(uId);
+        
+        const uNode = nodes[uId];
+        if(uNode && uNode.connections) {
+            uNode.connections.forEach(conn => {
+                if (!visited.has(conn.target)) {
+                    visited.add(conn.target);
+                    parentMap[conn.target] = { parentId: uId, edge: conn.edge };
+                    queue.push(conn.target);
+                }
+            });
+        }
+    }
+
+    const nodeReqP = {}; 
+    const nodeTotalQ = {}; 
+
+    Object.keys(nodes).forEach(k => {
+        nodeReqP[k] = 0; 
+        nodeTotalQ[k] = 0;
+    });
+
+    const calcReport = [];
+
+    // 4. Backward Pass
+    for (let i = processingOrder.length - 1; i >= 0; i--) {
+        const uId = processingOrder[i];
+        
+        let maxP_RequiredAtU = 0;
+        let totalQ_AtU = 0;
+
+        const uNode = nodes[uId];
+        if(!uNode) continue;
+
+        const childConnections = uNode.connections.filter(conn => parentMap[conn.target]?.parentId === uId);
+        
+        // Pass 1: Max Pressure
+        childConnections.forEach(child => {
+            const vId = child.target;
+            const edge = child.edge;
+            
+            const qChild = nodeTotalQ[vId] || 0; 
+            const pChild = nodeReqP[vId] || 0;   
+            
+            if (qChild > 0 || pChild > 0) {
+                const loss = calculateLoss(qChild, edge.len_ft, edge.d_in, C);
+                const pReqUpstream = pChild + loss;
+                maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pReqUpstream);
+            }
+        });
+
+        // Add Heads directly at Node U
+        let hasActiveHead = false;
+        if(uNode.heads.length > 0) hasActiveHead = true;
+        
+        if (hasActiveHead) {
+            if (maxP_RequiredAtU < startPressureReq) maxP_RequiredAtU = startPressureReq;
+            
+            uNode.heads.forEach(() => {
+                 let pHead = maxP_RequiredAtU;
+                 for(let k=0; k<2; k++) {
+                     let q = K * Math.sqrt(pHead > 0 ? pHead : 0);
+                     let lossNip = calculateLoss(q, RISER_NIPPLE_FT, NIPPLE_ID, C);
+                     pHead = maxP_RequiredAtU - lossNip;
+                 }
+                 if(pHead < 0) pHead = 0;
+                 totalQ_AtU += K * Math.sqrt(pHead);
+            });
+        }
+        
+        // Pass 2: Balance Flow
+        childConnections.forEach(child => {
+            const vId = child.target;
+            const edge = child.edge;
+            let qBranch = nodeTotalQ[vId] || 0;
+            const pChildReq = nodeReqP[vId] || 0;
+            
+            const lossBase = calculateLoss(qBranch, edge.len_ft, edge.d_in, C);
+            const pBranchReqAtU = pChildReq + lossBase;
+            
+            if (maxP_RequiredAtU > pBranchReqAtU && pBranchReqAtU > 0) {
+                const kBranch = qBranch / Math.sqrt(pBranchReqAtU);
+                qBranch = kBranch * Math.sqrt(maxP_RequiredAtU);
+            }
+            
+            edge.flow = qBranch;
+            edge.loss = calculateLoss(qBranch, edge.len_ft, edge.d_in, C);
+            edge.velocity = (0.4085 * qBranch) / Math.pow(edge.d_in, 2);
+            
+            edge.flowDir = (edge.u === uId) ? 'u->v' : 'v->u';
+
+            totalQ_AtU += qBranch;
+            
+            if (qBranch > 0) {
+                calcReport.push({
+                    pipeId: edge.id,
+                    id: `Pipe ${edge.size}"`,
+                    size: edge.size,
+                    lengthM: edge.len_ft / M_TO_FT,
+                    flow: qBranch,
+                    loss: edge.loss,
+                    pressure: maxP_RequiredAtU, 
+                    velocity: edge.velocity,
+                    addedFlow: 0,
+                    headCount: 0,
+                    flowDir: edge.flowDir
+                });
+            }
+        });
+        
+        nodeReqP[uId] = maxP_RequiredAtU;
+        nodeTotalQ[uId] = totalQ_AtU;
+    }
+
+    setResults(calcReport.reverse());
+    setTotalDemand({ 
+        flow: nodeTotalQ[sourceId] || 0, 
+        pressure: nodeReqP[sourceId] || 0
+    });
+  };
+  
+  // Calculate Layout for Tags to avoid collision
+  const getTagLayout = () => {
+    if (!results || results.length === 0) return [];
+    
+    const layout = [];
+    const occupiedRects = [];
+    const tagW = 90 / transform.scale;
+    const tagH = 44 / transform.scale;
+    const padding = 10 / transform.scale;
+
+    drawnPipes.forEach(pipe => {
+        const res = results.find(r => r.pipeId === pipe.id);
+        if (!res || res.flow <= 0) return;
+
+        // Base Position calculation
+        let startX = pipe.start.x, startY = pipe.start.y;
+        let endX = pipe.end.x, endY = pipe.end.y;
+        
+        if (res.flowDir === 'v->u') {
+            startX = pipe.end.x; startY = pipe.end.y;
+            endX = pipe.start.x; endY = pipe.start.y;
+        }
+
+        const midX = (startX + endX) / 2;
+        const midY = (startY + endY) / 2;
+        const pdx = endX - startX;
+        const pdy = endY - startY;
+        const plen = Math.sqrt(pdx*pdx + pdy*pdy);
+        const offsetDist = 60 / transform.scale; 
+        
+        let offX = plen > 0 ? (-pdy / plen) * offsetDist : 0;
+        let offY = plen > 0 ? (pdx / plen) * offsetDist : 0;
+
+        // Force Right for Vertical
+        if (Math.abs(pdy) > Math.abs(pdx)) {
+            if (offX < 0) { offX = -offX; offY = -offY; }
+        }
+
+        let tagX = midX + offX;
+        let tagY = midY + offY;
+
+        // Collision Avoidance (Stacking Outwards)
+        let attempts = 0;
+        while(attempts < 10) {
+            let collision = false;
+            for(let rect of occupiedRects) {
+                if (
+                    tagX - tagW/2 < rect.x + rect.w &&
+                    tagX + tagW/2 > rect.x &&
+                    tagY - tagH/2 < rect.y + rect.h &&
+                    tagY + tagH/2 > rect.y
+                ) {
+                    collision = true;
+                    break;
+                }
+            }
+            
+            if (!collision) break;
+            
+            // Push out further along the normal vector
+            const pushStep = (tagH + padding);
+            const lenOff = Math.sqrt(offX*offX + offY*offY) || 1;
+            const uX = offX / lenOff;
+            const uY = offY / lenOff;
+            
+            tagX += uX * pushStep;
+            tagY += uY * pushStep;
+            attempts++;
+        }
+
+        occupiedRects.push({ x: tagX - tagW/2, y: tagY - tagH/2, w: tagW, h: tagH });
+        
+        layout.push({
+            id: pipe.id,
+            tagX, tagY,
+            midX, midY, // For leader line
+            res
+        });
+    });
+    
+    return layout;
+  };
+  
+  const tagLayout = getTagLayout();
+
+  return (
+    <div className="min-h-screen bg-slate-100 p-4 font-sans text-slate-800">
+      <div className="max-w-[1600px] mx-auto grid grid-cols-1 xl:grid-cols-12 gap-6">
+        
+        {/* Side Panel */}
+        <div className="xl:col-span-3 space-y-4">
+          <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200">
+            <div className="bg-slate-900 p-4 text-white font-bold flex items-center gap-2">
+              <Droplets className="w-5 h-5 text-cyan-400" /> NFPA 13 Calc
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Plan File</label>
+                <input type="file" accept="image/*,application/pdf" onChange={handleFileChange} className="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-slate-100 file:text-slate-700 hover:file:bg-slate-200 cursor-pointer"/>
+              </div>
+
+              {/* Hazard Classification Selection */}
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                <h4 className="text-[9px] font-bold text-slate-400 uppercase mb-2 flex items-center gap-1">
+                  <Flame size={12}/> Hazard Classification
+                </h4>
+                <select 
+                  value={selectedHazard} 
+                  onChange={handleHazardChange}
+                  className="w-full text-xs p-2 rounded-lg border border-slate-200 font-bold text-slate-700 bg-white mb-2 outline-none"
+                >
+                  {hazardClasses.map(h => (
+                    <option key={h.id} value={h.id}>{h.label}</option>
+                  ))}
+                </select>
+                <div className="flex justify-between items-center text-[10px] text-slate-500 px-1">
+                  <span>Density:</span>
+                  <span className="font-bold text-slate-800">{designDensity.toFixed(2)} gpm/ft²</span>
+                </div>
+                <div className="flex justify-between items-center text-[10px] text-slate-500 px-1 mt-1">
+                  <span>Area/Head:</span>
+                  <div className="flex items-center gap-1">
+                    <input 
+                        type="number" 
+                        value={areaPerHead} 
+                        onChange={(e) => setAreaPerHead(parseFloat(e.target.value))}
+                        className="w-12 text-right font-bold text-slate-800 border-b border-slate-300 outline-none"
+                    />
+                    <span>ft²</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">K-Factor</span>
+                  <input type="number" step="0.1" value={kFactor} onChange={e => setKFactor(e.target.value)} className="w-full bg-transparent font-bold text-sm outline-none"/>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[9px] font-bold text-slate-400 uppercase block mb-1">C-Factor</span>
+                  <input type="number" value={cFactor} onChange={e => setCFactor(e.target.value)} className="w-full bg-transparent font-bold text-sm outline-none"/>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pipe Size (ASTM Sch.40)</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {pipeSpecs.map(spec => (
+                    <button 
+                      key={spec.nominal}
+                      onClick={() => { setMode('draw'); setSelectedPipeSize(spec.nominal); }}
+                      className={`py-2 px-1 rounded-lg text-[10px] font-bold border-2 transition-all flex flex-col items-center gap-1 ${mode === 'draw' && selectedPipeSize === spec.nominal ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-100 bg-white text-slate-600 hover:border-slate-300'}`}
+                    >
+                      <div className="w-full h-1 rounded-full" style={{ backgroundColor: spec.color }}></div>
+                      {spec.nominal}"
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-slate-900 p-6 m-4 rounded-2xl shadow-inner">
+              <div className="flex justify-between items-end mb-4">
+                <div className="text-[10px] font-bold text-slate-500 uppercase">System Demand</div>
+                <div className="text-[10px] text-cyan-400 font-mono">
+                  {pixelsPerMeter ? (
+                    <span className="flex items-center gap-1"><Check size={10}/> Scale: {safeFixed(pixelsPerMeter, 2)} px/m</span>
+                  ) : "No Scale"}
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="flex justify-between items-baseline">
+                  <span className="text-xs font-bold text-white/50">Total Flow</span>
+                  <span className="text-3xl font-black text-cyan-400">{safeFixed(totalDemand.flow, 1)} <small className="text-xs font-normal">GPM</small></span>
+                </div>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-xs font-bold text-white/50">Total Pressure</span>
+                  <span className="text-3xl font-black text-red-500">{safeFixed(totalDemand.pressure, 2)} <small className="text-xs font-normal">PSI</small></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Viewport Area */}
+        <div className="xl:col-span-6 flex flex-col">
+          <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200 h-[750px] relative flex flex-col">
+            <div className="bg-slate-900 p-3 flex items-center justify-between z-20">
+              <div className="flex items-center gap-2">
+                <div className="flex bg-slate-800 rounded-lg p-1">
+                  <button onClick={() => adjustZoom(-1)} className="p-2 text-slate-400 hover:text-white transition-all"><ZoomOut size={16}/></button>
+                  <div className="px-2 py-1 text-[10px] font-mono font-bold text-cyan-400 flex items-center min-w-[50px] justify-center">{Math.round(transform.scale * 100)}%</div>
+                  <button onClick={() => adjustZoom(1)} className="p-2 text-slate-400 hover:text-white transition-all"><ZoomIn size={16}/></button>
+                </div>
+                <div className="h-6 w-px bg-slate-700 mx-2"></div>
+                <div className="flex bg-slate-800 rounded-lg p-1">
+                  <button onClick={() => setMode('pan')} className={`p-2 rounded-md transition-all ${mode === 'pan' ? 'bg-slate-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Pan"><Maximize size={16}/></button>
+                  <button onClick={() => { setMode('scale'); setScalePoints([]); }} className={`p-2 rounded-md transition-all ${mode === 'scale' ? 'bg-red-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Set Scale"><Ruler size={16}/></button>
+                  <button onClick={() => setMode('sprinkler')} className={`p-2 rounded-md transition-all ${mode === 'sprinkler' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Place Sprinkler"><Target size={16}/></button>
+                  <button onClick={() => setMode('draw')} className={`p-2 rounded-md transition-all ${mode === 'draw' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'}`} title="Draw Pipe"><Edit3 size={16}/></button>
+                  <button onClick={() => setMode('delete')} className={`p-2 rounded-md transition-all ${mode === 'delete' ? 'bg-orange-500 text-white' : 'text-slate-400 hover:text-white'}`} title="Delete"><Eraser size={16}/></button>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button onClick={handleCalculate} className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-bold text-xs uppercase tracking-wider transition-all shadow-lg active:scale-95">
+                    <PlayCircle size={16} /> Calculate
+                </button>
+                <button 
+                  onClick={() => { 
+                    setDrawnPipes([]); 
+                    setPlacedSprinklers([]); 
+                    // setPixelsPerMeter(null); // ไม่ลบ Scale แล้ว
+                    setResults([]);
+                    setTotalDemand({ flow: 0, pressure: 0 });
+                    setNodesList([]);
+                    setVisualNodes([]);
+                  }} 
+                  className="text-[10px] font-black uppercase text-red-400 hover:text-red-300 transition-colors ml-2"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+
+            <div 
+              ref={containerRef}
+              className={`relative flex-1 bg-slate-200 overflow-hidden select-none touch-none ${mode === 'pan' ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') : 'cursor-crosshair'}`}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseUp}
+              onClick={handleCanvasClick}
+            >
+              <div 
+                style={{ 
+                  transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+                  transformOrigin: '0 0',
+                  transition: isDragging ? 'none' : 'transform 0.1s ease-out'
+                }}
+                className="inline-block relative"
+              >
+                {pdfUrl ? (
+                  <>
+                    {isPdf ? <object data={pdfUrl} type="application/pdf" className="w-[1200px] h-[1600px] pointer-events-none bg-white" /> : <img src={pdfUrl} alt="Plan" className="max-w-none shadow-2xl pointer-events-none" />}
+                    
+                    <svg className="absolute inset-0 pointer-events-none w-full h-full" style={{ zIndex: 5 }}>
+                      <defs>
+                         <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5"
+                            markerWidth="6" markerHeight="6"
+                            orient="auto-start-reverse">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#444" />
+                         </marker>
+                      </defs>
+
+                      {scalePoints.length === 2 && (
+                        <g>
+                          <line x1={scalePoints[0].x} y1={scalePoints[0].y} x2={scalePoints[1].x} y2={scalePoints[1].y} stroke="#ef4444" strokeWidth={2 / transform.scale} />
+                          <circle cx={scalePoints[0].x} cy={scalePoints[0].y} r={4 / transform.scale} fill="#ef4444" />
+                          <circle cx={scalePoints[1].x} cy={scalePoints[1].y} r={4 / transform.scale} fill="#ef4444" />
+                        </g>
+                      )}
+
+                      {(drawnPipes || []).map((pipe) => {
+                        const spec = pipeSpecs.find(s => s.nominal === pipe.size) || pipeSpecs[0];
+                        const lengthM = pixelsPerMeter ? (pipe.pixelLength / pixelsPerMeter) : 0;
+                        const strokeW = Math.max(1, (parseFloat(pipe.size) * 1.5) / transform.scale);
+                        
+                        // Find results for this pipe
+                        const res = results.find(r => r.pipeId === pipe.id);
+                        
+                        // Midpoint for tag
+                        const midX = (pipe.start.x + pipe.end.x) / 2;
+                        const midY = (pipe.start.y + pipe.end.y) / 2;
+                        
+                        // Determine arrow direction based on calculation flow direction
+                        let startX = pipe.start.x, startY = pipe.start.y;
+                        let endX = pipe.end.x, endY = pipe.end.y;
+                        
+                        if (res && res.flow > 0 && res.flowDir === 'v->u') {
+                            startX = pipe.end.x; startY = pipe.end.y;
+                            endX = pipe.start.x; endY = pipe.start.y;
+                        }
+
+                        // Arrow Geometry (Line Arrow >) centered at midpoint
+                        const arrowSize = 6 / transform.scale;
+                        // Determine unit vector
+                        const vecX = endX - startX;
+                        const vecY = endY - startY;
+                        const len = Math.sqrt(vecX*vecX + vecY*vecY);
+                        const unitX = vecX / (len || 1);
+                        const unitY = vecY / (len || 1);
+                        
+                        const angle = Math.atan2(unitY, unitX);
+                        const leftWingAngle = angle + Math.PI * 0.85; // 150 deg approx
+                        const rightWingAngle = angle - Math.PI * 0.85;
+
+                        const arrowTipX = midX;
+                        const arrowTipY = midY;
+                        
+                        const leftX = arrowTipX + Math.cos(leftWingAngle) * arrowSize;
+                        const leftY = arrowTipY + Math.sin(leftWingAngle) * arrowSize;
+                        
+                        const rightX = arrowTipX + Math.cos(rightWingAngle) * arrowSize;
+                        const rightY = arrowTipY + Math.sin(rightWingAngle) * arrowSize;
+
+                        return (
+                          <g key={pipe.id} className={mode === 'delete' ? "pointer-events-auto hover:opacity-50 cursor-pointer" : ""}>
+                            <line 
+                              x1={pipe.start.x} y1={pipe.start.y} 
+                              x2={pipe.end.x} y2={pipe.end.y} 
+                              stroke={spec.color} 
+                              strokeWidth={strokeW} 
+                              strokeLinecap="round" 
+                              opacity="0.9" 
+                            />
+                            {/* Arrow (Line Style) */}
+                            {res && res.flow > 0 && (
+                                <g>
+                                    <line x1={arrowTipX} y1={arrowTipY} x2={leftX} y2={leftY} stroke="#333" strokeWidth={1.5/transform.scale} />
+                                    <line x1={arrowTipX} y1={arrowTipY} x2={rightX} y2={rightY} stroke="#333" strokeWidth={1.5/transform.scale} />
+                                </g>
+                            )}
+
+                            {/* Node Markers */}
+                            <circle cx={pipe.start.x} cy={pipe.start.y} r={2/transform.scale} fill={spec.color} />
+                            <circle cx={pipe.end.x} cy={pipe.end.y} r={2/transform.scale} fill={spec.color} />
+                          </g>
+                        );
+                      })}
+
+                      {/* Render Calculated Tags from Layout (Avoid Overlap) */}
+                      {tagLayout.map((tag) => (
+                           <g key={tag.id} transform={`translate(${tag.tagX}, ${tag.tagY})`}>
+                                {/* Leader line to pipe center */}
+                                <line 
+                                    x1={tag.midX - tag.tagX} y1={tag.midY - tag.tagY} 
+                                    x2={0} y2={0} 
+                                    stroke="#94a3b8" 
+                                    strokeWidth={1/transform.scale} 
+                                    strokeDasharray={`${3/transform.scale},${2/transform.scale}`} 
+                                    opacity="0.6"
+                                />
+                                <rect x="-45" y="-22" width="90" height="44" rx="4" fill="rgba(255,255,255,0.95)" stroke="#cbd5e1" strokeWidth={1} transform={`scale(${1/transform.scale})`} />
+                                
+                                {/* Line 1: Size & Length */}
+                                <text 
+                                  y="-10" 
+                                  fontSize={9}
+                                  fill="#64748b"
+                                  fontWeight="bold"
+                                  textAnchor="middle"
+                                  transform={`scale(${1/transform.scale})`}
+                                >
+                                  {tag.res.size}" - {safeFixed(tag.res.lengthM, 2)}m
+                                </text>
+
+                                {/* Line 2: Flow */}
+                                <text 
+                                  y="2" 
+                                  fontSize={10}
+                                  fill="#000"
+                                  fontWeight="bold"
+                                  textAnchor="middle"
+                                  transform={`scale(${1/transform.scale})`}
+                                >
+                                  Q: {safeFixed(tag.res.flow, 1)}
+                                </text>
+
+                                {/* Line 3: Pressure */}
+                                <text 
+                                  y="14" 
+                                  fontSize={9}
+                                  fill="#d97706"
+                                  textAnchor="middle"
+                                  transform={`scale(${1/transform.scale})`}
+                                >
+                                  P: {safeFixed(tag.res.pressure, 2)}
+                                </text>
+                           </g>
+                      ))}
+
+                      {tempPipe && (
+                        <line x1={tempPipe.start.x} y1={tempPipe.start.y} x2={tempPipe.end.x} y2={tempPipe.end.y} stroke="#94a3b8" strokeWidth={1.5 / transform.scale} strokeDasharray={`${4/transform.scale},${4/transform.scale}`} />
+                      )}
+
+                      {snapPoint && (
+                        <circle 
+                          cx={snapPoint.x} 
+                          cy={snapPoint.y} 
+                          r={8 / transform.scale} 
+                          fill="transparent" 
+                          stroke="#fbbf24" 
+                          strokeWidth={2 / transform.scale} 
+                          strokeDasharray={`${2/transform.scale},${2/transform.scale}`}
+                        />
+                      )}
+
+                      {(visualNodes || []).map(node => (
+                         (node.degree > 1) ? (
+                            <circle key={node.id} cx={node.x} cy={node.y} r={4/transform.scale} fill="#fbbf24" stroke="white" strokeWidth={1/transform.scale} />
+                         ) : null
+                      ))}
+
+                      {(placedSprinklers || []).map((s) => {
+                         const isConnected = drawnPipes.some(pipe => {
+                            const dist = distanceToSegment(s, pipe.start, pipe.end);
+                            return dist < (5 / transform.scale);
+                         });
+
+                         return (
+                            <g key={s.id} className={mode === 'delete' ? "pointer-events-auto hover:opacity-50 cursor-pointer" : ""}>
+                                <circle 
+                                    cx={s.x} 
+                                    cy={s.y} 
+                                    r={6 / transform.scale} 
+                                    fill={isConnected ? "rgba(16, 185, 129, 0.5)" : "rgba(59, 130, 246, 0.5)"} 
+                                    stroke={isConnected ? "#059669" : "#2563eb"} 
+                                    strokeWidth={1 / transform.scale} 
+                                />
+                                {isConnected && (
+                                    <circle cx={s.x} cy={s.y} r={2.5 / transform.scale} fill="#fbbf24" />
+                                )}
+                            </g>
+                         );
+                      })}
+                    </svg>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center w-[1000px] h-[800px] text-slate-400">
+                    <Upload size={48} className="opacity-20 mb-4" />
+                    <p className="text-xs font-bold uppercase tracking-widest opacity-40">อัปโหลดไฟล์เพื่อเริ่มใช้งาน</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Status Indicator */}
+              <div className="absolute bottom-6 left-6 pointer-events-none">
+                <div className="bg-slate-900/90 backdrop-blur-lg text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-widest border border-white/10 shadow-2xl flex items-center gap-3">
+                  <div className={`w-2 h-2 rounded-full animate-pulse ${mode === 'pan' ? 'bg-slate-400' : mode === 'scale' ? 'bg-red-500' : mode === 'delete' ? 'bg-orange-500' : 'bg-emerald-500'}`}></div>
+                  MODE: {mode === 'scale' ? 'ลากเส้นเพื่อกำหนดสเกล' : mode === 'draw' ? `วาดท่อ (${selectedPipeSize}") - Snapping Active` : mode === 'sprinkler' ? 'วางหัวสปริงเกอร์ (Auto-Assign)' : mode === 'delete' ? 'คลิกที่วัตถุเพื่อลบ' : 'ดูและเลื่อนแบบ'}
+                </div>
+              </div>
+            </div>
+
+            {/* Scale Dialog */}
+            {showScaleDialog && (
+              <div className="absolute inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm pointer-events-auto">
+                <div className="bg-white shadow-xl p-8 rounded-3xl w-80 animate-in zoom-in duration-200">
+                  <h4 className="text-[10px] font-black uppercase text-slate-400 mb-2 tracking-widest text-center">กำหนดระยะจริง</h4>
+                  <div className="space-y-4">
+                    <div>
+                      <div className="relative">
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          value={realWorldDist} 
+                          onChange={e => setRealWorldDist(e.target.value)} 
+                          className="w-full bg-slate-100 border-none rounded-xl p-4 text-2xl font-black text-center outline-none focus:ring-2 focus:ring-red-500 transition-all placeholder:text-slate-300"
+                          placeholder="0.00"
+                          autoFocus 
+                        />
+                        <span className="absolute right-4 top-1/2 -translate-y-1/2 font-bold text-slate-400">m.</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => { setShowScaleDialog(false); setScalePoints([]); }} className="flex-1 py-3 bg-slate-100 text-slate-500 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-slate-200 transition-colors">ยกเลิก</button>
+                      <button onClick={applyScale} className="flex-[2] py-3 bg-red-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-red-200 hover:bg-red-700 transition-colors">ยืนยันสเกล</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Results Panel */}
+        <div className="xl:col-span-3">
+          <div className="bg-white shadow-xl rounded-2xl p-5 border border-slate-200 h-[750px] flex flex-col">
+            <h3 className="font-black text-slate-800 text-xs uppercase tracking-widest mb-4 flex items-center gap-2">
+              <Calculator size={14} className="text-red-500" /> ตารางการคำนวณ
+            </h3>
+            <div className="flex-1 overflow-y-auto space-y-3 pr-2 scrollbar-thin">
+              {pixelsPerMeter ? (
+                (results || []).length > 0 ? results.map((res, i) => (
+                  <div key={i} className="bg-slate-50 border border-slate-100 rounded-xl p-3 text-[10px] font-mono">
+                    <div className="flex justify-between font-black text-slate-400 uppercase mb-2">
+                      <span>{res.id}</span>
+                      <span className="text-slate-900">{res.size === "-" ? "จุดเริ่ม" : `${res.size}"`}</span>
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex justify-between"><span>ความยาว:</span> <span className="font-bold text-slate-700">{safeFixed(res.lengthM, 2)} m.</span></div>
+                      <div className="flex justify-between text-cyan-600"><span>อัตราไหล:</span> <span className="font-bold">{safeFixed(res.flow, 1)} GPM</span></div>
+                      {res.addedFlow > 0 && <div className="flex justify-between text-emerald-500 pl-2 text-[9px]"><span>+Head Flow:</span> <span>Included</span></div>}
+                      <div className="flex justify-between text-orange-600">
+                        <span>Friction Loss:</span> 
+                        <span className="font-bold">+{safeFixed(res.loss, 3)} PSI</span>
+                      </div>
+                      <div className="flex justify-between text-gray-400 text-[9px]">
+                        <span>(Vel: {safeFixed(res.velocity, 1)} fps)</span>
+                      </div>
+                      <div className="flex justify-between text-slate-900 border-t border-slate-200 pt-1 mt-1"><span>แรงดันรวม:</span> <span className="font-black">{safeFixed(res.pressure, 2)} PSI</span></div>
+                    </div>
+                  </div>
+                )) : (
+                  <div className="h-full flex flex-col items-center justify-center opacity-30 text-center">
+                    <PlayCircle size={32} className="mb-2" />
+                    <p className="text-[10px] font-bold uppercase">กดปุ่ม Calculate เพื่อเริ่มคำนวณ</p>
+                  </div>
+                )
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 border-2 border-dashed border-slate-100 rounded-3xl bg-slate-50/50">
+                  <Ruler size={40} className="mb-4 text-red-400 animate-bounce" />
+                  <p className="text-xs font-bold text-slate-500 uppercase leading-relaxed">กรุณากำหนดสเกลก่อน</p>
+                  <p className="text-[10px] text-slate-400 mt-2 text-center">กดปุ่มไม้บรรทัดแล้วลากเส้นทับระยะที่มีในแบบ</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default App;
