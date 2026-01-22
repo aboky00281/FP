@@ -1,0 +1,957 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFPA 13 Calculator</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM & Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Import Map for Modules -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.263.1"
+        }
+    }
+    </script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .canvas-grid {
+            background-size: 50px 50px;
+            background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px),
+                              linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 overflow-hidden">
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+          Plus, Trash2, Calculator, FileText, Droplets, Upload, Ruler, 
+          Maximize, Target, ZoomIn, ZoomOut, Edit3, Check, Info, PlayCircle, 
+          Eraser, Magnet, Flame, AlertTriangle, CornerDownRight, X
+        } from 'lucide-react';
+
+        const pipeSpecs = [
+            { nominal: "1", internal: 1.049, color: "#3b82f6" },
+            { nominal: "1.25", internal: 1.380, color: "#10b981" },
+            { nominal: "1.5", internal: 1.610, color: "#f59e0b" },
+            { nominal: "2", internal: 2.067, color: "#ef4444" },
+            { nominal: "2.5", internal: 2.469, color: "#8b5cf6" },
+            { nominal: "3", internal: 3.068, color: "#ec4899" },
+            { nominal: "4", internal: 4.026, color: "#06b6d4" },
+            { nominal: "6", internal: 6.065, color: "#14b8a6" },
+            { nominal: "8", internal: 7.981, color: "#475569" },
+        ];
+
+        const hazardClasses = [
+            { id: "LH", label: "Light Hazard", density: 0.10 },
+            { id: "OH1", label: "Ordinary Hazard Group 1", density: 0.15 },
+            { id: "OH2", label: "Ordinary Hazard Group 2", density: 0.20 },
+            { id: "EH1", label: "Extra Hazard Group 1", density: 0.30 },
+            { id: "EH2", label: "Extra Hazard Group 2", density: 0.40 },
+        ];
+
+        const App = () => {
+            const [kFactor, setKFactor] = useState(5.6);
+            const [cFactor, setCFactor] = useState(120);
+            const [selectedHazard, setSelectedHazard] = useState("EH2");
+            const [designDensity, setDesignDensity] = useState(0.40);
+            const [areaPerHead, setAreaPerHead] = useState(100);
+            const [pdfUrl, setPdfUrl] = useState(null);
+            const [mode, setMode] = useState('pan');
+            const [selectedPipeSize, setSelectedPipeSize] = useState("1.25");
+            const [scalePoints, setScalePoints] = useState([]);
+            const [pixelsPerMeter, setPixelsPerMeter] = useState(null);
+            const [realWorldDist, setRealWorldDist] = useState('');
+            const [showScaleDialog, setShowScaleDialog] = useState(false);
+            const [drawnPipes, setDrawnPipes] = useState([]);
+            const [tempPipe, setTempPipe] = useState(null);
+            const [placedSprinklers, setPlacedSprinklers] = useState([]);
+            const [snapPoint, setSnapPoint] = useState(null);
+            const [startSnapInfo, setStartSnapInfo] = useState(null);
+            const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+            const containerRef = useRef(null);
+            const [results, setResults] = useState([]);
+            const [totalDemand, setTotalDemand] = useState({ flow: 0, pressure: 0 });
+            const [visualNodes, setVisualNodes] = useState([]);
+            const [sourceNodeId, setSourceNodeId] = useState(null);
+
+            const safeNum = (val, fallback = 0) => {
+                const n = parseFloat(val);
+                return isNaN(n) ? fallback : n;
+            };
+            const safeFixed = (val, dec = 2) => safeNum(val).toFixed(dec);
+
+            useEffect(() => {
+                const nodes = {};
+                const getNodeKey = (pt) => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+                const getOrCreateNode = (pt) => {
+                    const key = getNodeKey(pt);
+                    if (!nodes[key]) nodes[key] = { id: key, x: pt.x, y: pt.y, degree: 0 };
+                    return nodes[key];
+                };
+
+                drawnPipes.forEach(p => {
+                    const n1 = getOrCreateNode(p.start);
+                    const n2 = getOrCreateNode(p.end);
+                    n1.degree += 1;
+                    n2.degree += 1;
+                });
+                setVisualNodes(Object.values(nodes));
+            }, [drawnPipes]);
+
+            const handleHazardChange = (e) => {
+                const hazardId = e.target.value;
+                setSelectedHazard(hazardId);
+                const hazard = hazardClasses.find(h => h.id === hazardId);
+                if (hazard) setDesignDensity(hazard.density);
+            };
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (pdfUrl && pdfUrl.startsWith('blob:')) URL.revokeObjectURL(pdfUrl);
+                setPdfUrl(URL.createObjectURL(file));
+                setScalePoints([]);
+                setDrawnPipes([]);
+                setPlacedSprinklers([]);
+                setResults([]);
+                setVisualNodes([]);
+                setTotalDemand({ flow: 0, pressure: 0 });
+                setTransform({ x: 0, y: 0, scale: 1 });
+                setMode('pan');
+                setSourceNodeId(null);
+            };
+
+            const getCanvasCoords = (e) => {
+                if (!containerRef.current) return { x: 0, y: 0 };
+                const rect = containerRef.current.getBoundingClientRect();
+                return {
+                    x: (e.clientX - rect.left - transform.x) / transform.scale,
+                    y: (e.clientY - rect.top - transform.y) / transform.scale
+                };
+            };
+
+            const projectPointToSegment = (P, A, B) => {
+                const distAB2 = Math.pow(B.x - A.x, 2) + Math.pow(B.y - A.y, 2);
+                if (distAB2 === 0) return A;
+                let t = ((P.x - A.x) * (B.x - A.x) + (P.y - A.y) * (B.y - A.y)) / distAB2;
+                t = Math.max(0, Math.min(1, t));
+                return { x: A.x + t * (B.x - A.x), y: A.y + t * (B.y - A.y) };
+            };
+
+            const getSnappedCoords = (rawCoords) => {
+                if (mode !== 'draw' && mode !== 'sprinkler') return { coords: rawCoords, isSnapped: false };
+
+                const snapThreshold = 15 / transform.scale;
+                let closestPoint = null;
+                let minDistance = Infinity;
+                let snapType = null;
+                let snapTarget = null;
+
+                drawnPipes.forEach(pipe => {
+                    [pipe.start, pipe.end].forEach(pt => {
+                        const dist = Math.sqrt(Math.pow(pt.x - rawCoords.x, 2) + Math.pow(pt.y - rawCoords.y, 2));
+                        if (dist < snapThreshold && dist < minDistance) {
+                            minDistance = dist;
+                            closestPoint = pt;
+                            snapType = 'node';
+                            snapTarget = pipe;
+                        }
+                    });
+                });
+
+                if (!closestPoint) {
+                    drawnPipes.forEach(pipe => {
+                        const projected = projectPointToSegment(rawCoords, pipe.start, pipe.end);
+                        const dist = Math.sqrt(Math.pow(projected.x - rawCoords.x, 2) + Math.pow(projected.y - rawCoords.y, 2));
+                        if (dist < snapThreshold && dist < minDistance) {
+                            minDistance = dist;
+                            closestPoint = projected;
+                            snapType = 'edge';
+                            snapTarget = pipe;
+                        }
+                    });
+                }
+
+                if (closestPoint) return { coords: closestPoint, isSnapped: true, snapType, snapTarget };
+                return { coords: rawCoords, isSnapped: false, snapType: null, snapTarget: null };
+            };
+
+            const splitPipeAtPoint = (pipes, targetPipe, splitPoint) => {
+                const remainingPipes = pipes.filter(p => p.id !== targetPipe.id);
+                const dist1 = Math.sqrt(Math.pow(splitPoint.x - targetPipe.start.x, 2) + Math.pow(splitPoint.y - targetPipe.start.y, 2));
+                const dist2 = Math.sqrt(Math.pow(targetPipe.end.x - splitPoint.x, 2) + Math.pow(targetPipe.end.y - splitPoint.y, 2));
+
+                const newSegments = [];
+                if (dist1 > 0.1) {
+                    newSegments.push({ ...targetPipe, id: Date.now() + Math.random(), end: splitPoint, pixelLength: dist1 });
+                }
+                if (dist2 > 0.1) {
+                    newSegments.push({ ...targetPipe, id: Date.now() + Math.random() + 1, start: splitPoint, pixelLength: dist2 });
+                }
+                return [...remainingPipes, ...newSegments];
+            };
+
+            const handleMouseDown = (e) => {
+                if (showScaleDialog) return;
+                const rawCoords = getCanvasCoords(e);
+                const { coords, isSnapped, snapType, snapTarget } = getSnappedCoords(rawCoords);
+
+                if (mode === 'pan') {
+                    setIsDragging(true);
+                    setDragStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
+                } else if (mode === 'scale') {
+                    setIsDragging(true);
+                    setScalePoints([coords, coords]);
+                } else if (mode === 'draw') {
+                    setIsDragging(true);
+                    setStartSnapInfo(isSnapped ? { type: snapType, target: snapTarget, coords: coords } : null);
+                    setTempPipe({ start: coords, end: coords, size: selectedPipeSize });
+                }
+            };
+
+            const handleMouseMove = (e) => {
+                if (showScaleDialog) return;
+                const rawCoords = getCanvasCoords(e);
+                const { coords, isSnapped } = getSnappedCoords(rawCoords);
+                setSnapPoint(isSnapped ? coords : null);
+
+                if (isDragging) {
+                    if (mode === 'pan') {
+                        setTransform(prev => ({ ...prev, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }));
+                    } else if (mode === 'scale') {
+                        setScalePoints(prev => [prev[0], rawCoords]);
+                    } else if (mode === 'draw') {
+                        setTempPipe(prev => ({ ...prev, end: coords }));
+                    }
+                }
+            };
+
+            const handleMouseUp = () => {
+                if (showScaleDialog) return;
+
+                if (mode === 'scale' && isDragging) {
+                    const dx = scalePoints[1].x - scalePoints[0].x;
+                    const dy = scalePoints[1].y - scalePoints[0].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > 5) {
+                        setShowScaleDialog(true);
+                        setRealWorldDist('');
+                        setIsDragging(false);
+                        return;
+                    } else {
+                        setScalePoints([]);
+                    }
+                } else if (mode === 'draw' && isDragging && tempPipe) {
+                    const endSnapInfo = getSnappedCoords(tempPipe.end);
+                    const finalEnd = endSnapInfo.isSnapped ? endSnapInfo.coords : tempPipe.end;
+
+                    const dx = finalEnd.x - tempPipe.start.x;
+                    const dy = finalEnd.y - tempPipe.start.y;
+                    const pixelLen = Math.sqrt(dx * dx + dy * dy);
+
+                    if (pixelLen > 2) {
+                        let nextPipes = [...drawnPipes];
+                        let actualStart = tempPipe.start;
+                        let actualEnd = finalEnd;
+
+                        if (startSnapInfo && startSnapInfo.type === 'edge' && startSnapInfo.target) {
+                            const targetPipe = nextPipes.find(p => p.id === startSnapInfo.target.id);
+                            if (targetPipe) {
+                                nextPipes = splitPipeAtPoint(nextPipes, targetPipe, startSnapInfo.coords);
+                                actualStart = startSnapInfo.coords;
+                            }
+                        }
+
+                        if (endSnapInfo.isSnapped && endSnapInfo.snapType === 'edge' && endSnapInfo.snapTarget) {
+                            const targetPipe = nextPipes.find(p => p.id === endSnapInfo.snapTarget.id);
+                            if (targetPipe) {
+                                nextPipes = splitPipeAtPoint(nextPipes, targetPipe, endSnapInfo.coords);
+                                actualEnd = endSnapInfo.coords;
+                            }
+                        }
+
+                        nextPipes.push({
+                            id: Date.now() + Math.random(),
+                            start: actualStart,
+                            end: actualEnd,
+                            size: tempPipe.size,
+                            pixelLength: pixelLen
+                        });
+                        setDrawnPipes(nextPipes);
+                    }
+                    setTempPipe(null);
+                    setStartSnapInfo(null);
+                }
+                setIsDragging(false);
+            };
+
+            const distanceToSegment = (P, A, B) => {
+                const distAB2 = Math.pow(B.x - A.x, 2) + Math.pow(B.y - A.y, 2);
+                if (distAB2 === 0) return Math.sqrt(Math.pow(P.x - A.x, 2) + Math.pow(P.y - A.y, 2));
+                let t = ((P.x - A.x) * (B.x - A.x) + (P.y - A.y) * (B.y - A.y)) / distAB2;
+                t = Math.max(0, Math.min(1, t));
+                return Math.sqrt(Math.pow(P.x - (A.x + t * (B.x - A.x)), 2) + Math.pow(P.y - (A.y + t * (B.y - A.y)), 2));
+            };
+
+            const handleCanvasClick = (e) => {
+                if (showScaleDialog) return;
+                const rawCoords = getCanvasCoords(e);
+                const { coords, isSnapped, snapType, snapTarget } = getSnappedCoords(rawCoords);
+
+                if (mode === 'sprinkler') {
+                    setPlacedSprinklers([...placedSprinklers, { ...coords, id: Date.now() }]);
+                    if (isSnapped && snapType === 'edge' && snapTarget) {
+                        const newPipes = splitPipeAtPoint(drawnPipes, snapTarget, coords);
+                        setDrawnPipes(newPipes);
+                    }
+                } else if (mode === 'delete') {
+                    const clickThreshold = 10 / transform.scale;
+                    const pipeToDelete = drawnPipes.find(pipe => {
+                        const dist = distanceToSegment(rawCoords, pipe.start, pipe.end);
+                        return dist < clickThreshold;
+                    });
+
+                    if (pipeToDelete) {
+                        setDrawnPipes(drawnPipes.filter(p => p.id !== pipeToDelete.id));
+                    } else {
+                        const sprinklerToDelete = placedSprinklers.find(s => {
+                            const dist = Math.sqrt(Math.pow(s.x - rawCoords.x, 2) + Math.pow(s.y - rawCoords.y, 2));
+                            return dist < clickThreshold;
+                        });
+                        if (sprinklerToDelete) {
+                            setPlacedSprinklers(placedSprinklers.filter(s => s.id !== sprinklerToDelete.id));
+                        }
+                    }
+                }
+            };
+
+            const applyScale = () => {
+                if (scalePoints.length < 2) return;
+                const dx = scalePoints[1].x - scalePoints[0].x;
+                const dy = scalePoints[1].y - scalePoints[0].y;
+                const pixelDist = Math.sqrt(dx * dx + dy * dy);
+                const rDist = parseFloat(realWorldDist);
+
+                if (pixelDist > 0 && rDist > 0) {
+                    setPixelsPerMeter(pixelDist / rDist);
+                    setMode('pan');
+                    setShowScaleDialog(false);
+                    setScalePoints([]);
+                } else {
+                    alert("กรุณาระบุระยะทางที่ถูกต้อง");
+                }
+            };
+
+            const adjustZoom = (delta) => {
+                if (!containerRef.current) return;
+                const zoomStep = 0.15;
+                const oldScale = transform.scale;
+                const newScale = Math.min(Math.max(oldScale + (delta > 0 ? zoomStep : -zoomStep), 0.1), 10);
+                
+                const rect = containerRef.current.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                
+                const worldX = (centerX - transform.x) / oldScale;
+                const worldY = (centerY - transform.y) / oldScale;
+                
+                const newX = centerX - worldX * newScale;
+                const newY = centerY - worldY * newScale;
+                
+                setTransform({ x: newX, y: newY, scale: newScale });
+            };
+
+            const calculateLoss = (Q, L_ft, d_in, C) => {
+                if (Q <= 0 || L_ft <= 0) return 0;
+                return (4.52 * Math.pow(Q, 1.85) * L_ft) / (Math.pow(C, 1.85) * Math.pow(d_in, 4.87));
+            };
+
+            const handleCalculate = () => {
+                if (!pixelsPerMeter) {
+                    alert("กรุณากำหนดสเกล (Set Scale) ก่อนคำนวณ");
+                    return;
+                }
+                if (drawnPipes.length === 0) {
+                    alert("กรุณาวาดท่ออย่างน้อย 1 เส้น");
+                    return;
+                }
+
+                const M_TO_FT = 3.28084;
+                const K = safeNum(kFactor, 5.6);
+                const C = safeNum(cFactor, 120);
+                const RISER_NIPPLE_FT = 0.1 * M_TO_FT;
+                const NIPPLE_ID = 1.049;
+                const density = safeNum(designDensity, 0.40);
+                const areaFt2 = safeNum(areaPerHead, 100);
+
+                const qMinHead = density * areaFt2;
+                const minP_Req = Math.pow(qMinHead / K, 2);
+                const startPressureReq = Math.max(7, minP_Req);
+
+                // Build Graph
+                const nodes = {};
+                const getNodeKey = (pt) => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+                const getOrCreateNode = (pt) => {
+                    const key = getNodeKey(pt);
+                    if (!nodes[key]) nodes[key] = { id: key, x: pt.x, y: pt.y, connections: [], heads: [] };
+                    return nodes[key];
+                };
+
+                drawnPipes.forEach(p => {
+                    const n1 = getOrCreateNode(p.start);
+                    const n2 = getOrCreateNode(p.end);
+                    const spec = pipeSpecs.find(s => s.nominal === p.size) || pipeSpecs[0];
+                    const edge = {
+                        id: p.id,
+                        u: n1.id,
+                        v: n2.id,
+                        pipe: p,
+                        size: p.size,
+                        heads: [], 
+                        d_in: spec.internal,
+                        len_ft: (p.pixelLength / pixelsPerMeter) * M_TO_FT,
+                        flow: 0,
+                        loss: 0,
+                        velocity: 0,
+                        flowDir: null
+                    };
+                    n1.connections.push({ target: n2.id, edge });
+                    n2.connections.push({ target: n1.id, edge });
+                });
+
+                const tolerance = 5 / transform.scale;
+                placedSprinklers.forEach(s => {
+                    for (const nodeId in nodes) {
+                        const node = nodes[nodeId];
+                        const dist = Math.sqrt(Math.pow(s.x - node.x, 2) + Math.pow(s.y - node.y, 2));
+                        if (dist < tolerance) {
+                            node.heads.push(s);
+                            break;
+                        }
+                    }
+                });
+
+                let sourceId = null;
+                let maxDia = -1;
+                const allNodes = Object.values(nodes);
+                const endPoints = allNodes.filter(n => n.connections.length === 1);
+
+                if (endPoints.length > 0) {
+                    endPoints.forEach(n => {
+                        const pipeSize = parseFloat(n.connections[0].edge.size);
+                        if (pipeSize > maxDia) {
+                            maxDia = pipeSize;
+                            sourceId = n.id;
+                        }
+                    });
+                }
+
+                if (!sourceId && allNodes.length > 0) {
+                    allNodes.forEach(n => {
+                        const localMax = n.connections.reduce((m, c) => Math.max(m, parseFloat(c.edge.size)), 0);
+                        if (localMax > maxDia) {
+                            maxDia = localMax;
+                            sourceId = n.id;
+                        }
+                    });
+                    if (!sourceId) sourceId = allNodes[0].id;
+                }
+
+                setSourceNodeId(sourceId);
+
+                const parentMap = {}; 
+                const processingOrder = []; 
+                const visited = new Set([sourceId]);
+                const queue = [sourceId];
+
+                while(queue.length > 0) {
+                    const uId = queue.shift();
+                    processingOrder.push(uId);
+                    const uNode = nodes[uId];
+                    if(uNode && uNode.connections) {
+                        uNode.connections.forEach(conn => {
+                            if (!visited.has(conn.target)) {
+                                visited.add(conn.target);
+                                parentMap[conn.target] = { parentId: uId, edge: conn.edge };
+                                queue.push(conn.target);
+                            }
+                        });
+                    }
+                }
+
+                const nodeReqP = {};
+                const nodeTotalQ = {};
+                Object.keys(nodes).forEach(k => {
+                    nodeReqP[k] = 0;
+                    nodeTotalQ[k] = 0;
+                });
+
+                const calcReport = [];
+
+                for (let i = processingOrder.length - 1; i >= 0; i--) {
+                    const uId = processingOrder[i];
+                    let maxP_RequiredAtU = 0;
+                    let totalQ_AtU = 0;
+                    
+                    const uNode = nodes[uId];
+                    if(!uNode) continue;
+
+                    const childConnections = uNode.connections.filter(conn => parentMap[conn.target]?.parentId === uId);
+
+                    childConnections.forEach(child => {
+                        const vId = child.target;
+                        const edge = child.edge;
+                        const qChild = nodeTotalQ[vId] || 0;
+                        const pChild = nodeReqP[vId] || 0;
+
+                        if (qChild > 0 || pChild > 0) {
+                            const loss = calculateLoss(qChild, edge.len_ft, edge.d_in, C);
+                            const pReqUpstream = pChild + loss;
+                            maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pReqUpstream);
+                        }
+                    });
+
+                    if (uNode.heads.length > 0) {
+                        if (maxP_RequiredAtU < startPressureReq) maxP_RequiredAtU = startPressureReq;
+                        
+                        uNode.heads.forEach(() => {
+                            let pHead = maxP_RequiredAtU;
+                            for(let k=0; k<2; k++) {
+                                let q = K * Math.sqrt(pHead > 0 ? pHead : 0);
+                                let lossNip = calculateLoss(q, RISER_NIPPLE_FT, NIPPLE_ID, C);
+                                pHead = maxP_RequiredAtU - lossNip;
+                            }
+                            if(pHead < 0) pHead = 0;
+                            totalQ_AtU += K * Math.sqrt(pHead);
+                        });
+                    }
+
+                    childConnections.forEach(child => {
+                        const vId = child.target;
+                        const edge = child.edge;
+                        let qBranch = nodeTotalQ[vId] || 0;
+                        const pChildReq = nodeReqP[vId] || 0;
+                        
+                        const lossBase = calculateLoss(qBranch, edge.len_ft, edge.d_in, C);
+                        const pBranchReqAtU = pChildReq + lossBase;
+
+                        if (maxP_RequiredAtU > pBranchReqAtU && pBranchReqAtU > 0.01 && qBranch > 0) {
+                            const kBranch = qBranch / Math.sqrt(pBranchReqAtU);
+                            qBranch = kBranch * Math.sqrt(maxP_RequiredAtU);
+                        }
+
+                        edge.flow = qBranch;
+                        edge.loss = calculateLoss(qBranch, edge.len_ft, edge.d_in, C);
+                        edge.velocity = (0.4085 * qBranch) / Math.pow(edge.d_in, 2);
+                        edge.flowDir = (edge.u === uId) ? 'u->v' : 'v->u';
+                        
+                        totalQ_AtU += qBranch;
+
+                        if (qBranch > 0 || (edge.flow > 0)) {
+                            calcReport.push({
+                                pipeId: edge.id,
+                                id: `Pipe ${edge.size}"`,
+                                size: edge.size,
+                                lengthM: edge.len_ft / M_TO_FT,
+                                flow: qBranch,
+                                loss: edge.loss,
+                                pressure: maxP_RequiredAtU,
+                                velocity: edge.velocity,
+                                flowDir: edge.flowDir
+                            });
+                        }
+                    });
+
+                    nodeReqP[uId] = maxP_RequiredAtU;
+                    nodeTotalQ[uId] = totalQ_AtU;
+                }
+
+                setResults(calcReport.reverse());
+                setTotalDemand({ flow: nodeTotalQ[sourceId] || 0, pressure: nodeReqP[sourceId] || 0 });
+            };
+
+            const getTagLayout = () => {
+                if (!results || results.length === 0) return [];
+                const layout = [];
+                const occupiedRects = [];
+                const tagW = 90 / transform.scale;
+                const tagH = 55 / transform.scale;
+                const padding = 10 / transform.scale;
+
+                drawnPipes.forEach(pipe => {
+                    const res = results.find(r => r.pipeId === pipe.id);
+                    if (!res || res.flow <= 0) return;
+
+                    let startX = pipe.start.x, startY = pipe.start.y;
+                    let endX = pipe.end.x, endY = pipe.end.y;
+
+                    if (res.flowDir === 'v->u') {
+                        startX = pipe.end.x; startY = pipe.end.y;
+                        endX = pipe.start.x; endY = pipe.start.y;
+                    }
+
+                    const midX = (startX + endX) / 2;
+                    const midY = (startY + endY) / 2;
+                    const pdx = endX - startX;
+                    const pdy = endY - startY;
+                    const plen = Math.sqrt(pdx*pdx + pdy*pdy);
+                    const angle = Math.atan2(pdy, pdx) || 0;
+
+                    const offsetDist = 60 / transform.scale;
+                    let offX = plen > 0 ? (-pdy / plen) * offsetDist : 0;
+                    let offY = plen > 0 ? (pdx / plen) * offsetDist : 0;
+
+                    if (Math.abs(pdy) > Math.abs(pdx)) {
+                        if (offX < 0) { offX = -offX; offY = -offY; }
+                    }
+
+                    let tagX = midX + offX;
+                    let tagY = midY + offY;
+
+                    let attempts = 0;
+                    while(attempts < 10) {
+                        let collision = false;
+                        for(let rect of occupiedRects) {
+                            if (tagX - tagW/2 < rect.x + rect.w && tagX + tagW/2 > rect.x &&
+                                tagY - tagH/2 < rect.y + rect.h && tagY + tagH/2 > rect.y) {
+                                collision = true;
+                                break;
+                            }
+                        }
+                        if (!collision) break;
+                        const pushStep = (tagH + padding);
+                        const lenOff = Math.sqrt(offX*offX + offY*offY) || 1;
+                        tagX += (offX / lenOff) * pushStep;
+                        tagY += (offY / lenOff) * pushStep;
+                        attempts++;
+                    }
+
+                    occupiedRects.push({ x: tagX - tagW/2, y: tagY - tagH/2, w: tagW, h: tagH });
+                    layout.push({ id: pipe.id, tagX, tagY, midX, midY, res, angle });
+                });
+                return layout;
+            };
+
+            const tagLayout = getTagLayout();
+
+            return (
+                <div className="flex h-screen w-full bg-slate-50 overflow-hidden font-sans select-none">
+                    {/* Side Panel - Compacted */}
+                    <div className="w-80 bg-white border-r border-slate-200 flex flex-col shadow-xl z-20 shrink-0">
+                        <div className="px-4 py-3 bg-slate-900 text-white flex justify-between items-center shrink-0">
+                            <h1 className="font-bold text-lg flex items-center gap-2">
+                                <Flame size={20} className="text-orange-500" />
+                                NFPA 13
+                            </h1>
+                            <label className="cursor-pointer bg-slate-700 hover:bg-slate-600 text-white text-xs px-2 py-1.5 rounded flex items-center gap-1 transition-colors">
+                                <input type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
+                                <Upload size={12} /> Open
+                            </label>
+                        </div>
+
+                        {/* Modified layout: Removed justify-between, added gap-3 to pack items closer to top */}
+                        <div className="flex-1 flex flex-col p-2 overflow-hidden gap-3">
+                            {/* Parameters */}
+                            <div className="border-b border-slate-200 pb-2">
+                                <h3 className="font-semibold text-slate-700 text-xs flex items-center gap-1 mb-1">
+                                    <Target size={14} /> Parameters
+                                </h3>
+                                <div className="grid grid-cols-2 gap-1 text-[10px]">
+                                    <div className="col-span-2">
+                                        <select value={selectedHazard} onChange={handleHazardChange} className="w-full p-1 border rounded bg-slate-50">
+                                            {hazardClasses.map(h => <option key={h.id} value={h.id}>{h.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-500">Density</label>
+                                        <input type="number" value={designDensity} onChange={e => setDesignDensity(e.target.value)} className="w-full p-1 border rounded" step="0.05" />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-500">Area/Hd</label>
+                                        <input type="number" value={areaPerHead} onChange={e => setAreaPerHead(e.target.value)} className="w-full p-1 border rounded" />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-500">K-Fac</label>
+                                        <input type="number" value={kFactor} onChange={e => setKFactor(e.target.value)} className="w-full p-1 border rounded" />
+                                    </div>
+                                     <div>
+                                        <label className="text-slate-500">C-Fac</label>
+                                        <input type="number" value={cFactor} onChange={e => setCFactor(e.target.value)} className="w-full p-1 border rounded" />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Pipe Selector - Modified to Transparent */}
+                            <div className="border-b border-slate-200 pb-2">
+                                <h3 className="font-semibold text-slate-700 text-xs flex items-center gap-1 mb-1">
+                                    <Ruler size={14} /> Pipe Size
+                                </h3>
+                                <div className="grid grid-cols-3 gap-1">
+                                    {pipeSpecs.map(spec => (
+                                        <button
+                                            key={spec.nominal}
+                                            onClick={() => setSelectedPipeSize(spec.nominal)}
+                                            className={`text-[10px] h-7 rounded border transition-all flex items-center justify-center ${
+                                                selectedPipeSize === spec.nominal 
+                                                ? 'ring-1 ring-offset-1 font-bold' 
+                                                : 'hover:bg-slate-50'
+                                            }`}
+                                            style={{ 
+                                                backgroundColor: 'transparent',
+                                                borderColor: spec.color,
+                                                color: spec.color
+                                            }}
+                                        >
+                                            {spec.nominal}"
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Tools - Removed flex-1 and justify-center to stop expanding */}
+                            <div className="flex flex-col gap-1">
+                                <h3 className="font-semibold text-slate-700 text-xs flex items-center gap-1">
+                                    <Edit3 size={14} /> Tools
+                                </h3>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                    <button onClick={() => setMode('pan')} className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[10px] border transition-colors ${mode === 'pan' ? 'bg-slate-800 text-white' : 'bg-white hover:bg-slate-50'}`}>
+                                        <Maximize size={12} /> Pan
+                                    </button>
+                                    <button onClick={() => setMode('scale')} className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[10px] border transition-colors ${mode === 'scale' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
+                                        <Ruler size={12} /> Scale
+                                    </button>
+                                    <button onClick={() => setMode('draw')} className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[10px] border transition-colors ${mode === 'draw' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
+                                        <Plus size={12} /> Pipe
+                                    </button>
+                                    <button onClick={() => setMode('sprinkler')} className={`flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[10px] border transition-colors ${mode === 'sprinkler' ? 'bg-emerald-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
+                                        <Droplets size={12} /> Head
+                                    </button>
+                                    <button onClick={() => setMode('delete')} className={`col-span-2 flex items-center justify-center gap-1 px-2 py-1.5 rounded text-[10px] border transition-colors ${mode === 'delete' ? 'bg-red-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
+                                        <Trash2 size={12} /> Delete
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Calculate Button - Reduced margin */}
+                            <button 
+                                onClick={handleCalculate}
+                                className="w-full py-2 bg-slate-900 hover:bg-slate-800 text-white rounded shadow text-sm flex items-center justify-center gap-2 font-bold transition-transform active:scale-95 shrink-0 mt-1"
+                            >
+                                <Calculator size={16} /> Calculate
+                            </button>
+
+                            {/* Results Summary */}
+                            {totalDemand.flow > 0 && (
+                                <div className="bg-slate-100 p-2 mt-1 rounded border border-slate-300 space-y-1 animate-in fade-in slide-in-from-bottom-2 shrink-0">
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="text-[10px] text-slate-600">Total Flow:</span>
+                                        <span className="text-sm font-bold text-blue-700">{safeFixed(totalDemand.flow)} <span className="text-[9px] text-slate-500 font-normal">gpm</span></span>
+                                    </div>
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="text-[10px] text-slate-600">Max Pressure:</span>
+                                        <span className="text-sm font-bold text-red-700">{safeFixed(totalDemand.pressure)} <span className="text-[9px] text-slate-500 font-normal">psi</span></span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Main Canvas Area */}
+                    <div 
+                        className="flex-1 relative bg-slate-200 overflow-hidden cursor-crosshair canvas-grid"
+                        ref={containerRef}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onClick={handleCanvasClick}
+                        onWheel={(e) => adjustZoom(e.deltaY > 0 ? -1 : 1)}
+                    >
+                        {/* Info Overlay */}
+                        <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border shadow-sm text-[10px] text-slate-600 pointer-events-none flex items-center gap-2">
+                            <span className="flex items-center gap-1"><Info size={12}/> Mode: <span className="font-bold uppercase text-slate-900">{mode}</span></span>
+                            <span className="w-px h-3 bg-slate-300"></span>
+                            <span>Scale: {pixelsPerMeter ? `${safeFixed(pixelsPerMeter)} px/m` : 'Not Set'}</span>
+                        </div>
+
+                        {/* Zoom Controls */}
+                        <div className="absolute bottom-6 right-6 z-10 flex flex-col gap-2">
+                            <button onClick={() => adjustZoom(1)} className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-transform active:scale-90"><ZoomIn size={16}/></button>
+                            <button onClick={() => adjustZoom(-1)} className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-transform active:scale-90"><ZoomOut size={16}/></button>
+                        </div>
+
+                        {/* Transform Container */}
+                        <div 
+                            style={{ 
+                                transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+                                transformOrigin: '0 0',
+                                width: '100%', height: '100%',
+                                pointerEvents: 'none'
+                            }}
+                        >
+                             {/* Background Image */}
+                            {pdfUrl && <img src={pdfUrl} className="absolute top-0 left-0 opacity-80" style={{ maxWidth: 'none', pointerEvents: 'none' }} />}
+
+                            <svg className="absolute top-0 left-0 overflow-visible" style={{ width: '1px', height: '1px' }}>
+                                {/* Drawn Pipes */}
+                                {drawnPipes.map(pipe => {
+                                    const spec = pipeSpecs.find(s => s.nominal === pipe.size) || pipeSpecs[0];
+                                    return (
+                                        <g key={pipe.id}>
+                                            <line 
+                                                x1={pipe.start.x} y1={pipe.start.y} 
+                                                x2={pipe.end.x} y2={pipe.end.y} 
+                                                stroke={spec.color} 
+                                                strokeWidth={4 / transform.scale}
+                                                strokeLinecap="round"
+                                            />
+                                        </g>
+                                    );
+                                })}
+
+                                {/* Nodes (Joints) */}
+                                {visualNodes.map(node => (
+                                    <circle 
+                                        key={node.id} 
+                                        cx={node.x} cy={node.y} 
+                                        r={3 / transform.scale} 
+                                        fill="#fff" stroke="#64748b" strokeWidth={1/transform.scale}
+                                    />
+                                ))}
+
+                                {/* Sprinklers */}
+                                {placedSprinklers.map(s => (
+                                    <g key={s.id} transform={`translate(${s.x}, ${s.y})`}>
+                                        <circle r={6 / transform.scale} fill="#10b981" fillOpacity="0.2" stroke="#059669" strokeWidth={1/transform.scale} />
+                                        <circle r={2 / transform.scale} fill="#059669" />
+                                    </g>
+                                ))}
+
+                                {/* Results Tags and Arrows - Decoupled in JSX */}
+                                {tagLayout.map(tag => (
+                                    <React.Fragment key={tag.id}>
+                                        {/* Tag Group */}
+                                        <g transform={`translate(${tag.tagX}, ${tag.tagY})`}>
+                                            <line 
+                                                x1={(tag.midX - tag.tagX)} y1={(tag.midY - tag.tagY)} 
+                                                x2={0} y2={0} 
+                                                stroke="#94a3b8" strokeWidth={1/transform.scale} strokeDasharray="4,2"
+                                            />
+                                            <foreignObject 
+                                                x={-45 / transform.scale} 
+                                                y={-27 / transform.scale} 
+                                                width={90 / transform.scale} 
+                                                height={54 / transform.scale}
+                                            >
+                                                <div xmlns="http://www.w3.org/1999/xhtml" 
+                                                     className="bg-white/95 border border-slate-300 rounded shadow-sm flex flex-col items-center justify-center text-center leading-none p-0.5"
+                                                     style={{ fontSize: `${10/transform.scale}px`, height: '100%', width: '100%' }}>
+                                                    <div className="text-[0.6em] text-slate-600 font-medium leading-tight">{tag.res.size}" {safeFixed(tag.res.lengthM, 1)} m.</div>
+                                                    <div className="font-bold text-slate-800 leading-tight">{safeFixed(tag.res.flow)} GPM</div>
+                                                    <div className="text-slate-500 text-[0.7em] leading-tight">{safeFixed(tag.res.pressure)} psi</div>
+                                                </div>
+                                            </foreignObject>
+                                        </g>
+
+                                        {/* Flow Arrow (Corrected rotation prop to tag.angle) */}
+                                        <g transform={`translate(${tag.midX}, ${tag.midY}) rotate(${tag.angle * 180 / Math.PI})`}>
+                                            <circle r={7/transform.scale} fill="white" fillOpacity="1" stroke="#e2e8f0" strokeWidth={1/transform.scale} />
+                                            <path 
+                                                d={`M ${-5/transform.scale} 0 L ${5/transform.scale} 0 M ${0} ${-4/transform.scale} L ${5/transform.scale} 0 L ${0} ${4/transform.scale}`} 
+                                                stroke="#ef4444" 
+                                                strokeWidth={2.5/transform.scale} 
+                                                fill="none" 
+                                                strokeLinecap="round" 
+                                                strokeLinejoin="round"
+                                            />
+                                        </g>
+                                    </React.Fragment>
+                                ))}
+
+                                {/* Temp Pipe (Ghost) */}
+                                {tempPipe && (
+                                    <line 
+                                        x1={tempPipe.start.x} y1={tempPipe.start.y} 
+                                        x2={tempPipe.end.x} y2={tempPipe.end.y} 
+                                        stroke={pipeSpecs.find(s => s.nominal === tempPipe.size)?.color || 'black'} 
+                                        strokeWidth={4 / transform.scale}
+                                        strokeOpacity="0.5"
+                                        strokeDasharray="5,5"
+                                    />
+                                )}
+
+                                {/* Snap Marker */}
+                                {snapPoint && (
+                                    <circle 
+                                        cx={snapPoint.x} cy={snapPoint.y} 
+                                        r={5 / transform.scale} 
+                                        fill="none" stroke="#ef4444" strokeWidth={2 / transform.scale}
+                                    />
+                                )}
+
+                                {/* Scale Line */}
+                                {scalePoints.length === 2 && (
+                                    <line 
+                                        x1={scalePoints[0].x} y1={scalePoints[0].y} 
+                                        x2={scalePoints[1].x} y2={scalePoints[1].y} 
+                                        stroke="#f00" strokeWidth={2 / transform.scale}
+                                    />
+                                )}
+                            </svg>
+                        </div>
+                    </div>
+
+                    {/* Scale Dialog Modal */}
+                    {showScaleDialog && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
+                            <div className="bg-white p-6 rounded-lg shadow-2xl w-80 animate-in zoom-in-95">
+                                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                                    <Ruler className="text-indigo-600" /> Set Scale
+                                </h3>
+                                <p className="text-sm text-slate-500 mb-4">
+                                    Enter the real-world distance for the line you just drew.
+                                </p>
+                                <input 
+                                    type="number" 
+                                    autoFocus
+                                    placeholder="Distance in meters"
+                                    className="w-full p-2 border rounded mb-4 text-lg"
+                                    value={realWorldDist}
+                                    onChange={e => setRealWorldDist(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && applyScale()}
+                                />
+                                <div className="flex justify-end gap-2">
+                                    <button onClick={() => { setShowScaleDialog(false); setScalePoints([]); }} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                                    <button onClick={applyScale} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium">Apply Scale</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
