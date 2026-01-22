@@ -666,10 +666,10 @@
                                 pressure: maxP_RequiredAtU,
                                 velocity: edge.velocity,
                                 flowDir: edge.flowDir,
-                                // Add Nodes info
+                                // Add Nodes info with # prefix
                                 nodes: edge.flowDir === 'u->v' 
-                                    ? `${edge.u_disp}-${edge.v_disp}` 
-                                    : `${edge.v_disp}-${edge.u_disp}`
+                                    ? `#${edge.u_disp}-#${edge.v_disp}` 
+                                    : `#${edge.v_disp}-#${edge.u_disp}`
                             });
                         }
                     });
@@ -988,21 +988,29 @@
                                     );
                                 })}
 
-                                {/* Nodes (Joints) with IDs - Only show if showTags is true */}
+                                {/* Nodes (Joints) with IDs - Modified style */}
                                 {showTags && visualNodes.map(node => (
                                     <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
+                                        {/* Connection Dot */}
                                         <circle 
-                                            r={7 / transform.scale} 
-                                            fill="#fff" stroke="#64748b" strokeWidth={1/transform.scale}
+                                            r={2.5 / transform.scale} 
+                                            fill="#334155" 
+                                            stroke="white"
+                                            strokeWidth={1 / transform.scale}
                                         />
+                                        {/* Label Offset from center */}
                                         <text
-                                            y={2.5 / transform.scale}
-                                            textAnchor="middle"
-                                            fontSize={8 / transform.scale}
-                                            fill="#334155"
+                                            x={4 / transform.scale}
+                                            y={-4 / transform.scale}
+                                            fontSize={9 / transform.scale}
+                                            fill="#0f172a"
                                             fontWeight="bold"
+                                            style={{ 
+                                                textShadow: '1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff',
+                                                pointerEvents: 'none'
+                                            }}
                                         >
-                                            {node.displayId}
+                                            #{node.displayId}
                                         </text>
                                     </g>
                                 ))}
