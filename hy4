@@ -59,12 +59,13 @@
             { nominal: "8", internal: 7.981, color: "#475569" },
         ];
 
+        // Updated Hazard Classes with default Area/Head values
         const hazardClasses = [
-            { id: "LH", label: "Light Hazard", density: 0.10 },
-            { id: "OH1", label: "Ordinary Hazard Group 1", density: 0.15 },
-            { id: "OH2", label: "Ordinary Hazard Group 2", density: 0.20 },
-            { id: "EH1", label: "Extra Hazard Group 1", density: 0.30 },
-            { id: "EH2", label: "Extra Hazard Group 2", density: 0.40 },
+            { id: "LH", label: "Light Hazard", density: 0.10, defaultArea: 130 },
+            { id: "OH1", label: "Ordinary Hazard Group 1", density: 0.15, defaultArea: 130 },
+            { id: "OH2", label: "Ordinary Hazard Group 2", density: 0.20, defaultArea: 130 },
+            { id: "EH1", label: "Extra Hazard Group 1", density: 0.30, defaultArea: 100 },
+            { id: "EH2", label: "Extra Hazard Group 2", density: 0.40, defaultArea: 100 },
         ];
 
         const App = () => {
@@ -122,7 +123,13 @@
                 const hazardId = e.target.value;
                 setSelectedHazard(hazardId);
                 const hazard = hazardClasses.find(h => h.id === hazardId);
-                if (hazard) setDesignDensity(hazard.density);
+                if (hazard) {
+                    setDesignDensity(hazard.density);
+                    // Update Area/Head based on hazard type
+                    if (hazard.defaultArea) {
+                        setAreaPerHead(hazard.defaultArea);
+                    }
+                }
             };
 
             const handleFileChange = (e) => {
@@ -748,19 +755,19 @@
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="text-slate-500">Density</label>
+                                        <label className="text-slate-500">Density (gpm/ft²)</label>
                                         <input type="number" value={designDensity} onChange={e => setDesignDensity(e.target.value)} className="w-full p-1 border rounded" step="0.05" />
                                     </div>
                                     <div>
-                                        <label className="text-slate-500">Area/Hd</label>
+                                        <label className="text-slate-500">Area/head (ft²)</label>
                                         <input type="number" value={areaPerHead} onChange={e => setAreaPerHead(e.target.value)} className="w-full p-1 border rounded" />
                                     </div>
                                     <div>
-                                        <label className="text-slate-500">K-Fac</label>
+                                        <label className="text-slate-500">K Factor</label>
                                         <input type="number" value={kFactor} onChange={e => setKFactor(e.target.value)} className="w-full p-1 border rounded" />
                                     </div>
                                      <div>
-                                        <label className="text-slate-500">C-Fac</label>
+                                        <label className="text-slate-500">C Value</label>
                                         <input type="number" value={cFactor} onChange={e => setCFactor(e.target.value)} className="w-full p-1 border rounded" />
                                     </div>
                                 </div>
