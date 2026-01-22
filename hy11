@@ -34,8 +34,9 @@
                               linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
         }
         @media print {
-            @page { margin: 1cm; size: auto; }
-            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            @page { margin: 1.5cm; size: auto; } /* Adjusted margins */
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white; }
+            #root { height: auto; overflow: visible; }
         }
     </style>
 </head>
@@ -922,7 +923,7 @@
             const tagLayout = getTagLayout();
 
             return (
-                <div className="flex h-screen w-full bg-slate-50 overflow-hidden font-sans select-none print:block print:h-auto print:overflow-visible">
+                <div className="flex h-screen w-full bg-slate-50 overflow-hidden font-sans select-none print:bg-white print:overflow-visible">
                     {/* Side Panel - Compacted */}
                     <div className="w-80 bg-white border-r border-slate-200 flex flex-col shadow-xl z-20 shrink-0 print:hidden">
                         <div className="px-4 py-3 bg-slate-900 text-white flex justify-between items-center shrink-0">
@@ -1273,7 +1274,8 @@
 
                     {/* Report Modal */}
                     {showReport && (
-                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:absolute print:inset-0 print:bg-white print:z-[9999]">
+                        // Changed: Added print:items-start to align content to top during print, removing vertical centering
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:absolute print:inset-0 print:bg-white print:z-[9999] print:block">
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-in zoom-in-95 print:shadow-none print:w-full print:max-w-none print:h-auto print:max-h-none print:rounded-none">
                                 <div className="p-4 border-b flex justify-between items-center bg-slate-50 rounded-t-lg print:hidden">
                                     <h3 className="font-bold text-lg text-slate-800 flex items-center gap-2">
