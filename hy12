@@ -125,7 +125,10 @@
             const [showReport, setShowReport] = useState(false);
             
             const [editingPipeId, setEditingPipeId] = useState(null);
-            const [alignmentLines, setAlignmentLines] = useState([]); // New state for alignment guides
+            const [alignmentLines, setAlignmentLines] = useState([]);
+            
+            // New state for sprinkler distance guide
+            const [sprinklerDistanceGuide, setSprinklerDistanceGuide] = useState(null);
 
             const safeNum = (val, fallback = 0) => {
                 const n = parseFloat(val);
@@ -357,14 +360,12 @@
                     const alignThreshold = 10 / transform.scale;
                     
                     placedSprinklers.forEach(s => {
-                        // Vertical Alignment check
                         if (Math.abs(effectiveCoords.x - s.x) < alignThreshold) {
-                            finalCoords = { ...finalCoords, x: s.x }; // Snap X
+                            finalCoords = { ...finalCoords, x: s.x };
                             newAlignmentLines.push({ x1: s.x, y1: s.y, x2: s.x, y2: finalCoords.y });
                         }
-                        // Horizontal Alignment check
                         if (Math.abs(effectiveCoords.y - s.y) < alignThreshold) {
-                            finalCoords = { ...finalCoords, y: s.y }; // Snap Y
+                            finalCoords = { ...finalCoords, y: s.y };
                             newAlignmentLines.push({ x1: s.x, y1: s.y, x2: finalCoords.x, y2: s.y });
                         }
                     });
@@ -372,18 +373,45 @@
                 
                 setAlignmentLines(newAlignmentLines);
 
-                // Use the potentially aligned/snapped coordinates
+                // --- Calculate Distance Guide for Sprinkler Mode ---
+                if (mode === 'sprinkler' && placedSprinklers.length > 0) {
+                    let minD = Infinity;
+                    let closest = null;
+                    placedSprinklers.forEach(s => {
+                        // Skip if it's the same point (unlikely here but good practice)
+                        const d = Math.sqrt(Math.pow(s.x - finalCoords.x, 2) + Math.pow(s.y - finalCoords.y, 2));
+                        if (d < minD) {
+                            minD = d;
+                            closest = s;
+                        }
+                    });
+
+                    if (closest) {
+                        const lenPx = minD;
+                        const lenText = pixelsPerMeter 
+                            ? `${(lenPx / pixelsPerMeter).toFixed(1)} m.` 
+                            : `${Math.round(lenPx)} px`;
+                        
+                        setSprinklerDistanceGuide({
+                            start: closest,
+                            end: finalCoords,
+                            text: lenText
+                        });
+                    }
+                } else {
+                    setSprinklerDistanceGuide(null);
+                }
+                // ----------------------------------------------------
+
                 const snapPointToUse = isSnapped ? pointSnappedCoords : (newAlignmentLines.length > 0 ? finalCoords : null);
                 setSnapPoint(snapPointToUse);
 
-                // Update drawing logic with final coords
                 if (isDragging) {
                     if (mode === 'pan') {
                         setTransform(prev => ({ ...prev, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }));
                     } else if (mode === 'scale') {
                         setScalePoints(prev => [prev[0], rawCoords]);
                     } else if (mode === 'draw') {
-                        // Use finalCoords for pipe endpoint
                         setTempPipe(prev => ({ ...prev, end: finalCoords }));
                     }
                 }
@@ -405,14 +433,9 @@
                         setScalePoints([]);
                     }
                 } else if (mode === 'draw' && isDragging && tempPipe) {
-                    // Logic to finalize pipe needs to respect alignment too
-                    // Re-calculate the end point one last time or use the state?
-                    // Better to rely on tempPipe.end which was updated in MouseMove
-                    
                     const finalEnd = tempPipe.end;
                     const { isSnapped, snapType, snapTarget, coords: snappedCoords } = getSnappedCoords(finalEnd);
                     
-                    // Prioritize hard snap over alignment snap for the end point object logic
                     const actualEnd = isSnapped ? snappedCoords : finalEnd;
 
                     const dx = actualEnd.x - tempPipe.start.x;
@@ -456,14 +479,14 @@
                     setStartSnapInfo(null);
                 }
                 setIsDragging(false);
-                setAlignmentLines([]); // Clear guides on mouse up
+                setAlignmentLines([]);
+                setSprinklerDistanceGuide(null); // Clear guide
             };
 
             const handleCanvasClick = (e) => {
                 if (showScaleDialog || editingPipeId) return;
                 const rawCoords = getCanvasCoords(e);
                 
-                // Alignment check for click (Sprinkler placement)
                 const { coords: pointSnappedCoords, isSnapped, snapType, snapTarget } = getSnappedCoords(rawCoords);
                 let finalCoords = isSnapped ? pointSnappedCoords : rawCoords;
                 
@@ -1237,6 +1260,34 @@
                                         opacity={0.8}
                                     />
                                 ))}
+                                
+                                {/* Sprinkler Distance Guide */}
+                                {sprinklerDistanceGuide && (
+                                    <g>
+                                        <line 
+                                            x1={sprinklerDistanceGuide.start.x} y1={sprinklerDistanceGuide.start.y} 
+                                            x2={sprinklerDistanceGuide.end.x} y2={sprinklerDistanceGuide.end.y} 
+                                            stroke="#10b981" 
+                                            strokeWidth={1 / transform.scale}
+                                            strokeDasharray={`${4 / transform.scale},${2 / transform.scale}`}
+                                            opacity={0.8}
+                                        />
+                                        <text
+                                            x={(sprinklerDistanceGuide.start.x + sprinklerDistanceGuide.end.x) / 2}
+                                            y={(sprinklerDistanceGuide.start.y + sprinklerDistanceGuide.end.y) / 2 - 10 / transform.scale}
+                                            textAnchor="middle"
+                                            fontSize={10 / transform.scale}
+                                            fill="#10b981"
+                                            fontWeight="bold"
+                                            style={{ 
+                                                textShadow: '0px 0px 4px rgba(255,255,255,0.8)',
+                                                pointerEvents: 'none'
+                                            }}
+                                        >
+                                            {sprinklerDistanceGuide.text}
+                                        </text>
+                                    </g>
+                                )}
 
                                 {/* Drawn Pipes */}
                                 {drawnPipes.map(pipe => {
@@ -1326,10 +1377,10 @@
 
                                         {/* Flow Arrow - Always visible regardless of showTags */}
                                         <g transform={`translate(${tag.midX}, ${tag.midY}) rotate(${tag.angle * 180 / Math.PI})`}>
-                                            {/* Changed stroke color to black */}
+                                            {/* Changed stroke color to lighter black (Slate 700) */}
                                             <path 
                                                 d={`M ${-3.5/transform.scale} ${-3.5/transform.scale} L ${3.5/transform.scale} 0 L ${-3.5/transform.scale} ${3.5/transform.scale}`} 
-                                                stroke="black" 
+                                                stroke="#334155" 
                                                 strokeWidth={1.5/transform.scale} 
                                                 fill="none" 
                                                 strokeLinecap="round" 
