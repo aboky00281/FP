@@ -28,15 +28,22 @@
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Engineering Graph Paper Grid Style */
         .canvas-grid {
+            background-color: #ffffff;
             background-size: 50px 50px;
-            background-image: linear-gradient(to right, #e2e8f0 1px, transparent 1px),
-                              linear-gradient(to bottom, #e2e8f0 1px, transparent 1px);
+            background-image: 
+                linear-gradient(to right, #e0f2fe 1px, transparent 1px),
+                linear-gradient(to bottom, #e0f2fe 1px, transparent 1px);
         }
+        
         @media print {
-            @page { margin: 1.5cm; size: auto; } /* Adjusted margins */
+            @page { margin: 1cm; size: auto; }
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white; }
             #root { height: auto; overflow: visible; }
+            /* Hide UI elements specifically for print if not handled by classes */
+            .no-print { display: none !important; }
         }
     </style>
 </head>
@@ -73,6 +80,21 @@
             { id: "EH2", label: "Extra Hazard Group 2", density: 0.40, defaultArea: 100 },
         ];
 
+        // Updated C-Factor Options - Full List from NFPA 13 Standard
+        const cFactors = [
+            { value: 150, label: "150 - Plastic (listed) - Underground" },
+            { value: 150, label: "150 - Plastic (listed) - Aboveground" },
+            { value: 150, label: "150 - Copper Tube or Stainless Steel" },
+            { value: 140, label: "140 - Cement-Lined Cast or Ductile Iron" },
+            { value: 140, label: "140 - Asbestos Cement" },
+            { value: 120, label: "120 - Steel (Wet System or Deluge System)" },
+            { value: 100, label: "100 - Steel (Dry System or Preaction System)" },
+            { value: 100, label: "100 - Cast or Ductile Iron, Unlined" },
+        ];
+
+        // NEW: K-Factor Options
+        const kFactors = [5.6, 8.0, 11.2, 14.0, 16.8, 19.6, 22.4, 25.2, 28.0, 33.6];
+
         const App = () => {
             const [kFactor, setKFactor] = useState(5.6);
             const [cFactor, setCFactor] = useState(120);
@@ -105,7 +127,6 @@
             const [historyIndex, setHistoryIndex] = useState(0);
             const [showReport, setShowReport] = useState(false);
             
-            // New state for pipe editing
             const [editingPipeId, setEditingPipeId] = useState(null);
 
             const safeNum = (val, fallback = 0) => {
@@ -812,6 +833,7 @@
                 const occupiedRects = [];
                 const tagW = 90 / transform.scale;
                 const tagH = 65 / transform.scale; 
+                // Increased padding significantly to prevent overlap
                 const padding = 25 / transform.scale; 
 
                 drawnPipes.forEach(pipe => {
@@ -821,6 +843,7 @@
                     let startX = pipe.start.x, startY = pipe.start.y;
                     let endX = pipe.end.x, endY = pipe.end.y;
 
+                    // Arrow calculation
                     let arrowAngle = 0;
                     if (res.flowDir === 'v->u') {
                         arrowAngle = Math.atan2(pipe.start.y - pipe.end.y, pipe.start.x - pipe.end.x);
@@ -843,7 +866,10 @@
                     let bestTagX = 0, bestTagY = 0, bestAnchorX = 0, bestAnchorY = 0;
                     let found = false;
 
+                    // Improved Search: Granular Sliding along pipe + Layers
+                    // positions: center, slightly offset, more offset, etc.
                     const posSteps = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8];
+                    // distances: layer 1, layer 2, layer 3
                     const distSteps = [1, 1.8, 2.6]; 
 
                     outerLoop:
@@ -858,6 +884,7 @@
                                 const cx = ax + (nx * dist * side);
                                 const cy = ay + (ny * dist * side);
 
+                                // Rect with padding included for collision
                                 const rect = {
                                     x: cx - tagW / 2 - padding/2,
                                     y: cy - tagH / 2 - padding/2,
@@ -867,6 +894,7 @@
 
                                 let collision = false;
                                 
+                                // 1. Check against other tags
                                 for (const r of occupiedRects) {
                                     if (rect.x < r.x + r.w && rect.x + rect.w > r.x &&
                                         rect.y < r.y + r.h && rect.y + rect.h > r.y) {
@@ -875,6 +903,7 @@
                                     }
                                 }
 
+                                // 2. Check against ANY pipe (Strict overlap avoidance)
                                 if (!collision) {
                                     for (const p of drawnPipes) {
                                         if (lineIntersectsRect(p.start.x, p.start.y, p.end.x, p.end.y, rect.x, rect.y, rect.w, rect.h)) {
@@ -884,8 +913,10 @@
                                     }
                                 }
                                 
+                                // 3. Check against Nodes (avoid covering connection points)
                                 if (!collision) {
                                     for (const n of visualNodes) {
+                                        // Simple point-in-rect check with margin
                                         const nodeX = n.x;
                                         const nodeY = n.y;
                                         const margin = 10 / transform.scale;
@@ -910,8 +941,10 @@
                         }
                     }
                     
+                    // Fallback strategy: Push significantly far out if no space found
                     if (!found) {
                          const dist = baseDist * 3.5;
+                         // Try to find a direction that isn't the origin
                          const nxFallback = nx;
                          const nyFallback = ny;
                          
@@ -920,6 +953,7 @@
                          bestTagX = bestAnchorX + (nxFallback * dist);
                          bestTagY = bestAnchorY + (nyFallback * dist);
                          
+                         // Add to occupied just in case
                          occupiedRects.push({ 
                              x: bestTagX - tagW/2 - padding/2, 
                              y: bestTagY - tagH/2 - padding/2, 
@@ -985,11 +1019,29 @@
                                     </div>
                                     <div>
                                         <label className="text-slate-500">K Factor</label>
-                                        <input type="number" value={kFactor} onChange={e => setKFactor(e.target.value)} className="w-full p-1 border rounded" />
+                                        <select 
+                                            value={kFactor} 
+                                            onChange={e => setKFactor(Number(e.target.value))} 
+                                            className="w-full p-1 border rounded bg-slate-50 text-[10px]"
+                                        >
+                                            {kFactors.map(k => (
+                                                <option key={k} value={k}>{k.toFixed(1)}</option>
+                                            ))}
+                                        </select>
                                     </div>
                                      <div>
                                         <label className="text-slate-500">C Value</label>
-                                        <input type="number" value={cFactor} onChange={e => setCFactor(e.target.value)} className="w-full p-1 border rounded" />
+                                        <select 
+                                            value={cFactor} 
+                                            onChange={e => setCFactor(Number(e.target.value))} 
+                                            className="w-full p-1 border rounded bg-slate-50 text-[10px]"
+                                        >
+                                            {cFactors.map(c => (
+                                                <option key={c.value} value={c.value}>
+                                                    {c.label}
+                                                </option>
+                                            ))}
+                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -1101,7 +1153,7 @@
 
                     {/* Main Canvas Area */}
                     <div 
-                        className="flex-1 relative bg-slate-200 overflow-hidden cursor-crosshair canvas-grid print:hidden"
+                        className="flex-1 relative bg-white overflow-hidden cursor-crosshair canvas-grid print:hidden"
                         ref={containerRef}
                         onMouseDown={handleMouseDown}
                         onMouseMove={handleMouseMove}
@@ -1200,7 +1252,7 @@
                                                 <line 
                                                     x1={(tag.anchorX - tag.tagX)} y1={(tag.anchorY - tag.tagY)} 
                                                     x2={0} y2={0} 
-                                                    stroke="#94a3b8" strokeWidth={1/transform.scale} strokeDasharray="4,2"
+                                                    stroke="#1e293b" strokeWidth={1/transform.scale} strokeDasharray="3,3"
                                                 />
                                                 <foreignObject 
                                                     x={-45 / transform.scale} 
@@ -1208,11 +1260,12 @@
                                                     width={90 / transform.scale} 
                                                     height={65 / transform.scale}
                                                 >
+                                                    {/* Changed Tag Style to Boxed Engineering Look */}
                                                     <div xmlns="http://www.w3.org/1999/xhtml" 
-                                                         className="bg-white/95 border border-slate-300 rounded shadow-sm flex flex-col items-center justify-center text-center leading-none p-0.5"
+                                                         className="bg-white border border-slate-900 shadow-none flex flex-col items-center justify-center text-center leading-none p-0.5"
                                                          style={{ fontSize: `${10/transform.scale}px`, height: '100%', width: '100%' }}>
                                                         {/* Node Info Line */}
-                                                        <div className="text-[0.7em] text-blue-800 font-bold mb-0.5">Node {tag.res.nodes}</div>
+                                                        <div className="text-[0.7em] text-blue-800 font-bold mb-0.5 border-b border-slate-300 w-full">Node {tag.res.nodes}</div>
                                                         <div className="text-[0.75em] text-black font-medium leading-tight">{tag.res.size}" {safeFixed(tag.res.lengthM, 1)} m.</div>
                                                         <div className="text-[0.75em] text-black font-bold leading-tight">{safeFixed(tag.res.flow)} GPM</div>
                                                         <div className="text-[0.75em] text-black leading-tight">{safeFixed(tag.res.pressure)} psi</div>
