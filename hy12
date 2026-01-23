@@ -39,10 +39,9 @@
         }
         
         @media print {
-            @page { margin: 1cm; size: auto; }
+            @page { margin: 1.5cm; size: auto; }
             body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white; }
             #root { height: auto; overflow: visible; }
-            /* Hide UI elements specifically for print if not handled by classes */
             .no-print { display: none !important; }
         }
     </style>
@@ -80,7 +79,6 @@
             { id: "EH2", label: "Extra Hazard Group 2", density: 0.40, defaultArea: 100 },
         ];
 
-        // Updated C-Factor Options - Full List from NFPA 13 Standard
         const cFactors = [
             { value: 150, label: "150 - Plastic (listed) - Underground" },
             { value: 150, label: "150 - Plastic (listed) - Aboveground" },
@@ -92,7 +90,6 @@
             { value: 100, label: "100 - Cast or Ductile Iron, Unlined" },
         ];
 
-        // NEW: K-Factor Options
         const kFactors = [5.6, 8.0, 11.2, 14.0, 16.8, 19.6, 22.4, 25.2, 28.0, 33.6];
 
         const App = () => {
@@ -128,6 +125,7 @@
             const [showReport, setShowReport] = useState(false);
             
             const [editingPipeId, setEditingPipeId] = useState(null);
+            const [alignmentLines, setAlignmentLines] = useState([]); // New state for alignment guides
 
             const safeNum = (val, fallback = 0) => {
                 const n = parseFloat(val);
@@ -350,16 +348,43 @@
                     }
                 }
 
-                const { coords, isSnapped } = getSnappedCoords(effectiveCoords);
-                setSnapPoint(isSnapped ? coords : null);
+                // Check Alignment (Smart Guides) - Only if not already hard-snapped to a point
+                const { coords: pointSnappedCoords, isSnapped } = getSnappedCoords(effectiveCoords);
+                let finalCoords = isSnapped ? pointSnappedCoords : effectiveCoords;
+                const newAlignmentLines = [];
 
+                if (!isSnapped && (mode === 'draw' || mode === 'sprinkler')) {
+                    const alignThreshold = 10 / transform.scale;
+                    
+                    placedSprinklers.forEach(s => {
+                        // Vertical Alignment check
+                        if (Math.abs(effectiveCoords.x - s.x) < alignThreshold) {
+                            finalCoords = { ...finalCoords, x: s.x }; // Snap X
+                            newAlignmentLines.push({ x1: s.x, y1: s.y, x2: s.x, y2: finalCoords.y });
+                        }
+                        // Horizontal Alignment check
+                        if (Math.abs(effectiveCoords.y - s.y) < alignThreshold) {
+                            finalCoords = { ...finalCoords, y: s.y }; // Snap Y
+                            newAlignmentLines.push({ x1: s.x, y1: s.y, x2: finalCoords.x, y2: s.y });
+                        }
+                    });
+                }
+                
+                setAlignmentLines(newAlignmentLines);
+
+                // Use the potentially aligned/snapped coordinates
+                const snapPointToUse = isSnapped ? pointSnappedCoords : (newAlignmentLines.length > 0 ? finalCoords : null);
+                setSnapPoint(snapPointToUse);
+
+                // Update drawing logic with final coords
                 if (isDragging) {
                     if (mode === 'pan') {
                         setTransform(prev => ({ ...prev, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }));
                     } else if (mode === 'scale') {
                         setScalePoints(prev => [prev[0], rawCoords]);
                     } else if (mode === 'draw') {
-                        setTempPipe(prev => ({ ...prev, end: coords }));
+                        // Use finalCoords for pipe endpoint
+                        setTempPipe(prev => ({ ...prev, end: finalCoords }));
                     }
                 }
             };
@@ -380,38 +405,45 @@
                         setScalePoints([]);
                     }
                 } else if (mode === 'draw' && isDragging && tempPipe) {
-                    const endSnapInfo = getSnappedCoords(tempPipe.end);
-                    const finalEnd = endSnapInfo.isSnapped ? endSnapInfo.coords : tempPipe.end;
+                    // Logic to finalize pipe needs to respect alignment too
+                    // Re-calculate the end point one last time or use the state?
+                    // Better to rely on tempPipe.end which was updated in MouseMove
+                    
+                    const finalEnd = tempPipe.end;
+                    const { isSnapped, snapType, snapTarget, coords: snappedCoords } = getSnappedCoords(finalEnd);
+                    
+                    // Prioritize hard snap over alignment snap for the end point object logic
+                    const actualEnd = isSnapped ? snappedCoords : finalEnd;
 
-                    const dx = finalEnd.x - tempPipe.start.x;
-                    const dy = finalEnd.y - tempPipe.start.y;
+                    const dx = actualEnd.x - tempPipe.start.x;
+                    const dy = actualEnd.y - tempPipe.start.y;
                     const pixelLen = Math.sqrt(dx * dx + dy * dy);
 
                     if (pixelLen > 2) {
                         let nextPipes = [...drawnPipes];
-                        let actualStart = tempPipe.start;
-                        let actualEnd = finalEnd;
+                        let startPoint = tempPipe.start;
+                        let endPoint = actualEnd;
 
                         if (startSnapInfo && startSnapInfo.type === 'edge' && startSnapInfo.target) {
                             const targetPipe = nextPipes.find(p => p.id === startSnapInfo.target.id);
                             if (targetPipe) {
                                 nextPipes = splitPipeAtPoint(nextPipes, targetPipe, startSnapInfo.coords);
-                                actualStart = startSnapInfo.coords;
+                                startPoint = startSnapInfo.coords;
                             }
                         }
 
-                        if (endSnapInfo.isSnapped && endSnapInfo.snapType === 'edge' && endSnapInfo.snapTarget) {
-                            const targetPipe = nextPipes.find(p => p.id === endSnapInfo.snapTarget.id);
+                        if (isSnapped && snapType === 'edge' && snapTarget) {
+                            const targetPipe = nextPipes.find(p => p.id === snapTarget.id);
                             if (targetPipe) {
-                                nextPipes = splitPipeAtPoint(nextPipes, targetPipe, endSnapInfo.coords);
-                                actualEnd = endSnapInfo.coords;
+                                nextPipes = splitPipeAtPoint(nextPipes, targetPipe, actualEnd);
+                                endPoint = actualEnd;
                             }
                         }
 
                         const newPipe = {
                             id: Date.now() + Math.random(),
-                            start: actualStart,
-                            end: actualEnd,
+                            start: startPoint,
+                            end: endPoint,
                             size: tempPipe.size,
                             pixelLength: pixelLen
                         };
@@ -424,20 +456,36 @@
                     setStartSnapInfo(null);
                 }
                 setIsDragging(false);
+                setAlignmentLines([]); // Clear guides on mouse up
             };
 
             const handleCanvasClick = (e) => {
                 if (showScaleDialog || editingPipeId) return;
                 const rawCoords = getCanvasCoords(e);
-                const { coords, isSnapped, snapType, snapTarget } = getSnappedCoords(rawCoords);
+                
+                // Alignment check for click (Sprinkler placement)
+                const { coords: pointSnappedCoords, isSnapped, snapType, snapTarget } = getSnappedCoords(rawCoords);
+                let finalCoords = isSnapped ? pointSnappedCoords : rawCoords;
+                
+                if (!isSnapped && mode === 'sprinkler') {
+                    const alignThreshold = 10 / transform.scale;
+                    let alignedX = rawCoords.x;
+                    let alignedY = rawCoords.y;
+                    
+                    placedSprinklers.forEach(s => {
+                        if (Math.abs(rawCoords.x - s.x) < alignThreshold) alignedX = s.x;
+                        if (Math.abs(rawCoords.y - s.y) < alignThreshold) alignedY = s.y;
+                    });
+                    finalCoords = { x: alignedX, y: alignedY };
+                }
 
                 if (mode === 'sprinkler') {
-                    const newSprinklers = [...placedSprinklers, { ...coords, id: Date.now() }];
+                    const newSprinklers = [...placedSprinklers, { ...finalCoords, id: Date.now() }];
                     setPlacedSprinklers(newSprinklers);
                     
                     let nextPipes = drawnPipes;
                     if (isSnapped && snapType === 'edge' && snapTarget) {
-                        nextPipes = splitPipeAtPoint(drawnPipes, snapTarget, coords);
+                        nextPipes = splitPipeAtPoint(drawnPipes, snapTarget, finalCoords);
                         setDrawnPipes(nextPipes);
                     }
                     commitToHistory(nextPipes, newSprinklers);
@@ -866,10 +914,7 @@
                     let bestTagX = 0, bestTagY = 0, bestAnchorX = 0, bestAnchorY = 0;
                     let found = false;
 
-                    // Improved Search: Granular Sliding along pipe + Layers
-                    // positions: center, slightly offset, more offset, etc.
                     const posSteps = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8];
-                    // distances: layer 1, layer 2, layer 3
                     const distSteps = [1, 1.8, 2.6]; 
 
                     outerLoop:
@@ -884,7 +929,6 @@
                                 const cx = ax + (nx * dist * side);
                                 const cy = ay + (ny * dist * side);
 
-                                // Rect with padding included for collision
                                 const rect = {
                                     x: cx - tagW / 2 - padding/2,
                                     y: cy - tagH / 2 - padding/2,
@@ -894,7 +938,6 @@
 
                                 let collision = false;
                                 
-                                // 1. Check against other tags
                                 for (const r of occupiedRects) {
                                     if (rect.x < r.x + r.w && rect.x + rect.w > r.x &&
                                         rect.y < r.y + r.h && rect.y + rect.h > r.y) {
@@ -903,7 +946,6 @@
                                     }
                                 }
 
-                                // 2. Check against ANY pipe (Strict overlap avoidance)
                                 if (!collision) {
                                     for (const p of drawnPipes) {
                                         if (lineIntersectsRect(p.start.x, p.start.y, p.end.x, p.end.y, rect.x, rect.y, rect.w, rect.h)) {
@@ -913,10 +955,8 @@
                                     }
                                 }
                                 
-                                // 3. Check against Nodes (avoid covering connection points)
                                 if (!collision) {
                                     for (const n of visualNodes) {
-                                        // Simple point-in-rect check with margin
                                         const nodeX = n.x;
                                         const nodeY = n.y;
                                         const margin = 10 / transform.scale;
@@ -941,10 +981,8 @@
                         }
                     }
                     
-                    // Fallback strategy: Push significantly far out if no space found
                     if (!found) {
                          const dist = baseDist * 3.5;
-                         // Try to find a direction that isn't the origin
                          const nxFallback = nx;
                          const nyFallback = ny;
                          
@@ -953,7 +991,6 @@
                          bestTagX = bestAnchorX + (nxFallback * dist);
                          bestTagY = bestAnchorY + (nyFallback * dist);
                          
-                         // Add to occupied just in case
                          occupiedRects.push({ 
                              x: bestTagX - tagW/2 - padding/2, 
                              y: bestTagY - tagH/2 - padding/2, 
@@ -1188,6 +1225,19 @@
                             {pdfUrl && <img src={pdfUrl} className="absolute top-0 left-0 opacity-80" style={{ maxWidth: 'none', pointerEvents: 'none' }} />}
 
                             <svg className="absolute top-0 left-0 overflow-visible" style={{ width: '1px', height: '1px' }}>
+                                {/* Alignment Guides */}
+                                {alignmentLines.map((line, i) => (
+                                    <line 
+                                        key={i}
+                                        x1={line.x1} y1={line.y1}
+                                        x2={line.x2} y2={line.y2}
+                                        stroke="#ec4899"
+                                        strokeWidth={1 / transform.scale}
+                                        strokeDasharray={`${4 / transform.scale},${4 / transform.scale}`}
+                                        opacity={0.8}
+                                    />
+                                ))}
+
                                 {/* Drawn Pipes */}
                                 {drawnPipes.map(pipe => {
                                     const spec = pipeSpecs.find(s => s.nominal === pipe.size) || pipeSpecs[0];
@@ -1294,8 +1344,9 @@
                                     const dx = tempPipe.end.x - tempPipe.start.x;
                                     const dy = tempPipe.end.y - tempPipe.start.y;
                                     const lenPx = Math.sqrt(dx * dx + dy * dy);
+                                    // Modified here: changed toFixed(2) to toFixed(1)
                                     const lenText = pixelsPerMeter 
-                                        ? `${(lenPx / pixelsPerMeter).toFixed(2)} m.` 
+                                        ? `${(lenPx / pixelsPerMeter).toFixed(1)} m.` 
                                         : `${Math.round(lenPx)} px`;
                                     
                                     return (
