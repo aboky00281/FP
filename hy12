@@ -1247,7 +1247,7 @@
                                                 x1={pipe.start.x} y1={pipe.start.y} 
                                                 x2={pipe.end.x} y2={pipe.end.y} 
                                                 stroke={spec.color} 
-                                                strokeWidth={4 / transform.scale}
+                                                strokeWidth={2.5 / transform.scale}
                                                 strokeLinecap="round"
                                             />
                                         </g>
@@ -1326,11 +1326,11 @@
 
                                         {/* Flow Arrow - Always visible regardless of showTags */}
                                         <g transform={`translate(${tag.midX}, ${tag.midY}) rotate(${tag.angle * 180 / Math.PI})`}>
-                                            <circle r={7/transform.scale} fill="white" fillOpacity="1" stroke="#e2e8f0" strokeWidth={1/transform.scale} />
+                                            {/* Changed stroke color to black */}
                                             <path 
-                                                d={`M ${-5/transform.scale} 0 L ${5/transform.scale} 0 M ${0} ${-4/transform.scale} L ${5/transform.scale} 0 L ${0} ${4/transform.scale}`} 
-                                                stroke="#ef4444" 
-                                                strokeWidth={2.5/transform.scale} 
+                                                d={`M ${-3.5/transform.scale} ${-3.5/transform.scale} L ${3.5/transform.scale} 0 L ${-3.5/transform.scale} ${3.5/transform.scale}`} 
+                                                stroke="black" 
+                                                strokeWidth={1.5/transform.scale} 
                                                 fill="none" 
                                                 strokeLinecap="round" 
                                                 strokeLinejoin="round"
@@ -1355,7 +1355,7 @@
                                                 x1={tempPipe.start.x} y1={tempPipe.start.y} 
                                                 x2={tempPipe.end.x} y2={tempPipe.end.y} 
                                                 stroke={pipeSpecs.find(s => s.nominal === tempPipe.size)?.color || 'black'} 
-                                                strokeWidth={4 / transform.scale}
+                                                strokeWidth={2.5 / transform.scale}
                                                 strokeOpacity="0.5"
                                                 strokeDasharray="5,5"
                                             />
