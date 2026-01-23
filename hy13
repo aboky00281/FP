@@ -127,6 +127,7 @@
             const [editingPipeId, setEditingPipeId] = useState(null);
             const [alignmentLines, setAlignmentLines] = useState([]);
             const [sprinklerDistanceGuide, setSprinklerDistanceGuide] = useState(null);
+            const [pipeAlignmentGuide, setPipeAlignmentGuide] = useState(null);
 
             const safeNum = (val, fallback = 0) => {
                 const n = parseFloat(val);
@@ -349,11 +350,55 @@
                     }
                 }
 
-                const { coords: pointSnappedCoords, isSnapped } = getSnappedCoords(effectiveCoords);
+                // Check Alignment (Smart Guides) - Only if not already hard-snapped to a point
+                const { coords: pointSnappedCoords, isSnapped, snapType, snapTarget } = getSnappedCoords(effectiveCoords);
                 let finalCoords = isSnapped ? pointSnappedCoords : effectiveCoords;
                 const newAlignmentLines = [];
 
-                if (!isSnapped && (mode === 'draw' || mode === 'sprinkler')) {
+                // Reset guides
+                setPipeAlignmentGuide(null);
+
+                if (isSnapped && snapType === 'edge' && (mode === 'sprinkler')) {
+                     // Show guide along the pipe we are snapped to
+                     const pipe = snapTarget;
+                     // Find existing sprinklers on this pipe
+                     const headsOnPipe = placedSprinklers.filter(s => distanceToSegment(s, pipe.start, pipe.end) < 1);
+                     
+                     // Sort heads by distance from start to find adjacent pairs
+                     headsOnPipe.sort((a, b) => {
+                         const da = Math.pow(a.x - pipe.start.x, 2) + Math.pow(a.y - pipe.start.y, 2);
+                         const db = Math.pow(b.x - pipe.start.x, 2) + Math.pow(b.y - pipe.start.y, 2);
+                         return da - db;
+                     });
+
+                     let isMidpoint = false;
+                     const snapThreshold = 10 / transform.scale;
+
+                     // Check midpoints between heads
+                     for (let i = 0; i < headsOnPipe.length - 1; i++) {
+                         const h1 = headsOnPipe[i];
+                         const h2 = headsOnPipe[i+1];
+                         const mx = (h1.x + h2.x) / 2;
+                         const my = (h1.y + h2.y) / 2;
+
+                         const distToMid = Math.sqrt(Math.pow(finalCoords.x - mx, 2) + Math.pow(finalCoords.y - my, 2));
+                         
+                         if (distToMid < snapThreshold) {
+                             finalCoords = { x: mx, y: my };
+                             isMidpoint = true;
+                             break;
+                         }
+                     }
+
+                     setPipeAlignmentGuide({
+                         p1: pipe.start,
+                         p2: pipe.end,
+                         heads: headsOnPipe,
+                         cursor: finalCoords,
+                         isMidpoint: isMidpoint
+                     });
+                }
+                else if (!isSnapped && (mode === 'draw' || mode === 'sprinkler')) {
                     const alignThreshold = 10 / transform.scale;
                     
                     placedSprinklers.forEach(s => {
@@ -370,12 +415,20 @@
                 
                 setAlignmentLines(newAlignmentLines);
 
+                // --- Calculate Distance Guide for Sprinkler Mode ---
                 if (mode === 'sprinkler' && placedSprinklers.length > 0) {
                     let minD = Infinity;
                     let closest = null;
-                    placedSprinklers.forEach(s => {
+                    
+                    // Filter to only check heads on the same pipe if snapped to pipe
+                    const candidates = (pipeAlignmentGuide && pipeAlignmentGuide.heads.length > 0) 
+                        ? pipeAlignmentGuide.heads 
+                        : placedSprinklers;
+
+                    candidates.forEach(s => {
                         const d = Math.sqrt(Math.pow(s.x - finalCoords.x, 2) + Math.pow(s.y - finalCoords.y, 2));
-                        if (d < minD) {
+                        // Avoid self (if distance is tiny)
+                        if (d > 0.1 && d < minD) {
                             minD = d;
                             closest = s;
                         }
@@ -392,13 +445,16 @@
                             end: finalCoords,
                             text: lenText
                         });
+                    } else {
+                        setSprinklerDistanceGuide(null);
                     }
                 } else {
                     setSprinklerDistanceGuide(null);
                 }
 
                 const snapPointToUse = isSnapped ? pointSnappedCoords : (newAlignmentLines.length > 0 ? finalCoords : null);
-                setSnapPoint(snapPointToUse);
+                // Override snap point if midpoint snap occurred
+                setSnapPoint(pipeAlignmentGuide?.isMidpoint ? finalCoords : snapPointToUse);
 
                 if (isDragging) {
                     if (mode === 'pan') {
@@ -475,6 +531,7 @@
                 setIsDragging(false);
                 setAlignmentLines([]);
                 setSprinklerDistanceGuide(null); 
+                setPipeAlignmentGuide(null); // Clear pipe guide
             };
 
             const handleCanvasClick = (e) => {
@@ -532,6 +589,7 @@
                 }
             };
 
+            // Double Click Handler for Edit
             const handleCanvasDoubleClick = (e) => {
                 if (showScaleDialog) return;
                 const rawCoords = getCanvasCoords(e);
@@ -552,7 +610,7 @@
                     p.id === editingPipeId ? { ...p, size: newSize } : p
                 );
                 setDrawnPipes(nextPipes);
-                setResults([]); 
+                setResults([]); // Clear results to force re-calc
                 setTotalDemand({ flow: 0, pressure: 0 });
                 commitToHistory(nextPipes, placedSprinklers);
                 setEditingPipeId(null);
@@ -732,15 +790,16 @@
 
                 const nodeReqP = {};
                 const nodeTotalQ = {};
-                const nodeActualP = {}; 
+                const nodeActualP = {}; // Store ACTUAL balanced pressure
                 Object.keys(nodes).forEach(k => {
                     nodeReqP[k] = 0;
                     nodeTotalQ[k] = 0;
                     nodeActualP[k] = 0;
                 });
 
-                const tempReport = {}; 
+                const tempReport = {}; // Use dict for easier update
 
+                // 1. Backward Pass (Demand & Flow Balancing)
                 for (let i = processingOrder.length - 1; i >= 0; i--) {
                     const uId = processingOrder[i];
                     let maxP_RequiredAtU = 0;
@@ -764,8 +823,9 @@
                         }
                     });
 
+                    // Add Heads
                     if (uNode.heads.length > 0) {
-                        let pMinHead = startPressureReq; 
+                        let pMinHead = startPressureReq; // e.g. 7 psi
                         let qHead = K * Math.sqrt(pMinHead);
                         let lossNip = calculateLoss(qHead, RISER_NIPPLE_FT, NIPPLE_ID, C);
                         let pReqAtNodeForHead = pMinHead + lossNip;
@@ -784,6 +844,7 @@
                         });
                     }
 
+                    // Balance Flow from branches
                     childConnections.forEach(child => {
                         const vId = child.target;
                         const edge = child.edge;
@@ -802,7 +863,7 @@
                         edge.loss = calculateLoss(qBranch, edge.len_ft, edge.d_in, C);
                         
                         const velocityFps = (0.4085 * qBranch) / Math.pow(edge.d_in, 2);
-                        edge.velocity = velocityFps * 0.3048; 
+                        edge.velocity = velocityFps * 0.3048; // Convert ft/s to m/s
 
                         edge.flowDir = (edge.u === uId) ? 'u->v' : 'v->u';
                         
@@ -815,7 +876,7 @@
                             lengthM: edge.len_ft / M_TO_FT,
                             flow: qBranch,
                             loss: edge.loss,
-                            pressure: 0, 
+                            pressure: 0, // Will be updated in forward pass
                             velocity: edge.velocity,
                             flowDir: edge.flowDir || 'N/A',
                             nodes: edge.flowDir === 'u->v' 
@@ -828,6 +889,7 @@
                     nodeTotalQ[uId] = totalQ_AtU;
                 }
 
+                // 2. Forward Pass (Actual Pressure Calculation)
                 nodeActualP[sourceId] = nodeReqP[sourceId];
                 
                 const forwardQueue = [sourceId];
@@ -893,7 +955,8 @@
                 const occupiedRects = [];
                 const tagW = 90 / transform.scale;
                 const tagH = 65 / transform.scale; 
-                const padding = 20 / transform.scale; // Reduced slightly for better tight fits while maintaining separation
+                // Padding ensures tags don't touch each other
+                const padding = 15 / transform.scale; 
                 const pipeBuffer = 5 / transform.scale;
 
                 // Check collision helper
@@ -905,10 +968,10 @@
                             return true;
                         }
                     }
-                    // 2. Pipes (Line segments)
+                    // 2. Pipes (Line segments) - Prevent tag overlapping pipes
                     const safeRect = { 
-                        x: rect.x - pipeBuffer, y: rect.y - pipeBuffer, 
-                        w: rect.w + pipeBuffer*2, h: rect.h + pipeBuffer*2 
+                        x: rect.x + pipeBuffer, y: rect.y + pipeBuffer, 
+                        w: rect.w - pipeBuffer*2, h: rect.h - pipeBuffer*2 
                     };
                     for (const p of drawnPipes) {
                         if (lineIntersectsRect(p.start.x, p.start.y, p.end.x, p.end.y, safeRect.x, safeRect.y, safeRect.w, safeRect.h)) {
@@ -933,6 +996,7 @@
                     let startX = pipe.start.x, startY = pipe.start.y;
                     let endX = pipe.end.x, endY = pipe.end.y;
 
+                    // Arrow calculation
                     let arrowAngle = 0;
                     if (res.flowDir === 'v->u') {
                         arrowAngle = Math.atan2(pipe.start.y - pipe.end.y, pipe.start.x - pipe.end.x);
@@ -955,25 +1019,29 @@
                     let bestTagX = 0, bestTagY = 0, bestAnchorX = 0, bestAnchorY = 0;
                     let found = false;
 
-                    const posSteps = [0.5, 0.4, 0.6, 0.3, 0.7, 0.2, 0.8];
-                    const distSteps = [1, 1.5, 2.0, 2.5, 3.0, 4.0]; // More layers for radial expansion
+                    // Strategy 1: Standard Placement (Perpendicular to pipe at various points)
+                    // More granular steps
+                    const posSteps = [0.5, 0.3, 0.7, 0.4, 0.6, 0.2, 0.8, 0.1, 0.9]; 
+                    const distSteps = [1.0, 1.6, 2.2, 3.0]; 
 
-                    // Try standard perpendicular placement first
                     outerLoop:
                     for (let distMult of distSteps) {
                         const dist = baseDist * distMult;
                         for (let t of posSteps) {
                             const ax = startX + dx * t;
                             const ay = startY + dy * t;
+
                             for (let side of [1, -1]) {
                                 const cx = ax + (nx * dist * side);
                                 const cy = ay + (ny * dist * side);
+
                                 const rect = {
                                     x: cx - tagW / 2 - padding/2,
                                     y: cy - tagH / 2 - padding/2,
                                     w: tagW + padding,
                                     h: tagH + padding
                                 };
+
                                 if (!checkCollision(rect)) {
                                     bestTagX = cx; bestTagY = cy; bestAnchorX = ax; bestAnchorY = ay;
                                     found = true;
@@ -984,39 +1052,50 @@
                         }
                     }
 
-                    // Radial Search Fallback (Spiral out from center)
+                    // Strategy 2: Spiral Search (If standard placement fails)
+                    // Spirals out from the center of the pipe until a free spot is found
                     if (!found) {
                         const centerAx = startX + dx * 0.5;
                         const centerAy = startY + dy * 0.5;
-                        let r = baseDist * 3.5;
-                        const maxR = baseDist * 8;
-                        const angleStep = Math.PI / 4; // 45 degree steps
+                        
+                        let r = baseDist * 1.5;
+                        const maxR = baseDist * 10; // Allow searching far out
+                        const angleStep = Math.PI / 8; // 22.5 degrees steps
 
                         radialLoop:
                         while (r < maxR) {
                             for (let theta = 0; theta < Math.PI * 2; theta += angleStep) {
                                 const cx = centerAx + Math.cos(theta) * r;
                                 const cy = centerAy + Math.sin(theta) * r;
+                                
                                 const rect = {
                                     x: cx - tagW / 2 - padding/2,
                                     y: cy - tagH / 2 - padding/2,
                                     w: tagW + padding,
                                     h: tagH + padding
                                 };
+
                                 if (!checkCollision(rect)) {
-                                    bestTagX = cx; bestTagY = cy; bestAnchorX = centerAx; bestAnchorY = centerAy;
+                                    bestTagX = cx; 
+                                    bestTagY = cy;
+                                    
+                                    // Smart Anchor: Project point back to pipe segment for cleaner leader line
+                                    const proj = projectPointToSegment({x: cx, y: cy}, pipe.start, pipe.end);
+                                    bestAnchorX = proj.x;
+                                    bestAnchorY = proj.y;
+                                    
                                     found = true;
                                     occupiedRects.push(rect);
                                     break radialLoop;
                                 }
                             }
-                            r += baseDist * 0.5;
+                            r += (tagH / 2); // Expand radius
                         }
                     }
                     
-                    // Final Fallback: Force place far away if absolutely nothing works
+                    // Final Fallback: Just place it far out (should rarely happen with spiral search)
                     if (!found) {
-                         const dist = baseDist * 5.0;
+                         const dist = baseDist * 4.0;
                          bestAnchorX = startX + dx * 0.5;
                          bestAnchorY = startY + dy * 0.5;
                          bestTagX = bestAnchorX + (nx * dist);
@@ -1233,7 +1312,7 @@
                         <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border shadow-sm text-[10px] text-slate-600 pointer-events-none flex items-center gap-2">
                             <span className="flex items-center gap-1"><Info size={12}/> Mode: <span className="font-bold uppercase text-slate-900">{mode}</span></span>
                             <span className="w-px h-3 bg-slate-300"></span>
-                            <span>Scale: {pixelsPerMeter ? `${safeFixed(pixelsPerMeter)} px/m` : 'Not Set'}</span>
+                            <span>Scale: {pixelsPerMeter ? `${pixelsPerMeter.toFixed(4)} px/m` : 'Not Set'}</span>
                         </div>
 
                         {/* Zoom Controls */}
@@ -1255,7 +1334,22 @@
                             {pdfUrl && <img src={pdfUrl} className="absolute top-0 left-0 opacity-80" style={{ maxWidth: 'none', pointerEvents: 'none' }} />}
 
                             <svg className="absolute top-0 left-0 overflow-visible" style={{ width: '1px', height: '1px' }}>
-                                {/* Alignment Guides */}
+                                {/* Pipe Alignment Guide (Orange Dashed Line on Pipe) */}
+                                {pipeAlignmentGuide && (
+                                    <g>
+                                        <line 
+                                            x1={pipeAlignmentGuide.p1.x} y1={pipeAlignmentGuide.p1.y}
+                                            x2={pipeAlignmentGuide.p2.x} y2={pipeAlignmentGuide.p2.y}
+                                            stroke="#f97316" // Orange 500
+                                            strokeWidth={1.5 / transform.scale}
+                                            strokeDasharray={`${6 / transform.scale},${3 / transform.scale}`}
+                                            opacity={0.8}
+                                        />
+                                        {/* Midpoint Triangle Indicator REMOVED as requested */}
+                                    </g>
+                                )}
+
+                                {/* Alignment Guides (Pink Crosshair) */}
                                 {alignmentLines.map((line, i) => (
                                     <line 
                                         key={i}
@@ -1268,7 +1362,7 @@
                                     />
                                 ))}
                                 
-                                {/* Sprinkler Distance Guide */}
+                                {/* Sprinkler Distance Guide (Green Dashed) */}
                                 {sprinklerDistanceGuide && (
                                     <g>
                                         <line 
@@ -1462,23 +1556,48 @@
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center print:hidden">
                             <div className="bg-white p-6 rounded-lg shadow-2xl w-80 animate-in zoom-in-95">
                                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
-                                    <Ruler className="text-indigo-600" /> Set Scale
+                                    <Ruler className="text-indigo-600" /> Calibrate Scale
                                 </h3>
-                                <p className="text-sm text-slate-500 mb-4">
-                                    Enter the real-world distance for the line you just drew.
+                                {/* Show measured pixels */}
+                                <div className="mb-4 bg-slate-50 p-2 rounded text-sm text-slate-600">
+                                    <div className="flex justify-between">
+                                        <span>Measured Length:</span>
+                                        <span className="font-mono font-bold">
+                                            {(() => {
+                                                const dx = scalePoints[1].x - scalePoints[0].x;
+                                                const dy = scalePoints[1].y - scalePoints[0].y;
+                                                return Math.sqrt(dx*dx + dy*dy).toFixed(2);
+                                            })()} px
+                                        </span>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-slate-500 mb-2">
+                                    Enter Real-World Distance:
                                 </p>
-                                <input 
-                                    type="number" 
-                                    autoFocus
-                                    placeholder="Distance in meters"
-                                    className="w-full p-2 border rounded mb-4 text-lg"
-                                    value={realWorldDist}
-                                    onChange={e => setRealWorldDist(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && applyScale()}
-                                />
+                                <div className="flex items-center gap-2 mb-4">
+                                    <input 
+                                        type="number" 
+                                        autoFocus
+                                        placeholder="0.00"
+                                        className="w-full p-2 border rounded text-lg"
+                                        value={realWorldDist}
+                                        onChange={e => setRealWorldDist(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && applyScale()}
+                                        step="0.01"
+                                    />
+                                    <span className="text-slate-500 font-medium">m</span>
+                                </div>
+                                
+                                {/* Show resulting scale factor preview */}
+                                {realWorldDist && !isNaN(parseFloat(realWorldDist)) && parseFloat(realWorldDist) > 0 && (
+                                    <div className="mb-4 text-xs text-center text-emerald-600 font-medium">
+                                        Result: {((Math.sqrt(Math.pow(scalePoints[1].x - scalePoints[0].x, 2) + Math.pow(scalePoints[1].y - scalePoints[0].y, 2))) / parseFloat(realWorldDist)).toFixed(4)} px/m
+                                    </div>
+                                )}
+
                                 <div className="flex justify-end gap-2">
                                     <button onClick={() => { setShowScaleDialog(false); setScalePoints([]); }} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
-                                    <button onClick={applyScale} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium">Apply Scale</button>
+                                    <button onClick={applyScale} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium">Apply</button>
                                 </div>
                             </div>
                         </div>
