@@ -59,22 +59,17 @@
           RotateCcw, RotateCw, Eye, EyeOff, Settings
         } from 'lucide-react';
 
-        // Adjusted Pipe Colors: Pastel Gradient from Light (Warm) to Dark (Cool/Neutral)
+        // Adjusted Pipe Colors: Vibrant & High Contrast to ensure distinction between sizes
         const pipeSpecs = [
-            // Light/Warm Pastels
-            { nominal: "1", internal: 1.049, color: "#fcd34d" },    // Pastel Amber (Lightest)
-            { nominal: "1.25", internal: 1.380, color: "#fb923c" }, // Pastel Orange
-            { nominal: "1.5", internal: 1.610, color: "#f87171" },  // Pastel Red/Salmon
-            { nominal: "2", internal: 2.067, color: "#f472b6" },    // Pastel Pink
-            
-            // Mid/Cool Pastels
-            { nominal: "2.5", internal: 2.469, color: "#c084fc" },  // Pastel Purple
-            { nominal: "3", internal: 3.068, color: "#818cf8" },    // Pastel Indigo
-            { nominal: "4", internal: 4.026, color: "#60a5fa" },    // Pastel Blue
-            
-            // Darker/Deeper Pastels
-            { nominal: "6", internal: 6.065, color: "#2dd4bf" },    // Pastel Teal
-            { nominal: "8", internal: 7.981, color: "#64748b" },    // Pastel Slate (Darkest)
+            { nominal: "1", internal: 1.049, color: "#facc15" },    // Yellow 400
+            { nominal: "1.25", internal: 1.380, color: "#fb923c" }, // Orange 400 (Light Orange - Clearly distinct from Red)
+            { nominal: "1.5", internal: 1.610, color: "#dc2626" },  // Red 600 (Vibrant Red - Clearly distinct from Orange)
+            { nominal: "2", internal: 2.067, color: "#ec4899" },    // Pink 500
+            { nominal: "2.5", internal: 2.469, color: "#a855f7" },  // Purple 500
+            { nominal: "3", internal: 3.068, color: "#3b82f6" },    // Blue 500
+            { nominal: "4", internal: 4.026, color: "#06b6d4" },    // Cyan 500
+            { nominal: "6", internal: 6.065, color: "#10b981" },    // Emerald 500
+            { nominal: "8", internal: 7.981, color: "#475569" },    // Slate 600
         ];
 
         const hazardClasses = [
@@ -141,6 +136,17 @@
             };
             const safeFixed = (val, dec = 2) => safeNum(val).toFixed(dec);
 
+            // Function to determine contrast color (Black or White) based on background hex
+            const getContrastColor = (hexcolor) => {
+                if (!hexcolor) return '#000000';
+                hexcolor = hexcolor.replace("#", "");
+                const r = parseInt(hexcolor.substr(0,2),16);
+                const g = parseInt(hexcolor.substr(2,2),16);
+                const b = parseInt(hexcolor.substr(4,2),16);
+                const yiq = ((r*299)+(g*587)+(b*114))/1000;
+                return (yiq >= 128) ? '#000000' : '#ffffff';
+            };
+
             const commitToHistory = (newPipes, newSprinklers) => {
                 const newHistory = history.slice(0, historyIndex + 1);
                 newHistory.push({ pipes: newPipes, sprinklers: newSprinklers });
@@ -172,28 +178,140 @@
                 }
             };
 
+            // Improved re-node logic: Hydraulic Tree Traversal (Most Remote Leaf -> Source)
             useEffect(() => {
-                const nodes = {};
-                let idCounter = 1;
+                const uniqueNodes = new Map();
+                const adj = {}; 
                 const getKey = (pt) => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
                 
+                // 1. Build Graph
                 drawnPipes.forEach(p => {
-                    [p.start, p.end].forEach(pt => {
-                        const key = getKey(pt);
-                        if (!nodes[key]) {
-                            nodes[key] = { 
-                                id: key, 
-                                displayId: idCounter++, 
-                                x: pt.x, 
-                                y: pt.y, 
-                                degree: 0 
-                            };
-                        }
-                    });
-                    nodes[getKey(p.start)].degree++;
-                    nodes[getKey(p.end)].degree++;
+                    const k1 = getKey(p.start);
+                    const k2 = getKey(p.end);
+                    
+                    if (!uniqueNodes.has(k1)) uniqueNodes.set(k1, { id: k1, x: p.start.x, y: p.start.y, degree: 0, maxPipeSize: 0 });
+                    if (!uniqueNodes.has(k2)) uniqueNodes.set(k2, { id: k2, x: p.end.x, y: p.end.y, degree: 0, maxPipeSize: 0 });
+
+                    uniqueNodes.get(k1).degree++;
+                    uniqueNodes.get(k2).degree++;
+                    
+                    const sizeVal = parseFloat(p.size);
+                    uniqueNodes.get(k1).maxPipeSize = Math.max(uniqueNodes.get(k1).maxPipeSize, sizeVal);
+                    uniqueNodes.get(k2).maxPipeSize = Math.max(uniqueNodes.get(k2).maxPipeSize, sizeVal);
+
+                    if (!adj[k1]) adj[k1] = [];
+                    if (!adj[k2]) adj[k2] = [];
+                    adj[k1].push(k2);
+                    adj[k2].push(k1);
                 });
-                setVisualNodes(Object.values(nodes));
+
+                let allNodes = Array.from(uniqueNodes.values());
+                if (allNodes.length === 0) {
+                    setVisualNodes([]);
+                    return;
+                }
+
+                // 2. Identify Source
+                // Priority: Largest Pipe > Degree 1 > Bottom-most > Left-most
+                let sourceNode = allNodes[0];
+                allNodes.sort((a, b) => {
+                    if (b.maxPipeSize !== a.maxPipeSize) return b.maxPipeSize - a.maxPipeSize;
+                    // Prefer degree 1 (end of line/start of system)
+                    const degA = a.degree === 1 ? 1 : 0;
+                    const degB = b.degree === 1 ? 1 : 0;
+                    if (degA !== degB) return degB - degA;
+                    // Prefer Bottom (larger Y)
+                    if (Math.abs(a.y - b.y) > 1) return b.y - a.y;
+                    // Prefer Left (smaller X)
+                    return a.x - b.x;
+                });
+                sourceNode = allNodes[0];
+
+                // 3. Build Spanning Tree (BFS) & Calculate Depths
+                const parentMap = {};
+                const childrenMap = {};
+                const depthMap = {}; // Distance from Source in hops
+                const visited = new Set([sourceNode.id]);
+                const queue = [{ id: sourceNode.id, depth: 0 }];
+                
+                depthMap[sourceNode.id] = 0;
+                
+                // BFS to establish hierarchy
+                const traversalOrder = []; // To calculate max branch length later
+                
+                while(queue.length > 0) {
+                    const { id, depth } = queue.shift();
+                    traversalOrder.push(id);
+                    
+                    if (!childrenMap[id]) childrenMap[id] = [];
+                    
+                    if (adj[id]) {
+                        adj[id].forEach(neighborId => {
+                            if (!visited.has(neighborId)) {
+                                visited.add(neighborId);
+                                parentMap[neighborId] = id;
+                                childrenMap[id].push(neighborId);
+                                depthMap[neighborId] = depth + 1;
+                                queue.push({ id: neighborId, depth: depth + 1 });
+                            }
+                        });
+                    }
+                }
+
+                // 4. Calculate Max Branch Depth for every node (Bottom-Up)
+                // This helps us identify which branch is the "longest" or "most remote"
+                const maxReachMap = {}; // Max depth reachable from this node
+                // Initialize with own depth
+                allNodes.forEach(n => maxReachMap[n.id] = depthMap[n.id] || 0);
+                
+                // Reverse traversal (Leaves to Source) to propagate max depth up
+                for(let i = traversalOrder.length - 1; i >= 0; i--) {
+                    const id = traversalOrder[i];
+                    const pId = parentMap[id];
+                    if (pId) {
+                        maxReachMap[pId] = Math.max(maxReachMap[pId], maxReachMap[id]);
+                    }
+                }
+
+                // 5. DFS Post-Order Traversal to Assign IDs
+                // We visit the "Deepest/Longest" branch first. 
+                // Because it's Post-Order, the first visited leaf gets added to the list first (ID=1).
+                const finalOrder = [];
+                
+                const traverse = (nodeId) => {
+                    const children = childrenMap[nodeId] || [];
+                    
+                    // Sort children: Deepest branch first
+                    children.sort((a, b) => {
+                        // Prioritize branch with greater reach (Most Remote Area)
+                        if (maxReachMap[a] !== maxReachMap[b]) return maxReachMap[b] - maxReachMap[a];
+                        
+                        // Tie-breaker: Spatial
+                        const nodeA = uniqueNodes.get(a);
+                        const nodeB = uniqueNodes.get(b);
+                        // Right-most first?
+                        return nodeB.x - nodeA.x; 
+                    });
+
+                    children.forEach(childId => traverse(childId));
+                    finalOrder.push(nodeId); // Post-order: Add self after children
+                };
+
+                traverse(sourceNode.id);
+
+                // 6. Assign IDs
+                // finalOrder is [RemoteLeaf1, RemoteLeaf2, ..., Junction, ..., Source]
+                // So RemoteLeaf1 = 1, Source = N.
+                finalOrder.forEach((nodeId, index) => {
+                    if (uniqueNodes.has(nodeId)) {
+                        uniqueNodes.get(nodeId).displayId = index + 1;
+                    }
+                });
+
+                // Update State
+                setVisualNodes(Array.from(uniqueNodes.values()));
+                setSourceNodeId(sourceNode.id);
+
             }, [drawnPipes]);
 
             const handleHazardChange = (e) => {
@@ -736,16 +854,13 @@
                 // Build Graph
                 const nodes = {};
                 const coordToDisplayId = {};
-                let idCounter = 1;
-                const getKey = (pt) => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
                 
-                drawnPipes.forEach(p => {
-                    [p.start, p.end].forEach(pt => {
-                        const key = getKey(pt);
-                        if (!coordToDisplayId[key]) {
-                            coordToDisplayId[key] = idCounter++;
-                        }
-                    });
+                const getKey = (pt) => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+
+                // FIX: Sync calculation IDs with visual nodes directly to ensure consistency
+                // Use the IDs that are currently displayed on the canvas
+                visualNodes.forEach(node => {
+                    coordToDisplayId[node.id] = node.displayId;
                 });
 
                 const getOrCreateNode = (pt) => {
@@ -935,7 +1050,9 @@
                             flowDir: edge.flowDir || 'N/A',
                             nodes: edge.flowDir === 'u->v' 
                                 ? `#${edge.u_disp}-#${edge.v_disp}` 
-                                : `#${edge.v_disp}-#${edge.u_disp}`
+                                : `#${edge.v_disp}-#${edge.u_disp}`,
+                            // NEW: Identify if this pipe connects to the source
+                            isSourcePipe: (edge.u === sourceId || edge.v === sourceId)
                         };
                     });
 
@@ -1007,10 +1124,11 @@
                 if (!results || results.length === 0) return [];
                 const layout = [];
                 const occupiedRects = [];
-                const tagW = 90 / transform.scale;
-                const tagH = 65 / transform.scale; 
+                // Compact dimensions (Reduced from 90x65)
+                const tagW = 70 / transform.scale;
+                const tagH = 52 / transform.scale; 
                 // Padding ensures tags don't touch each other
-                const padding = 15 / transform.scale; 
+                const padding = 10 / transform.scale; 
                 const pipeBuffer = 5 / transform.scale;
 
                 // Check collision helper
@@ -1521,20 +1639,45 @@
                                                     stroke="#334155" strokeWidth={1/transform.scale} strokeDasharray="3,3"
                                                 />
                                                 <foreignObject 
-                                                    x={-45 / transform.scale} 
-                                                    y={-32 / transform.scale} 
-                                                    width={90 / transform.scale} 
-                                                    height={65 / transform.scale}
+                                                    x={-35 / transform.scale} 
+                                                    y={-26 / transform.scale} 
+                                                    width={70 / transform.scale} 
+                                                    height={52 / transform.scale}
                                                 >
-                                                    {/* Changed Tag Style to Boxed Engineering Look */}
+                                                    {/* Changed Tag Style: Highlight Source Pipe Tag */}
                                                     <div xmlns="http://www.w3.org/1999/xhtml" 
-                                                         className="bg-white border border-slate-900 shadow-none flex flex-col items-center justify-center text-center leading-none p-0.5"
-                                                         style={{ fontSize: `${10/transform.scale}px`, height: '100%', width: '100%' }}>
-                                                        {/* Node Info Line */}
-                                                        <div className="text-[0.7em] text-blue-800 font-bold mb-0.5 border-b border-slate-300 w-full">Node {tag.res.nodes}</div>
-                                                        <div className="text-[0.75em] text-black font-medium leading-tight">{tag.res.size}" {safeFixed(tag.res.lengthM, 1)} m.</div>
-                                                        <div className="text-[0.75em] text-black font-bold leading-tight">{safeFixed(tag.res.flow)} GPM</div>
-                                                        <div className="text-[0.75em] text-black leading-tight">{safeFixed(tag.res.pressure)} psi</div>
+                                                         className={`
+                                                            border shadow-sm flex flex-col items-center text-center leading-none overflow-hidden rounded-[2px]
+                                                            ${tag.res.isSourcePipe ? 'bg-red-50 border-red-600 border-[1.5px]' : 'bg-white border-slate-900'}
+                                                         `}
+                                                         style={{ fontSize: `${9/transform.scale}px`, height: '100%', width: '100%' }}>
+                                                        
+                                                        {/* Node Info Line (Header) */}
+                                                        <div className={`w-full border-b ${tag.res.isSourcePipe ? 'bg-red-100 border-red-300' : 'bg-slate-100 border-slate-300'}`}>
+                                                            <div className={`text-[0.85em] font-bold uppercase py-[1px] ${tag.res.isSourcePipe ? 'text-red-900' : 'text-slate-900'}`}>
+                                                                Node {tag.res.nodes}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Data Lines */}
+                                                        <div className="flex flex-col justify-center flex-1 w-full px-0.5 space-y-[1px]">
+                                                            {/* Pipe Info */}
+                                                            <div className="text-[0.75em] text-slate-500 font-semibold border-b border-slate-100 pb-[1px]">
+                                                                {tag.res.size}" - {safeFixed(tag.res.lengthM, 1)}m
+                                                            </div>
+                                                            
+                                                            {/* Flow (Blue) */}
+                                                            <div className="flex justify-between items-baseline px-1">
+                                                                <span className="text-[0.7em] text-slate-400 font-normal">Q:</span>
+                                                                <span className="text-[0.9em] text-blue-800 font-bold">{Math.round(tag.res.flow)}</span>
+                                                            </div>
+
+                                                            {/* Pressure (Red) */}
+                                                            <div className="flex justify-between items-baseline px-1">
+                                                                <span className="text-[0.7em] text-slate-400 font-normal">P:</span>
+                                                                <span className="text-[0.9em] text-red-700 font-bold">{safeFixed(tag.res.pressure, 1)}</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </foreignObject>
                                             </g>
@@ -1542,15 +1685,16 @@
 
                                         {/* Flow Arrow - Always visible regardless of showTags */}
                                         <g transform={`translate(${tag.midX}, ${tag.midY}) rotate(${tag.angle * 180 / Math.PI})`}>
-                                            {/* Changed stroke color to lighter black (Slate 700) */}
+                                            {/* Flow Arrow fixed to Black color with white shadow for visibility */}
                                             <path 
                                                 d={`M ${-3.5/transform.scale} ${-3.5/transform.scale} L ${3.5/transform.scale} 0 L ${-3.5/transform.scale} ${3.5/transform.scale}`} 
-                                                stroke="#334155" 
+                                                stroke="#000000" 
                                                 strokeWidth={0.8/transform.scale} 
                                                 fill="none" 
                                                 strokeLinecap="round" 
                                                 strokeLinejoin="round"
                                                 strokeDasharray={`${2/transform.scale},${1.5/transform.scale}`}
+                                                style={{ filter: 'drop-shadow(0px 0px 1px rgba(255,255,255,1))' }} 
                                             />
                                         </g>
                                     </React.Fragment>
