@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hydraulic Calculation Tools (NFPA 13) V.1.1</title>
+    <title>Hydraulic Calculation Tools (NFPA 13) V.1.1 By วัยรุ่นเซินเจิ้น</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -59,20 +59,22 @@
           RotateCcw, RotateCw, Eye, EyeOff, Settings
         } from 'lucide-react';
 
-        // Adjusted Pipe Colors: Ordered from Light (Small sizes) to Dark (Large sizes)
+        // Adjusted Pipe Colors: Pastel Gradient from Light (Warm) to Dark (Cool/Neutral)
         const pipeSpecs = [
-            // Small Pipes (Light/Bright Colors)
-            { nominal: "1", internal: 1.049, color: "#22d3ee" },    // Cyan 400
-            { nominal: "1.25", internal: 1.380, color: "#a3e635" }, // Lime 400
-            { nominal: "1.5", internal: 1.610, color: "#facc15" },  // Yellow 400
-            { nominal: "2", internal: 2.067, color: "#fb923c" },    // Orange 400
-            { nominal: "2.5", internal: 2.469, color: "#f87171" },  // Red 400
-            { nominal: "3", internal: 3.068, color: "#c084fc" },    // Purple 400
+            // Light/Warm Pastels
+            { nominal: "1", internal: 1.049, color: "#fcd34d" },    // Pastel Amber (Lightest)
+            { nominal: "1.25", internal: 1.380, color: "#fb923c" }, // Pastel Orange
+            { nominal: "1.5", internal: 1.610, color: "#f87171" },  // Pastel Red/Salmon
+            { nominal: "2", internal: 2.067, color: "#f472b6" },    // Pastel Pink
             
-            // Large Pipes (Dark/Deep Colors)
-            { nominal: "4", internal: 4.026, color: "#0d9488" },    // Teal 600
-            { nominal: "6", internal: 6.065, color: "#1d4ed8" },    // Blue 700
-            { nominal: "8", internal: 7.981, color: "#0f172a" },    // Slate 900 (Almost Black)
+            // Mid/Cool Pastels
+            { nominal: "2.5", internal: 2.469, color: "#c084fc" },  // Pastel Purple
+            { nominal: "3", internal: 3.068, color: "#818cf8" },    // Pastel Indigo
+            { nominal: "4", internal: 4.026, color: "#60a5fa" },    // Pastel Blue
+            
+            // Darker/Deeper Pastels
+            { nominal: "6", internal: 6.065, color: "#2dd4bf" },    // Pastel Teal
+            { nominal: "8", internal: 7.981, color: "#64748b" },    // Pastel Slate (Darkest)
         ];
 
         const hazardClasses = [
@@ -1187,7 +1189,7 @@
                                     <Flame size={18} className="text-orange-400" />
                                     Hydraulic Calculation Tools (NFPA 13)
                                 </h1>
-                                <span className="text-[10px] text-indigo-200 ml-6">V.1.1</span>
+                                <span className="text-[10px] text-indigo-200 ml-6">V.1.1 By วัยรุ่นเซินเจิ้น</span>
                             </div>
                             <label className="cursor-pointer bg-indigo-800 hover:bg-indigo-700 text-white text-xs px-2 py-1.5 rounded flex items-center gap-1 transition-colors">
                                 <input type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
@@ -1356,7 +1358,11 @@
 
                     {/* Main Canvas Area */}
                     <div 
-                        className="flex-1 relative bg-white overflow-hidden cursor-crosshair canvas-grid print:hidden"
+                        className={`flex-1 relative bg-white overflow-hidden canvas-grid print:hidden ${
+                            mode === 'pan' 
+                                ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') 
+                                : 'cursor-crosshair'
+                        }`}
                         ref={containerRef}
                         onMouseDown={handleMouseDown}
                         onMouseMove={handleMouseMove}
@@ -1470,16 +1476,17 @@
                                     return (
                                         <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
                                             {/* Connection Dot - Highlight Source with Red/Larger dot */}
+                                            {/* Adjusted radius to match single line pipe width (approx 3px) */}
                                             <circle 
-                                                r={(isSource ? 5 : 3) / transform.scale} 
+                                                r={(isSource ? 3.5 : 1.8) / transform.scale} 
                                                 fill="#ffffff" // White fill
                                                 stroke={isSource ? "#ef4444" : "#94a3b8"} // Colored stroke
-                                                strokeWidth={1.5 / transform.scale}
+                                                strokeWidth={1.2 / transform.scale}
                                             />
                                             {/* Label Offset from center - Show #S if it matches sourceNodeId */}
                                             <text
-                                                x={(isSource ? 6 : 4) / transform.scale}
-                                                y={(isSource ? -6 : -4) / transform.scale}
+                                                x={(isSource ? 5 : 3) / transform.scale}
+                                                y={(isSource ? -5 : -3) / transform.scale}
                                                 fontSize={(isSource ? 11 : 9) / transform.scale}
                                                 fill={isSource ? "#ef4444" : "#64748b"}
                                                 fontWeight="bold"
@@ -1539,10 +1546,11 @@
                                             <path 
                                                 d={`M ${-3.5/transform.scale} ${-3.5/transform.scale} L ${3.5/transform.scale} 0 L ${-3.5/transform.scale} ${3.5/transform.scale}`} 
                                                 stroke="#334155" 
-                                                strokeWidth={1.5/transform.scale} 
+                                                strokeWidth={0.8/transform.scale} 
                                                 fill="none" 
                                                 strokeLinecap="round" 
                                                 strokeLinejoin="round"
+                                                strokeDasharray={`${2/transform.scale},${1.5/transform.scale}`}
                                             />
                                         </g>
                                     </React.Fragment>
