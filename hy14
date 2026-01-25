@@ -1865,7 +1865,10 @@
                                                 <th className="p-3 border-r border-gray-200">Length (m)</th>
                                                 <th className="p-3 border-r border-gray-200">Friction Loss (psi)</th>
                                                 <th className="p-3 border-r border-gray-200">Required Pressure (psi)</th>
-                                                <th className="p-3">Velocity (m/s)</th>
+                                                <th className="p-3">
+                                                    Velocity (m/s)
+                                                    <span className="block text-[10px] font-normal text-gray-500 text-nowrap">&lt; 9.0 m/s</span>
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-gray-100">
