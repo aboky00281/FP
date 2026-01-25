@@ -1,0 +1,1964 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hydraulic Calculation Tools (NFPA 13) V.1.1 By วัยรุ่นเซินเจิ้น</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM & Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Import Map for Modules -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "lucide-react": "https://esm.sh/lucide-react@0.263.1"
+        }
+    }
+    </script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #64748b; }
+        
+        /* Engineering Graph Paper Grid Style */
+        .canvas-grid {
+            background-color: #ffffff;
+            background-size: 50px 50px;
+            background-image: 
+                linear-gradient(to right, #f1f5f9 1px, transparent 1px),
+                linear-gradient(to bottom, #f1f5f9 1px, transparent 1px);
+        }
+        
+        @media print {
+            @page { margin: 1.5cm; size: auto; }
+            body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background-color: white; }
+            #root { height: auto; overflow: visible; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 overflow-hidden print:bg-white print:overflow-visible">
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect, useRef, useMemo } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { 
+          Plus, Trash2, Calculator, FileText, Droplets, Upload, Ruler, 
+          Maximize, Target, ZoomIn, ZoomOut, Edit3, Check, Info, PlayCircle, 
+          Magnet, Flame, AlertTriangle, CornerDownRight, X,
+          RotateCcw, RotateCw, Eye, EyeOff, Settings
+        } from 'lucide-react';
+
+        // Adjusted Pipe Colors: Vibrant & High Contrast to ensure distinction between sizes
+        const pipeSpecs = [
+            { nominal: "1", internal: 1.049, color: "#eab308" },    // Yellow 500 (Gold)
+            { nominal: "1.25", internal: 1.380, color: "#fb923c" }, // Orange 400 (Light Orange)
+            { nominal: "1.5", internal: 1.610, color: "#b91c1c" },  // Red 700 (Dark Red)
+            { nominal: "2", internal: 2.067, color: "#ec4899" },    // Pink 500
+            { nominal: "2.5", internal: 2.469, color: "#a855f7" },  // Purple 500
+            { nominal: "3", internal: 3.068, color: "#3b82f6" },    // Blue 500
+            { nominal: "4", internal: 4.026, color: "#06b6d4" },    // Cyan 500
+            { nominal: "6", internal: 6.065, color: "#10b981" },    // Emerald 500
+            { nominal: "8", internal: 7.981, color: "#475569" },    // Slate 600
+        ];
+
+        const hazardClasses = [
+            { id: "LH", label: "Light Hazard", density: 0.10, defaultArea: 130 },
+            { id: "OH1", label: "Ordinary Hazard Group 1", density: 0.15, defaultArea: 130 },
+            { id: "OH2", label: "Ordinary Hazard Group 2", density: 0.20, defaultArea: 130 },
+            { id: "EH1", label: "Extra Hazard Group 1", density: 0.30, defaultArea: 100 },
+            { id: "EH2", label: "Extra Hazard Group 2", density: 0.40, defaultArea: 100 },
+        ];
+
+        const cFactors = [
+            { value: 150, label: "150 - Plastic (listed) - Underground" },
+            { value: 150, label: "150 - Plastic (listed) - Aboveground" },
+            { value: 150, label: "150 - Copper Tube or Stainless Steel" },
+            { value: 140, label: "140 - Cement-Lined Cast or Ductile Iron" },
+            { value: 140, label: "140 - Asbestos Cement" },
+            { value: 120, label: "120 - Steel (Wet System or Deluge System)" },
+            { value: 100, label: "100 - Steel (Dry System or Preaction System)" },
+            { value: 100, label: "100 - Cast or Ductile Iron, Unlined" },
+        ];
+
+        const kFactors = [5.6, 8.0, 11.2, 14.0, 16.8, 19.6, 22.4, 25.2, 28.0, 33.6];
+
+        const App = () => {
+            const [kFactor, setKFactor] = useState(5.6);
+            const [cFactor, setCFactor] = useState(120);
+            const [selectedHazard, setSelectedHazard] = useState("LH");
+            const [designDensity, setDesignDensity] = useState(0.10);
+            const [areaPerHead, setAreaPerHead] = useState(130);
+            const [pdfUrl, setPdfUrl] = useState(null);
+            const [mode, setMode] = useState('pan');
+            const [selectedPipeSize, setSelectedPipeSize] = useState("1");
+            const [scalePoints, setScalePoints] = useState([]);
+            const [pixelsPerMeter, setPixelsPerMeter] = useState(null);
+            const [realWorldDist, setRealWorldDist] = useState('');
+            const [showScaleDialog, setShowScaleDialog] = useState(false);
+            const [drawnPipes, setDrawnPipes] = useState([]);
+            const [tempPipe, setTempPipe] = useState(null);
+            const [placedSprinklers, setPlacedSprinklers] = useState([]);
+            const [snapPoint, setSnapPoint] = useState(null);
+            const [startSnapInfo, setStartSnapInfo] = useState(null);
+            const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+            const containerRef = useRef(null);
+            const [results, setResults] = useState([]);
+            const [totalDemand, setTotalDemand] = useState({ flow: 0, pressure: 0 });
+            const [visualNodes, setVisualNodes] = useState([]);
+            const [sourceNodeId, setSourceNodeId] = useState(null);
+            
+            const [showTags, setShowTags] = useState(true);
+            const [history, setHistory] = useState([{ pipes: [], sprinklers: [] }]);
+            const [historyIndex, setHistoryIndex] = useState(0);
+            const [showReport, setShowReport] = useState(false);
+            
+            const [editingPipeId, setEditingPipeId] = useState(null);
+            const [alignmentLines, setAlignmentLines] = useState([]);
+            const [sprinklerDistanceGuide, setSprinklerDistanceGuide] = useState(null);
+            const [pipeAlignmentGuide, setPipeAlignmentGuide] = useState(null);
+
+            const safeNum = (val, fallback = 0) => {
+                const n = parseFloat(val);
+                return isNaN(n) ? fallback : n;
+            };
+            const safeFixed = (val, dec = 2) => safeNum(val).toFixed(dec);
+
+            // Function to determine contrast color (Black or White) based on background hex
+            const getContrastColor = (hexcolor) => {
+                if (!hexcolor) return '#000000';
+                hexcolor = hexcolor.replace("#", "");
+                const r = parseInt(hexcolor.substr(0,2),16);
+                const g = parseInt(hexcolor.substr(2,2),16);
+                const b = parseInt(hexcolor.substr(4,2),16);
+                const yiq = ((r*299)+(g*587)+(b*114))/1000;
+                return (yiq >= 128) ? '#000000' : '#ffffff';
+            };
+
+            const commitToHistory = (newPipes, newSprinklers) => {
+                const newHistory = history.slice(0, historyIndex + 1);
+                newHistory.push({ pipes: newPipes, sprinklers: newSprinklers });
+                setHistory(newHistory);
+                setHistoryIndex(newHistory.length - 1);
+            };
+
+            const handleUndo = () => {
+                if (historyIndex > 0) {
+                    const prevIndex = historyIndex - 1;
+                    const prevState = history[prevIndex];
+                    setDrawnPipes(prevState.pipes);
+                    setPlacedSprinklers(prevState.sprinklers);
+                    setHistoryIndex(prevIndex);
+                    setResults([]); 
+                    setTotalDemand({ flow: 0, pressure: 0 });
+                }
+            };
+
+            const handleRedo = () => {
+                if (historyIndex < history.length - 1) {
+                    const nextIndex = historyIndex + 1;
+                    const nextState = history[nextIndex];
+                    setDrawnPipes(nextState.pipes);
+                    setPlacedSprinklers(nextState.sprinklers);
+                    setHistoryIndex(nextIndex);
+                    setResults([]);
+                    setTotalDemand({ flow: 0, pressure: 0 });
+                }
+            };
+
+            // Improved re-node logic: Hydraulic Tree Traversal (Most Remote Leaf -> Source)
+            useEffect(() => {
+                const uniqueNodes = new Map();
+                const adj = {}; 
+                const getKey = (pt) => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+                
+                // 1. Build Graph
+                drawnPipes.forEach(p => {
+                    const k1 = getKey(p.start);
+                    const k2 = getKey(p.end);
+                    
+                    if (!uniqueNodes.has(k1)) uniqueNodes.set(k1, { id: k1, x: p.start.x, y: p.start.y, degree: 0, maxPipeSize: 0 });
+                    if (!uniqueNodes.has(k2)) uniqueNodes.set(k2, { id: k2, x: p.end.x, y: p.end.y, degree: 0, maxPipeSize: 0 });
+
+                    uniqueNodes.get(k1).degree++;
+                    uniqueNodes.get(k2).degree++;
+                    
+                    const sizeVal = parseFloat(p.size);
+                    uniqueNodes.get(k1).maxPipeSize = Math.max(uniqueNodes.get(k1).maxPipeSize, sizeVal);
+                    uniqueNodes.get(k2).maxPipeSize = Math.max(uniqueNodes.get(k2).maxPipeSize, sizeVal);
+
+                    if (!adj[k1]) adj[k1] = [];
+                    if (!adj[k2]) adj[k2] = [];
+                    adj[k1].push(k2);
+                    adj[k2].push(k1);
+                });
+
+                let allNodes = Array.from(uniqueNodes.values());
+                if (allNodes.length === 0) {
+                    setVisualNodes([]);
+                    return;
+                }
+
+                // 2. Identify Source
+                let sourceNode = allNodes[0];
+                allNodes.sort((a, b) => {
+                    if (b.maxPipeSize !== a.maxPipeSize) return b.maxPipeSize - a.maxPipeSize;
+                    const degA = a.degree === 1 ? 1 : 0;
+                    const degB = b.degree === 1 ? 1 : 0;
+                    if (degA !== degB) return degB - degA;
+                    if (Math.abs(a.y - b.y) > 1) return b.y - a.y;
+                    return a.x - b.x;
+                });
+                sourceNode = allNodes[0];
+
+                // 3. Build Spanning Tree (BFS) & Calculate Depths
+                const parentMap = {};
+                const childrenMap = {};
+                const depthMap = {};
+                const visited = new Set([sourceNode.id]);
+                const queue = [{ id: sourceNode.id, depth: 0 }];
+                
+                depthMap[sourceNode.id] = 0;
+                
+                const traversalOrder = [];
+                
+                while(queue.length > 0) {
+                    const { id, depth } = queue.shift();
+                    traversalOrder.push(id);
+                    
+                    if (!childrenMap[id]) childrenMap[id] = [];
+                    
+                    if (adj[id]) {
+                        adj[id].forEach(neighborId => {
+                            if (!visited.has(neighborId)) {
+                                visited.add(neighborId);
+                                parentMap[neighborId] = id;
+                                childrenMap[id].push(neighborId);
+                                depthMap[neighborId] = depth + 1;
+                                queue.push({ id: neighborId, depth: depth + 1 });
+                            }
+                        });
+                    }
+                }
+
+                const maxReachMap = {};
+                allNodes.forEach(n => maxReachMap[n.id] = depthMap[n.id] || 0);
+                
+                for(let i = traversalOrder.length - 1; i >= 0; i--) {
+                    const id = traversalOrder[i];
+                    const pId = parentMap[id];
+                    if (pId) {
+                        maxReachMap[pId] = Math.max(maxReachMap[pId], maxReachMap[id]);
+                    }
+                }
+
+                const finalOrder = [];
+                const traverse = (nodeId) => {
+                    const children = childrenMap[nodeId] || [];
+                    children.sort((a, b) => {
+                        if (maxReachMap[a] !== maxReachMap[b]) return maxReachMap[b] - maxReachMap[a];
+                        const nodeA = uniqueNodes.get(a);
+                        const nodeB = uniqueNodes.get(b);
+                        return nodeB.x - nodeA.x; 
+                    });
+                    children.forEach(childId => traverse(childId));
+                    finalOrder.push(nodeId); 
+                };
+
+                traverse(sourceNode.id);
+
+                finalOrder.forEach((nodeId, index) => {
+                    if (uniqueNodes.has(nodeId)) {
+                        uniqueNodes.get(nodeId).displayId = index + 1;
+                    }
+                });
+
+                setVisualNodes(Array.from(uniqueNodes.values()));
+                setSourceNodeId(sourceNode.id);
+
+            }, [drawnPipes]);
+
+            const handleHazardChange = (e) => {
+                const hazardId = e.target.value;
+                setSelectedHazard(hazardId);
+                const hazard = hazardClasses.find(h => h.id === hazardId);
+                if (hazard) {
+                    setDesignDensity(hazard.density);
+                    if (hazard.defaultArea) {
+                        setAreaPerHead(hazard.defaultArea);
+                    }
+                }
+            };
+
+            const handleFileChange = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                if (pdfUrl && pdfUrl.startsWith('blob:')) URL.revokeObjectURL(pdfUrl);
+                setPdfUrl(URL.createObjectURL(file));
+                setScalePoints([]);
+                setDrawnPipes([]);
+                setPlacedSprinklers([]);
+                setResults([]);
+                setVisualNodes([]);
+                setTotalDemand({ flow: 0, pressure: 0 });
+                setTransform({ x: 0, y: 0, scale: 1 });
+                setMode('pan');
+                setSourceNodeId(null);
+                setHistory([{ pipes: [], sprinklers: [] }]);
+                setHistoryIndex(0);
+            };
+
+            const getCanvasCoords = (e) => {
+                if (!containerRef.current) return { x: 0, y: 0 };
+                const rect = containerRef.current.getBoundingClientRect();
+                return {
+                    x: (e.clientX - rect.left - transform.x) / transform.scale,
+                    y: (e.clientY - rect.top - transform.y) / transform.scale
+                };
+            };
+
+            const projectPointToSegment = (P, A, B) => {
+                const distAB2 = Math.pow(B.x - A.x, 2) + Math.pow(B.y - A.y, 2);
+                if (distAB2 === 0) return A;
+                let t = ((P.x - A.x) * (B.x - A.x) + (P.y - A.y) * (B.y - A.y)) / distAB2;
+                t = Math.max(0, Math.min(1, t));
+                return { x: A.x + t * (B.x - A.x), y: A.y + t * (B.y - A.y) };
+            };
+
+            const getSnappedCoords = (rawCoords) => {
+                if (mode !== 'draw' && mode !== 'sprinkler') return { coords: rawCoords, isSnapped: false };
+
+                const snapThreshold = 15 / transform.scale;
+                let closestPoint = null;
+                let minDistance = Infinity;
+                let snapType = null;
+                let snapTarget = null;
+
+                placedSprinklers.forEach(s => {
+                    const dist = Math.sqrt(Math.pow(s.x - rawCoords.x, 2) + Math.pow(s.y - rawCoords.y, 2));
+                    if (dist < snapThreshold && dist < minDistance) {
+                        minDistance = dist;
+                        closestPoint = { x: s.x, y: s.y };
+                        snapType = 'node';
+                        snapTarget = s;
+                    }
+                });
+
+                drawnPipes.forEach(pipe => {
+                    [pipe.start, pipe.end].forEach(pt => {
+                        const dist = Math.sqrt(Math.pow(pt.x - rawCoords.x, 2) + Math.pow(pt.y - rawCoords.y, 2));
+                        if (dist < snapThreshold && dist < minDistance) {
+                            minDistance = dist;
+                            closestPoint = pt;
+                            snapType = 'node';
+                            snapTarget = pipe;
+                        }
+                    });
+                });
+
+                if (!closestPoint) {
+                    drawnPipes.forEach(pipe => {
+                        const projected = projectPointToSegment(rawCoords, pipe.start, pipe.end);
+                        const dist = Math.sqrt(Math.pow(projected.x - rawCoords.x, 2) + Math.pow(projected.y - rawCoords.y, 2));
+                        if (dist < snapThreshold && dist < minDistance) {
+                            minDistance = dist;
+                            closestPoint = projected;
+                            snapType = 'edge';
+                            snapTarget = pipe;
+                        }
+                    });
+                }
+
+                if (closestPoint) return { coords: closestPoint, isSnapped: true, snapType, snapTarget };
+                return { coords: rawCoords, isSnapped: false, snapType: null, snapTarget: null };
+            };
+
+            const splitPipeAtPoint = (pipes, targetPipe, splitPoint) => {
+                const remainingPipes = pipes.filter(p => p.id !== targetPipe.id);
+                const dist1 = Math.sqrt(Math.pow(splitPoint.x - targetPipe.start.x, 2) + Math.pow(splitPoint.y - targetPipe.start.y, 2));
+                const dist2 = Math.sqrt(Math.pow(targetPipe.end.x - splitPoint.x, 2) + Math.pow(targetPipe.end.y - splitPoint.y, 2));
+
+                const newSegments = [];
+                if (dist1 > 0.1) {
+                    newSegments.push({ ...targetPipe, id: Date.now() + Math.random(), end: splitPoint, pixelLength: dist1 });
+                }
+                if (dist2 > 0.1) {
+                    newSegments.push({ ...targetPipe, id: Date.now() + Math.random() + 1, start: splitPoint, pixelLength: dist2 });
+                }
+                return [...remainingPipes, ...newSegments];
+            };
+
+            const distanceToSegment = (P, A, B) => {
+                const distAB2 = Math.pow(B.x - A.x, 2) + Math.pow(B.y - A.y, 2);
+                if (distAB2 === 0) return Math.sqrt(Math.pow(P.x - A.x, 2) + Math.pow(P.y - A.y, 2));
+                let t = ((P.x - A.x) * (B.x - A.x) + (P.y - A.y) * (B.y - A.y)) / distAB2;
+                t = Math.max(0, Math.min(1, t));
+                return Math.sqrt(Math.pow(P.x - (A.x + t * (B.x - A.x)), 2) + Math.pow(P.y - (A.y + t * (B.y - A.y)), 2));
+            };
+
+            const handleMouseDown = (e) => {
+                if (showScaleDialog || editingPipeId) return;
+                const rawCoords = getCanvasCoords(e);
+                const { coords, isSnapped, snapType, snapTarget } = getSnappedCoords(rawCoords);
+
+                if (mode === 'pan') {
+                    setIsDragging(true);
+                    setDragStart({ x: e.clientX - transform.x, y: e.clientY - transform.y });
+                } else if (mode === 'scale') {
+                    setIsDragging(true);
+                    setScalePoints([coords, coords]);
+                } else if (mode === 'draw') {
+                    setIsDragging(true);
+                    setStartSnapInfo(isSnapped ? { type: snapType, target: snapTarget, coords: coords } : null);
+                    setTempPipe({ start: coords, end: coords, size: selectedPipeSize });
+                }
+            };
+
+            const handleMouseMove = (e) => {
+                if (showScaleDialog || editingPipeId) return;
+                const rawCoords = getCanvasCoords(e);
+                
+                let effectiveCoords = rawCoords;
+
+                if (isDragging && mode === 'draw' && tempPipe) {
+                    const dx = rawCoords.x - tempPipe.start.x;
+                    const dy = rawCoords.y - tempPipe.start.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist > 5 / transform.scale) {
+                        const angle = Math.atan2(dy, dx);
+                        const snappedAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4);
+                        
+                        effectiveCoords = {
+                            x: tempPipe.start.x + Math.cos(snappedAngle) * dist,
+                            y: tempPipe.start.y + Math.sin(snappedAngle) * dist
+                        };
+                    } else {
+                        effectiveCoords = tempPipe.start;
+                    }
+                }
+
+                // Check Alignment (Smart Guides) - Only if not already hard-snapped to a point
+                const { coords: pointSnappedCoords, isSnapped, snapType, snapTarget } = getSnappedCoords(effectiveCoords);
+                let finalCoords = isSnapped ? pointSnappedCoords : effectiveCoords;
+                const newAlignmentLines = [];
+
+                // Reset guides
+                setPipeAlignmentGuide(null);
+
+                if (isSnapped && snapType === 'edge' && (mode === 'sprinkler')) {
+                     // Show guide along the pipe we are snapped to
+                     const pipe = snapTarget;
+                     // Find existing sprinklers on this pipe
+                     const headsOnPipe = placedSprinklers.filter(s => distanceToSegment(s, pipe.start, pipe.end) < 1);
+                     
+                     // Sort heads by distance from start to find adjacent pairs
+                     headsOnPipe.sort((a, b) => {
+                         const da = Math.pow(a.x - pipe.start.x, 2) + Math.pow(a.y - pipe.start.y, 2);
+                         const db = Math.pow(b.x - pipe.start.x, 2) + Math.pow(b.y - pipe.start.y, 2);
+                         return da - db;
+                     });
+
+                     let isMidpoint = false;
+                     const snapThreshold = 10 / transform.scale;
+
+                     // Check midpoints between heads
+                     for (let i = 0; i < headsOnPipe.length - 1; i++) {
+                         const h1 = headsOnPipe[i];
+                         const h2 = headsOnPipe[i+1];
+                         const mx = (h1.x + h2.x) / 2;
+                         const my = (h1.y + h2.y) / 2;
+
+                         const distToMid = Math.sqrt(Math.pow(finalCoords.x - mx, 2) + Math.pow(finalCoords.y - my, 2));
+                         
+                         if (distToMid < snapThreshold) {
+                             finalCoords = { x: mx, y: my };
+                             isMidpoint = true;
+                             break;
+                         }
+                     }
+
+                     setPipeAlignmentGuide({
+                         p1: pipe.start,
+                         p2: pipe.end,
+                         heads: headsOnPipe,
+                         cursor: finalCoords,
+                         isMidpoint: isMidpoint
+                     });
+                }
+                else if (!isSnapped && mode === 'draw' && tempPipe) {
+                     const p1 = tempPipe.start;
+                     const dx = effectiveCoords.x - p1.x;
+                     const dy = effectiveCoords.y - p1.y;
+                     const len2 = dx*dx + dy*dy;
+                     
+                     if (len2 > 0.001) {
+                         const alignThreshold = 10 / transform.scale;
+                         let bestProj = null;
+                         let minDist = alignThreshold;
+                         let bestHead = null;
+
+                         placedSprinklers.forEach(s => {
+                             const v1x = s.x - p1.x;
+                             const v1y = s.y - p1.y;
+                             const t = (v1x * dx + v1y * dy) / len2;
+                             const projX = p1.x + t * dx;
+                             const projY = p1.y + t * dy;
+                             const dist = Math.sqrt(Math.pow(finalCoords.x - projX, 2) + Math.pow(finalCoords.y - projY, 2));
+                             
+                             if (dist < minDist) {
+                                 minDist = dist;
+                                 bestProj = { x: projX, y: projY };
+                                 bestHead = s;
+                             }
+                         });
+
+                         if (bestProj) {
+                             finalCoords = bestProj;
+                             newAlignmentLines.push({ 
+                                 x1: bestHead.x, y1: bestHead.y, 
+                                 x2: bestProj.x, y2: bestProj.y 
+                             });
+                         }
+                     }
+                }
+                else if (!isSnapped && mode === 'sprinkler') {
+                    const alignThreshold = 10 / transform.scale;
+                    placedSprinklers.forEach(s => {
+                        if (Math.abs(effectiveCoords.x - s.x) < alignThreshold) {
+                            finalCoords = { ...finalCoords, x: s.x };
+                            newAlignmentLines.push({ x1: s.x, y1: s.y, x2: s.x, y2: finalCoords.y });
+                        }
+                        if (Math.abs(effectiveCoords.y - s.y) < alignThreshold) {
+                            finalCoords = { ...finalCoords, y: s.y };
+                            newAlignmentLines.push({ x1: s.x, y1: s.y, x2: finalCoords.x, y2: s.y });
+                        }
+                    });
+                }
+                
+                setAlignmentLines(newAlignmentLines);
+
+                if (mode === 'sprinkler' && placedSprinklers.length > 0) {
+                    let minD = Infinity;
+                    let closest = null;
+                    const candidates = (pipeAlignmentGuide && pipeAlignmentGuide.heads.length > 0) 
+                        ? pipeAlignmentGuide.heads 
+                        : placedSprinklers;
+
+                    candidates.forEach(s => {
+                        const d = Math.sqrt(Math.pow(s.x - finalCoords.x, 2) + Math.pow(s.y - finalCoords.y, 2));
+                        if (d > 0.1 && d < minD) {
+                            minD = d;
+                            closest = s;
+                        }
+                    });
+
+                    if (closest) {
+                        const lenPx = minD;
+                        const lenText = pixelsPerMeter 
+                            ? `${(lenPx / pixelsPerMeter).toFixed(1)} m.` 
+                            : `${Math.round(lenPx)} px`;
+                        
+                        setSprinklerDistanceGuide({
+                            start: closest,
+                            end: finalCoords,
+                            text: lenText
+                        });
+                    } else {
+                        setSprinklerDistanceGuide(null);
+                    }
+                } else {
+                    setSprinklerDistanceGuide(null);
+                }
+
+                const snapPointToUse = isSnapped ? pointSnappedCoords : (newAlignmentLines.length > 0 ? finalCoords : null);
+                setSnapPoint(pipeAlignmentGuide?.isMidpoint ? finalCoords : snapPointToUse);
+
+                if (isDragging) {
+                    if (mode === 'pan') {
+                        setTransform(prev => ({ ...prev, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }));
+                    } else if (mode === 'scale') {
+                        setScalePoints(prev => [prev[0], rawCoords]);
+                    } else if (mode === 'draw') {
+                        setTempPipe(prev => ({ ...prev, end: finalCoords }));
+                    }
+                }
+            };
+
+            const handleMouseUp = () => {
+                if (showScaleDialog || editingPipeId) return;
+
+                if (mode === 'scale' && isDragging) {
+                    const dx = scalePoints[1].x - scalePoints[0].x;
+                    const dy = scalePoints[1].y - scalePoints[0].y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist > 5) {
+                        setShowScaleDialog(true);
+                        setRealWorldDist('');
+                        setIsDragging(false);
+                        return;
+                    } else {
+                        setScalePoints([]);
+                    }
+                } else if (mode === 'draw' && isDragging && tempPipe) {
+                    const finalEnd = tempPipe.end;
+                    const { isSnapped, snapType, snapTarget, coords: snappedCoords } = getSnappedCoords(finalEnd);
+                    const actualEnd = isSnapped ? snappedCoords : finalEnd;
+                    const dx = actualEnd.x - tempPipe.start.x;
+                    const dy = actualEnd.y - tempPipe.start.y;
+                    const pixelLen = Math.sqrt(dx * dx + dy * dy);
+
+                    if (pixelLen > 2) {
+                        let nextPipes = [...drawnPipes];
+                        let startPoint = tempPipe.start;
+                        let endPoint = actualEnd;
+
+                        if (startSnapInfo && startSnapInfo.type === 'edge' && startSnapInfo.target) {
+                            const targetPipe = nextPipes.find(p => p.id === startSnapInfo.target.id);
+                            if (targetPipe) {
+                                nextPipes = splitPipeAtPoint(nextPipes, targetPipe, startSnapInfo.coords);
+                                startPoint = startSnapInfo.coords;
+                            }
+                        }
+
+                        if (isSnapped && snapType === 'edge' && snapTarget) {
+                            const targetPipe = nextPipes.find(p => p.id === snapTarget.id);
+                            if (targetPipe) {
+                                nextPipes = splitPipeAtPoint(nextPipes, targetPipe, actualEnd);
+                                endPoint = actualEnd;
+                            }
+                        }
+
+                        const newPipe = {
+                            id: Date.now() + Math.random(),
+                            start: startPoint,
+                            end: endPoint,
+                            size: tempPipe.size,
+                            pixelLength: pixelLen
+                        };
+                        nextPipes.push(newPipe);
+                        setDrawnPipes(nextPipes);
+                        commitToHistory(nextPipes, placedSprinklers);
+                    }
+                    setTempPipe(null);
+                    setStartSnapInfo(null);
+                }
+                setIsDragging(false);
+                setAlignmentLines([]);
+                setSprinklerDistanceGuide(null); 
+                setPipeAlignmentGuide(null);
+            };
+
+            const handleCanvasClick = (e) => {
+                if (showScaleDialog || editingPipeId) return;
+                const rawCoords = getCanvasCoords(e);
+                const { coords: pointSnappedCoords, isSnapped, snapType, snapTarget } = getSnappedCoords(rawCoords);
+                let finalCoords = isSnapped ? pointSnappedCoords : rawCoords;
+                
+                if (!isSnapped && mode === 'sprinkler') {
+                    const alignThreshold = 10 / transform.scale;
+                    let alignedX = rawCoords.x;
+                    let alignedY = rawCoords.y;
+                    placedSprinklers.forEach(s => {
+                        if (Math.abs(rawCoords.x - s.x) < alignThreshold) alignedX = s.x;
+                        if (Math.abs(rawCoords.y - s.y) < alignThreshold) alignedY = s.y;
+                    });
+                    finalCoords = { x: alignedX, y: alignedY };
+                }
+
+                if (mode === 'sprinkler') {
+                    const newSprinklers = [...placedSprinklers, { ...finalCoords, id: Date.now() }];
+                    setPlacedSprinklers(newSprinklers);
+                    let nextPipes = drawnPipes;
+                    if (isSnapped && snapType === 'edge' && snapTarget) {
+                        nextPipes = splitPipeAtPoint(drawnPipes, snapTarget, finalCoords);
+                        setDrawnPipes(nextPipes);
+                    }
+                    commitToHistory(nextPipes, newSprinklers);
+                } else if (mode === 'delete') {
+                    const clickThreshold = 10 / transform.scale;
+                    const pipeToDelete = drawnPipes.find(pipe => {
+                        const dist = distanceToSegment(rawCoords, pipe.start, pipe.end);
+                        return dist < clickThreshold;
+                    });
+
+                    if (pipeToDelete) {
+                        const nextPipes = drawnPipes.filter(p => p.id !== pipeToDelete.id);
+                        setDrawnPipes(nextPipes);
+                        commitToHistory(nextPipes, placedSprinklers);
+                    } else {
+                        const sprinklerToDelete = placedSprinklers.find(s => {
+                            const dist = Math.sqrt(Math.pow(s.x - rawCoords.x, 2) + Math.pow(s.y - rawCoords.y, 2));
+                            return dist < clickThreshold;
+                        });
+                        if (sprinklerToDelete) {
+                            const nextSprinklers = placedSprinklers.filter(s => s.id !== sprinklerToDelete.id);
+                            setPlacedSprinklers(nextSprinklers);
+                            commitToHistory(drawnPipes, nextSprinklers);
+                        }
+                    }
+                }
+            };
+
+            const handleCanvasDoubleClick = (e) => {
+                if (showScaleDialog) return;
+                const rawCoords = getCanvasCoords(e);
+                const clickThreshold = 10 / transform.scale;
+                const clickedPipe = drawnPipes.find(pipe => {
+                    const dist = distanceToSegment(rawCoords, pipe.start, pipe.end);
+                    return dist < clickThreshold;
+                });
+                if (clickedPipe) {
+                    setEditingPipeId(clickedPipe.id);
+                }
+            };
+
+            const updatePipeSize = (newSize) => {
+                const nextPipes = drawnPipes.map(p => 
+                    p.id === editingPipeId ? { ...p, size: newSize } : p
+                );
+                setDrawnPipes(nextPipes);
+                setResults([]); 
+                setTotalDemand({ flow: 0, pressure: 0 });
+                commitToHistory(nextPipes, placedSprinklers);
+                setEditingPipeId(null);
+            };
+
+            const applyScale = () => {
+                if (scalePoints.length < 2) return;
+                const dx = scalePoints[1].x - scalePoints[0].x;
+                const dy = scalePoints[1].y - scalePoints[0].y;
+                const pixelDist = Math.sqrt(dx * dx + dy * dy);
+                const rDist = parseFloat(realWorldDist);
+
+                if (pixelDist > 0 && rDist > 0) {
+                    setPixelsPerMeter(pixelDist / rDist);
+                    setMode('pan');
+                    setShowScaleDialog(false);
+                    setScalePoints([]);
+                } else {
+                    alert("กรุณาระบุระยะทางที่ถูกต้อง");
+                }
+            };
+
+            const adjustZoom = (delta) => {
+                if (!containerRef.current) return;
+                const zoomStep = 0.15;
+                const oldScale = transform.scale;
+                const newScale = Math.min(Math.max(oldScale + (delta > 0 ? zoomStep : -zoomStep), 0.1), 10);
+                const rect = containerRef.current.getBoundingClientRect();
+                const centerX = rect.width / 2;
+                const centerY = rect.height / 2;
+                const worldX = (centerX - transform.x) / oldScale;
+                const worldY = (centerY - transform.y) / oldScale;
+                const newX = centerX - worldX * newScale;
+                const newY = centerY - worldY * newScale;
+                setTransform({ x: newX, y: newY, scale: newScale });
+            };
+
+            const calculateLoss = (Q, L_ft, d_in, C) => {
+                if (Q <= 0 || L_ft <= 0) return 0;
+                return (4.52 * Math.pow(Q, 1.85) * L_ft) / (Math.pow(C, 1.85) * Math.pow(d_in, 4.87));
+            };
+
+            const handleCalculate = () => {
+                if (!pixelsPerMeter) {
+                    alert("กรุณากำหนดสเกล (Set Scale) ก่อนคำนวณ");
+                    return;
+                }
+                if (drawnPipes.length === 0) {
+                    alert("กรุณาวาดท่ออย่างน้อย 1 เส้น");
+                    return;
+                }
+
+                const M_TO_FT = 3.28084;
+                const K = safeNum(kFactor, 5.6);
+                const C = safeNum(cFactor, 120);
+                const RISER_NIPPLE_FT = 0.1 * M_TO_FT;
+                const NIPPLE_ID = 1.049;
+                const density = safeNum(designDensity, 0.40);
+                const areaFt2 = safeNum(areaPerHead, 100);
+
+                const qMinHead = density * areaFt2;
+                const minP_Req = Math.pow(qMinHead / K, 2);
+                const startPressureReq = Math.max(7, minP_Req);
+
+                const nodes = {};
+                const coordToDisplayId = {};
+                const getKey = (pt) => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`;
+
+                visualNodes.forEach(node => {
+                    coordToDisplayId[node.id] = node.displayId;
+                });
+
+                const getOrCreateNode = (pt) => {
+                    const key = getKey(pt);
+                    if (!nodes[key]) nodes[key] = { id: key, x: pt.x, y: pt.y, connections: [], heads: [] };
+                    return nodes[key];
+                };
+
+                drawnPipes.forEach(p => {
+                    const n1 = getOrCreateNode(p.start);
+                    const n2 = getOrCreateNode(p.end);
+                    const spec = pipeSpecs.find(s => s.nominal === p.size) || pipeSpecs[0];
+                    const uDisp = coordToDisplayId[getKey(p.start)];
+                    const vDisp = coordToDisplayId[getKey(p.end)];
+
+                    const edge = {
+                        id: p.id,
+                        u: n1.id,
+                        v: n2.id,
+                        u_disp: uDisp,
+                        v_disp: vDisp,
+                        pipe: p,
+                        size: p.size,
+                        heads: [], 
+                        d_in: spec.internal,
+                        len_ft: (p.pixelLength / pixelsPerMeter) * M_TO_FT,
+                        flow: 0,
+                        loss: 0,
+                        velocity: 0,
+                        flowDir: null
+                    };
+                    n1.connections.push({ target: n2.id, edge });
+                    n2.connections.push({ target: n1.id, edge });
+                });
+
+                const tolerance = 5 / transform.scale;
+                placedSprinklers.forEach(s => {
+                    for (const nodeId in nodes) {
+                        const node = nodes[nodeId];
+                        const dist = Math.sqrt(Math.pow(s.x - node.x, 2) + Math.pow(s.y - node.y, 2));
+                        if (dist < tolerance) {
+                            node.heads.push(s);
+                            break;
+                        }
+                    }
+                });
+
+                // FIX: Use the Source Node already identified by the visual logic (useEffect)
+                // This ensures the calculation starts from the same 'S' node shown on screen.
+                let sourceId = sourceNodeId;
+                
+                // Fallback validation: ensure sourceId exists in the current graph
+                if (!sourceId || !nodes[sourceId]) {
+                    // Fallback heuristics if state is desynced (rare)
+                    let maxDia = -1;
+                    const allNodes = Object.values(nodes);
+                    if (allNodes.length > 0) {
+                        allNodes.forEach(n => {
+                            const localMax = n.connections.reduce((m, c) => Math.max(m, parseFloat(c.edge.size)), 0);
+                            if (localMax > maxDia) {
+                                maxDia = localMax;
+                                sourceId = n.id;
+                            }
+                        });
+                        // Prefer bottom-most node if multiple candidates (simple fallback)
+                        if (!sourceId) sourceId = allNodes[0].id; 
+                    }
+                }
+
+                // IMPORTANT: Do NOT call setSourceNodeId(sourceId) here, 
+                // as it overrides the smarter logic from useEffect.
+                
+                const parentMap = {}; 
+                const processingOrder = []; 
+                const visited = new Set([sourceId]);
+                const queue = [sourceId];
+
+                while(queue.length > 0) {
+                    const uId = queue.shift();
+                    processingOrder.push(uId);
+                    const uNode = nodes[uId];
+                    if(uNode && uNode.connections) {
+                        uNode.connections.forEach(conn => {
+                            if (!visited.has(conn.target)) {
+                                visited.add(conn.target);
+                                parentMap[conn.target] = { parentId: uId, edge: conn.edge };
+                                queue.push(conn.target);
+                            }
+                        });
+                    }
+                }
+
+                const nodeReqP = {};
+                const nodeTotalQ = {};
+                const nodeActualP = {}; 
+                Object.keys(nodes).forEach(k => {
+                    nodeReqP[k] = 0;
+                    nodeTotalQ[k] = 0;
+                    nodeActualP[k] = 0;
+                });
+
+                const tempReport = {}; 
+
+                for (let i = processingOrder.length - 1; i >= 0; i--) {
+                    const uId = processingOrder[i];
+                    let maxP_RequiredAtU = 0;
+                    let totalQ_AtU = 0;
+                    
+                    const uNode = nodes[uId];
+                    if(!uNode) continue;
+
+                    const childConnections = uNode.connections.filter(conn => parentMap[conn.target]?.parentId === uId);
+
+                    childConnections.forEach(child => {
+                        const vId = child.target;
+                        const edge = child.edge;
+                        const qChild = nodeTotalQ[vId] || 0;
+                        const pChild = nodeReqP[vId] || 0;
+
+                        if (qChild > 0 || pChild > 0) {
+                            const loss = calculateLoss(qChild, edge.len_ft, edge.d_in, C);
+                            const pReqUpstream = pChild + loss;
+                            maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pReqUpstream);
+                        }
+                    });
+
+                    if (uNode.heads.length > 0) {
+                        let pMinHead = startPressureReq; 
+                        let qHead = K * Math.sqrt(pMinHead);
+                        let lossNip = calculateLoss(qHead, RISER_NIPPLE_FT, NIPPLE_ID, C);
+                        let pReqAtNodeForHead = pMinHead + lossNip;
+
+                        maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pReqAtNodeForHead);
+                        
+                        uNode.heads.forEach(() => {
+                            let pHeadEst = maxP_RequiredAtU;
+                            for(let k=0; k<2; k++) {
+                                let q = K * Math.sqrt(pHeadEst > 0 ? pHeadEst : 0);
+                                let loss = calculateLoss(q, RISER_NIPPLE_FT, NIPPLE_ID, C);
+                                pHeadEst = maxP_RequiredAtU - loss;
+                            }
+                            if(pHeadEst < 0) pHeadEst = 0;
+                            totalQ_AtU += K * Math.sqrt(pHeadEst);
+                        });
+                    }
+
+                    childConnections.forEach(child => {
+                        const vId = child.target;
+                        const edge = child.edge;
+                        let qBranch = nodeTotalQ[vId] || 0;
+                        const pChildReq = nodeReqP[vId] || 0;
+                        
+                        const lossBase = calculateLoss(qBranch, edge.len_ft, edge.d_in, C);
+                        const pBranchReqAtU = pChildReq + lossBase;
+
+                        if (maxP_RequiredAtU > pBranchReqAtU && pBranchReqAtU > 0.01 && qBranch > 0) {
+                            const kBranch = qBranch / Math.sqrt(pBranchReqAtU);
+                            qBranch = kBranch * Math.sqrt(maxP_RequiredAtU);
+                        }
+
+                        edge.flow = qBranch;
+                        edge.loss = calculateLoss(qBranch, edge.len_ft, edge.d_in, C);
+                        const velocityFps = (0.4085 * qBranch) / Math.pow(edge.d_in, 2);
+                        edge.velocity = velocityFps * 0.3048; 
+                        edge.flowDir = (edge.u === uId) ? 'u->v' : 'v->u';
+                        totalQ_AtU += qBranch;
+
+                        tempReport[edge.id] = {
+                            pipeId: edge.id,
+                            id: `Pipe ${edge.size}"`,
+                            size: edge.size,
+                            lengthM: edge.len_ft / M_TO_FT,
+                            flow: qBranch,
+                            loss: edge.loss,
+                            pressure: 0,
+                            velocity: edge.velocity,
+                            flowDir: edge.flowDir || 'N/A',
+                            nodes: edge.flowDir === 'u->v' 
+                                ? `#${edge.u_disp}-#${edge.v_disp}` 
+                                : `#${edge.v_disp}-#${edge.u_disp}`,
+                            isSourcePipe: (edge.u === sourceId || edge.v === sourceId)
+                        };
+                    });
+
+                    nodeReqP[uId] = maxP_RequiredAtU;
+                    nodeTotalQ[uId] = totalQ_AtU;
+                }
+
+                nodeActualP[sourceId] = nodeReqP[sourceId];
+                
+                const forwardQueue = [sourceId];
+                const forwardVisited = new Set([sourceId]);
+
+                while(forwardQueue.length > 0) {
+                    const uId = forwardQueue.shift();
+                    const currentP = nodeActualP[uId];
+                    const uNode = nodes[uId];
+
+                    const childConnections = uNode.connections.filter(conn => parentMap[conn.target]?.parentId === uId);
+                    
+                    childConnections.forEach(child => {
+                        const vId = child.target;
+                        const edge = child.edge;
+                        if (tempReport[edge.id]) {
+                            tempReport[edge.id].pressure = currentP;
+                        }
+                        const nextP = currentP - edge.loss; 
+                        nodeActualP[vId] = nextP;
+                        if (!forwardVisited.has(vId)) {
+                            forwardVisited.add(vId);
+                            forwardQueue.push(vId);
+                        }
+                    });
+                }
+
+                setResults(Object.values(tempReport).reverse());
+                setTotalDemand({ flow: nodeTotalQ[sourceId] || 0, pressure: nodeReqP[sourceId] || 0 });
+            };
+
+            const lineIntersectsRect = (x1, y1, x2, y2, rx, ry, rw, rh) => {
+                const left = rx, right = rx + rw, top = ry, bottom = ry + rh;
+                const minX = Math.min(x1, x2), maxX = Math.max(x1, x2);
+                const minY = Math.min(y1, y2), maxY = Math.max(y1, y2);
+                if (maxX < left || minX > right || maxY < top || minY > bottom) return false;
+
+                const intersect = (p1x, p1y, p2x, p2y, p3x, p3y, p4x, p4y) => {
+                    const det = (p2x - p1x) * (p4y - p3y) - (p4x - p3x) * (p2y - p1y);
+                    if (det === 0) return false;
+                    const lambda = ((p4y - p3y) * (p4x - p1x) + (p3x - p4x) * (p4y - p1y)) / det;
+                    const gamma = ((p1y - p2y) * (p4x - p1x) + (p2x - p1x) * (p4y - p1y)) / det;
+                    return (0 < lambda && lambda < 1) && (0 < gamma && gamma < 1);
+                };
+
+                if (intersect(x1, y1, x2, y2, left, top, right, top)) return true;
+                if (intersect(x1, y1, x2, y2, right, top, right, bottom)) return true;
+                if (intersect(x1, y1, x2, y2, right, bottom, left, bottom)) return true;
+                if (intersect(x1, y1, x2, y2, left, bottom, left, top)) return true;
+                
+                if (x1 > left && x1 < right && y1 > top && y1 < bottom) return true;
+                return false;
+            };
+
+            const getTagLayout = () => {
+                if (!results || results.length === 0) return [];
+                const layout = [];
+                const occupiedRects = [];
+                const tagW = 70 / transform.scale;
+                const tagH = 52 / transform.scale; 
+                // Increased padding to prevent tags from touching
+                const padding = 15 / transform.scale;
+                const pipeBuffer = 15 / transform.scale; 
+
+                const obstacles = [];
+                
+                visualNodes.forEach(n => {
+                    obstacles.push({ 
+                        x: n.x - 15/transform.scale, 
+                        y: n.y - 15/transform.scale, 
+                        w: 30/transform.scale, 
+                        h: 30/transform.scale 
+                    });
+                    obstacles.push({ 
+                        x: n.x, 
+                        y: n.y - 25/transform.scale, 
+                        w: 60/transform.scale, 
+                        h: 25/transform.scale 
+                    });
+                });
+
+                placedSprinklers.forEach(s => {
+                    obstacles.push({ 
+                        x: s.x - 20/transform.scale, 
+                        y: s.y - 20/transform.scale, 
+                        w: 40/transform.scale, 
+                        h: 40/transform.scale 
+                    });
+                });
+
+                // Helper: Check if a line segment crosses any pipe
+                const checkLineCrossesPipes = (p1, p2, excludePipeId) => {
+                    for (const pipe of drawnPipes) {
+                        if (pipe.id === excludePipeId) continue;
+                        
+                        const x1 = p1.x, y1 = p1.y, x2 = p2.x, y2 = p2.y;
+                        const x3 = pipe.start.x, y3 = pipe.start.y, x4 = pipe.end.x, y4 = pipe.end.y;
+                        
+                        const denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+                        if (denom === 0) continue; 
+                        
+                        const ua = ((x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3)) / denom;
+                        const ub = ((x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3)) / denom;
+                        
+                        if (ua > 0.05 && ua < 0.95 && ub > 0.05 && ub < 0.95) {
+                            return true;
+                        }
+                    }
+                    return false;
+                };
+
+                const checkCollision = (rect, ignorePipes = false) => {
+                    // 1. Existing Tags
+                    for (const r of occupiedRects) {
+                        if (rect.x < r.x + r.w + padding && rect.x + rect.w + padding > r.x &&
+                            rect.y < r.y + r.h + padding && rect.y + rect.h + padding > r.y) {
+                            return true;
+                        }
+                    }
+                    // 2. Obstacles
+                    for (const r of obstacles) {
+                        if (rect.x < r.x + r.w && rect.x + rect.w > r.x &&
+                            rect.y < r.y + r.h && rect.y + rect.h > r.y) {
+                            return true;
+                        }
+                    }
+                    
+                    if (!ignorePipes) {
+                        const checkRect = { 
+                            x: rect.x - pipeBuffer, 
+                            y: rect.y - pipeBuffer, 
+                            w: rect.w + pipeBuffer*2, 
+                            h: rect.h + pipeBuffer*2 
+                        };
+                        for (const p of drawnPipes) {
+                            if (lineIntersectsRect(p.start.x, p.start.y, p.end.x, p.end.y, checkRect.x, checkRect.y, checkRect.w, checkRect.h)) {
+                                return true;
+                            }
+                        }
+                    }
+                    return false;
+                };
+
+                drawnPipes.forEach(pipe => {
+                    const res = results.find(r => r.pipeId === pipe.id);
+                    if (!res) return;
+
+                    let startX = pipe.start.x, startY = pipe.start.y;
+                    let endX = pipe.end.x, endY = pipe.end.y;
+                    let midX = (startX + endX) / 2;
+                    let midY = (startY + endY) / 2;
+
+                    let arrowAngle = 0;
+                    if (res.flowDir === 'v->u') {
+                        arrowAngle = Math.atan2(pipe.start.y - pipe.end.y, pipe.start.x - pipe.end.x);
+                    } else {
+                        arrowAngle = Math.atan2(pipe.end.y - pipe.start.y, pipe.end.x - pipe.start.x);
+                    }
+
+                    const dx = endX - startX;
+                    const dy = endY - startY;
+
+                    // Vectors
+                    const len = Math.sqrt(dx*dx + dy*dy);
+                    const ux = dx / len;
+                    const uy = dy / len;
+                    // Normal vector (perpendicular)
+                    const nx = -uy;
+                    const ny = ux;
+
+                    // Strategy: Sliding Anchor + Perpendicular Expansion
+                    const baseDist = 55 / transform.scale; 
+                    // More granular posSteps to find gaps
+                    const posSteps = [0.5, 0.4, 0.6, 0.3, 0.7, 0.25, 0.75, 0.2, 0.8, 0.1, 0.9]; 
+                    // Extend distSteps further
+                    const distSteps = [1.0, 1.5, 2.0, 2.6, 3.4, 4.5, 6.0];
+
+                    const isHorzPipe = Math.abs(Math.cos(arrowAngle)) > 0.707;
+                    
+                    let bestCandidate = null;
+
+                    // Pass 1: Strict Mode (Tag Clear + Leader Line Clear)
+                    outerLoop1:
+                    for (let distMult of distSteps) {
+                        const dist = baseDist * distMult;
+                        for (let t of posSteps) {
+                            const ax = startX + dx * t;
+                            const ay = startY + dy * t;
+
+                            for (let side of [1, -1]) {
+                                const cx = ax + (nx * dist * side);
+                                const cy = ay + (ny * dist * side);
+
+                                const rect = {
+                                    x: cx - tagW / 2,
+                                    y: cy - tagH / 2,
+                                    w: tagW,
+                                    h: tagH
+                                };
+
+                                if (!checkCollision(rect)) {
+                                    // Check Leader Line crossing
+                                    // Orthogonal Leader logic
+                                    let elbowX, elbowY;
+                                    if (isHorzPipe) { elbowX = ax; elbowY = cy; } 
+                                    else { elbowX = cx; elbowY = ay; }
+                                    
+                                    const seg1OK = !checkLineCrossesPipes({x:ax, y:ay}, {x:elbowX, y:elbowY}, pipe.id);
+                                    const seg2OK = !checkLineCrossesPipes({x:elbowX, y:elbowY}, {x:cx, y:cy}, pipe.id);
+
+                                    if (seg1OK && seg2OK) {
+                                        bestCandidate = {
+                                            id: pipe.id,
+                                            tagX: cx, tagY: cy,
+                                            anchorX: ax, anchorY: ay,
+                                            midX: midX, midY: midY,
+                                            res, angle: arrowAngle, rect
+                                        };
+                                        break outerLoop1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Pass 2: Relaxed Mode (Allow leader crossing, but Tag MUST be clear)
+                    if (!bestCandidate) {
+                        outerLoop2:
+                        for (let distMult of distSteps) {
+                            const dist = baseDist * distMult;
+                            for (let t of posSteps) {
+                                const ax = startX + dx * t;
+                                const ay = startY + dy * t;
+                                for (let side of [1, -1]) {
+                                    const cx = ax + (nx * dist * side);
+                                    const cy = ay + (ny * dist * side);
+                                    const rect = { x: cx - tagW/2, y: cy - tagH/2, w: tagW, h: tagH };
+
+                                    if (!checkCollision(rect)) {
+                                        bestCandidate = {
+                                            id: pipe.id,
+                                            tagX: cx, tagY: cy,
+                                            anchorX: ax, anchorY: ay,
+                                            midX: midX, midY: midY,
+                                            res, angle: arrowAngle, rect
+                                        };
+                                        break outerLoop2;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Pass 3: Desperation Mode (Spiral Search)
+                    // If still no spot, look everywhere around the pipe center, ignoring pipes but respecting tags
+                    if (!bestCandidate) {
+                        let r = baseDist * 4.0;
+                        const maxR = baseDist * 15.0; // Search far out
+                        const da = Math.PI / 8; // 22.5 deg steps
+
+                        spiralLoop:
+                        while (r < maxR) {
+                            for (let a = 0; a < Math.PI * 2; a += da) {
+                                const cx = midX + Math.cos(a) * r;
+                                const cy = midY + Math.sin(a) * r;
+                                const rect = { x: cx - tagW/2, y: cy - tagH/2, w: tagW, h: tagH };
+                                
+                                // Check ONLY against other tags (ignore pipes here to guarantee a spot)
+                                // We use checkCollision with ignorePipes=true
+                                if (!checkCollision(rect, true)) {
+                                    // Found a clear spot (tag-wise)
+                                    // Calculate closest anchor on pipe
+                                    const proj = projectPointToSegment({x: cx, y: cy}, pipe.start, pipe.end);
+                                    bestCandidate = {
+                                        id: pipe.id,
+                                        tagX: cx, tagY: cy,
+                                        anchorX: proj.x, anchorY: proj.y,
+                                        midX: midX, midY: midY,
+                                        res, angle: arrowAngle, rect
+                                    };
+                                    break spiralLoop;
+                                }
+                            }
+                            r += (tagH * 0.8); // Step out
+                        }
+                    }
+
+                    // Absolute Fallback (Should rarely happen unless screen is 100% full of tags)
+                    if (!bestCandidate) {
+                         const dist = baseDist * 8.0;
+                         const ax = startX + dx * 0.5;
+                         const ay = startY + dy * 0.5;
+                         const cx = ax + (nx * dist);
+                         const cy = ay + (ny * dist);
+                         bestCandidate = {
+                             id: pipe.id,
+                             tagX: cx, tagY: cy,
+                             anchorX: ax, anchorY: ay,
+                             midX: midX, midY: midY,
+                             res, angle: arrowAngle,
+                             rect: { x: cx - tagW/2, y: cy - tagH/2, w: tagW, h: tagH }
+                         };
+                    }
+
+                    layout.push(bestCandidate);
+                    occupiedRects.push(bestCandidate.rect);
+                });
+                
+                return layout;
+            };
+
+            const tagLayout = getTagLayout();
+
+            return (
+                <div className="flex h-screen w-full bg-slate-50 overflow-hidden font-sans select-none print:bg-white print:overflow-visible">
+                    {/* Side Panel - Compacted */}
+                    <div className="w-80 bg-white border-r border-slate-200 flex flex-col shadow-xl z-20 shrink-0 print:hidden">
+                        <div className="px-4 py-3 bg-indigo-900 text-white flex justify-between items-center shrink-0">
+                            <div className="flex flex-col">
+                                <h1 className="font-bold text-sm flex items-center gap-2">
+                                    <Flame size={18} className="text-orange-400" />
+                                    Hydraulic Calculation Tools (NFPA 13)
+                                </h1>
+                                <span className="text-[10px] text-indigo-200 ml-6">V.1.1 By วัยรุ่นเซินเจิ้น</span>
+                            </div>
+                            <label className="cursor-pointer bg-indigo-800 hover:bg-indigo-700 text-white text-xs px-2 py-1.5 rounded flex items-center gap-1 transition-colors">
+                                <input type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
+                                <Upload size={12} /> Open
+                            </label>
+                        </div>
+
+                        <div className="flex-1 flex flex-col p-2 overflow-hidden gap-3">
+                            {/* Parameters */}
+                            <div className="border-b border-slate-200 pb-2">
+                                <h3 className="font-semibold text-slate-700 text-xs flex items-center gap-1 mb-1">
+                                    <Target size={14} /> Parameters
+                                </h3>
+                                <div className="grid grid-cols-2 gap-1 text-[10px]">
+                                    <div className="col-span-2">
+                                        <select value={selectedHazard} onChange={handleHazardChange} className="w-full p-1 border rounded bg-slate-50">
+                                            {hazardClasses.map(h => <option key={h.id} value={h.id}>{h.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-500">Density (gpm/ft²)</label>
+                                        <input type="number" value={designDensity} onChange={e => setDesignDensity(e.target.value)} className="w-full p-1 border rounded" step="0.05" />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-500">Area/head (ft²)</label>
+                                        <input type="number" value={areaPerHead} onChange={e => setAreaPerHead(e.target.value)} className="w-full p-1 border rounded" />
+                                    </div>
+                                    <div>
+                                        <label className="text-slate-500">K Factor</label>
+                                        <select 
+                                            value={kFactor} 
+                                            onChange={e => setKFactor(Number(e.target.value))} 
+                                            className="w-full p-1 border rounded bg-slate-50 text-[10px]"
+                                        >
+                                            {kFactors.map(k => (
+                                                <option key={k} value={k}>{k.toFixed(1)}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                     <div>
+                                        <label className="text-slate-500">C Value</label>
+                                        <select 
+                                            value={cFactor} 
+                                            onChange={e => setCFactor(Number(e.target.value))} 
+                                            className="w-full p-1 border rounded bg-slate-50 text-[10px]"
+                                        >
+                                            {cFactors.map(c => (
+                                                <option key={c.value} value={c.value}>
+                                                    {c.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Pipe Selector - Modified to Minimal Dot Style */}
+                            <div className="border-b border-slate-200 pb-2">
+                                <h3 className="font-semibold text-slate-700 text-xs flex items-center gap-1 mb-1">
+                                    <Ruler size={14} /> Pipe Size
+                                </h3>
+                                <div className="grid grid-cols-3 gap-1">
+                                    {pipeSpecs.map(spec => (
+                                        <button
+                                            key={spec.nominal}
+                                            onClick={() => setSelectedPipeSize(spec.nominal)}
+                                            className={`
+                                                h-8 rounded border text-[10px] font-medium transition-all flex items-center justify-center gap-2
+                                                ${selectedPipeSize === spec.nominal 
+                                                    ? 'bg-white shadow-md transform scale-105' 
+                                                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-white hover:border-slate-300'}
+                                            `}
+                                            style={{
+                                                borderColor: selectedPipeSize === spec.nominal ? spec.color : '',
+                                                color: selectedPipeSize === spec.nominal ? spec.color : ''
+                                            }}
+                                        >
+                                            {/* Color Dot */}
+                                            <div 
+                                                className="w-2 h-2 rounded-full" 
+                                                style={{ backgroundColor: spec.color }}
+                                            />
+                                            {spec.nominal}"
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Tools */}
+                            <div className="flex flex-col gap-1">
+                                <h3 className="font-semibold text-slate-700 text-xs flex items-center gap-1">
+                                    <Edit3 size={14} /> Tools
+                                </h3>
+                                
+                                <div className="grid grid-cols-2 gap-2">
+                                    {/* Left Column: View & Config */}
+                                    <div className="flex flex-col gap-1.5">
+                                        <button onClick={() => setMode('scale')} className={`flex items-center justify-center gap-2 px-2 py-2 rounded text-[10px] border transition-colors ${mode === 'scale' ? 'bg-indigo-600 text-white' : 'bg-white hover:bg-slate-50'}`} title="Set Scale">
+                                            <Ruler size={14} /> Scale
+                                        </button>
+                                        <button onClick={() => setMode('pan')} className={`flex items-center justify-center gap-2 px-2 py-2 rounded text-[10px] border transition-colors ${mode === 'pan' ? 'bg-slate-800 text-white' : 'bg-white hover:bg-slate-50'}`} title="Pan/Zoom">
+                                            <Maximize size={14} /> Pan
+                                        </button>
+                                        <button onClick={() => setShowTags(!showTags)} className={`flex items-center justify-center gap-2 px-2 py-2 rounded text-[10px] border transition-colors ${!showTags ? 'bg-slate-200 text-slate-500' : 'bg-white hover:bg-slate-50'}`} title="Toggle Tags">
+                                            {showTags ? <Eye size={14} /> : <EyeOff size={14} />} {showTags ? "Hide Tags" : "Show Tags"}
+                                        </button>
+                                    </div>
+
+                                    {/* Right Column: Editing */}
+                                    <div className="flex flex-col gap-1.5">
+                                        <button onClick={() => setMode('sprinkler')} className={`flex items-center justify-center gap-2 px-2 py-2 rounded text-[10px] border transition-colors ${mode === 'sprinkler' ? 'bg-emerald-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
+                                            <Droplets size={14} /> Add Head
+                                        </button>
+                                        <button onClick={() => setMode('draw')} className={`flex items-center justify-center gap-2 px-2 py-2 rounded text-[10px] border transition-colors ${mode === 'draw' ? 'bg-blue-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
+                                            <Plus size={14} /> Draw Pipe
+                                        </button>
+                                        <button onClick={() => setMode('delete')} className={`flex items-center justify-center gap-2 px-2 py-2 rounded text-[10px] border transition-colors ${mode === 'delete' ? 'bg-red-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
+                                            <Trash2 size={14} /> Delete
+                                        </button>
+                                    </div>
+                                </div>
+
+                                {/* Undo/Redo Row */}
+                                <div className="grid grid-cols-2 gap-2 mt-1">
+                                    <button onClick={handleUndo} disabled={historyIndex <= 0} className="flex items-center justify-center gap-1 px-1 py-1.5 rounded text-[10px] border bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" title="Undo">
+                                        <RotateCcw size={12} /> Undo
+                                    </button>
+                                    <button onClick={handleRedo} disabled={historyIndex >= history.length - 1} className="flex items-center justify-center gap-1 px-1 py-1.5 rounded text-[10px] border bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" title="Redo">
+                                        <RotateCw size={12} /> Redo
+                                    </button>
+                                </div>
+
+                                {/* Calculate & Report Row (Moved here) */}
+                                <div className="flex gap-2 mt-1 pt-2 border-t border-slate-100">
+                                    <button 
+                                        onClick={handleCalculate}
+                                        className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded shadow text-[10px] flex items-center justify-center gap-2 font-bold transition-transform active:scale-95"
+                                    >
+                                        <Calculator size={14} /> Calculate
+                                    </button>
+                                    <button 
+                                        onClick={() => setShowReport(true)}
+                                        className="flex-none w-8 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded shadow flex items-center justify-center transition-transform active:scale-95"
+                                        title="View Calculation Report"
+                                    >
+                                        <FileText size={14} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Results Summary */}
+                            {totalDemand.flow > 0 && (
+                                <div className="bg-slate-100 p-2 mt-2 rounded border border-slate-300 space-y-1 animate-in fade-in slide-in-from-bottom-2 shrink-0">
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="text-[10px] text-slate-600">Total Flow:</span>
+                                        <span className="text-sm font-bold text-blue-700">{safeFixed(totalDemand.flow)} <span className="text-[9px] text-slate-500 font-normal">gpm</span></span>
+                                    </div>
+                                    <div className="flex justify-between items-baseline">
+                                        <span className="text-[10px] text-slate-600">Max Pressure:</span>
+                                        <span className="text-sm font-bold text-red-700">{safeFixed(totalDemand.pressure)} <span className="text-[9px] text-slate-500 font-normal">psi</span></span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Main Canvas Area */}
+                    <div 
+                        className={`flex-1 relative bg-white overflow-hidden canvas-grid print:hidden ${
+                            mode === 'pan' 
+                                ? (isDragging ? 'cursor-grabbing' : 'cursor-grab') 
+                                : 'cursor-crosshair'
+                        }`}
+                        ref={containerRef}
+                        onMouseDown={handleMouseDown}
+                        onMouseMove={handleMouseMove}
+                        onMouseUp={handleMouseUp}
+                        onClick={handleCanvasClick}
+                        onDoubleClick={handleCanvasDoubleClick}
+                        onWheel={(e) => adjustZoom(e.deltaY > 0 ? -1 : 1)}
+                    >
+                        {/* Info Overlay */}
+                        <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border shadow-sm text-[10px] text-slate-600 pointer-events-none flex items-center gap-2">
+                            <span className="flex items-center gap-1"><Info size={12}/> Mode: <span className="font-bold uppercase text-slate-900">{mode}</span></span>
+                            <span className="w-px h-3 bg-slate-300"></span>
+                            <span>Scale: {pixelsPerMeter ? `${pixelsPerMeter.toFixed(4)} px/m` : 'Not Set'}</span>
+                        </div>
+
+                        {/* Zoom Controls */}
+                        <div className="absolute bottom-6 right-6 z-10 flex flex-col gap-2">
+                            <button onClick={() => adjustZoom(1)} className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-transform active:scale-90"><ZoomIn size={16}/></button>
+                            <button onClick={() => adjustZoom(-1)} className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-transform active:scale-90"><ZoomOut size={16}/></button>
+                        </div>
+
+                        {/* Transform Container */}
+                        <div 
+                            style={{ 
+                                transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+                                transformOrigin: '0 0',
+                                width: '100%', height: '100%',
+                                pointerEvents: 'none'
+                            }}
+                        >
+                             {/* Background Image */}
+                            {pdfUrl && <img src={pdfUrl} className="absolute top-0 left-0 opacity-80" style={{ maxWidth: 'none', pointerEvents: 'none' }} />}
+
+                            <svg className="absolute top-0 left-0 overflow-visible" style={{ width: '1px', height: '1px' }}>
+                                {/* Pipe Alignment Guide (Orange Dashed Line on Pipe) */}
+                                {pipeAlignmentGuide && (
+                                    <g>
+                                        <line 
+                                            x1={pipeAlignmentGuide.p1.x} y1={pipeAlignmentGuide.p1.y}
+                                            x2={pipeAlignmentGuide.p2.x} y2={pipeAlignmentGuide.p2.y}
+                                            stroke="#f97316" // Orange 500
+                                            strokeWidth={1.5 / transform.scale}
+                                            strokeDasharray={`${6 / transform.scale},${3 / transform.scale}`}
+                                            opacity={0.8}
+                                        />
+                                        {/* Midpoint Triangle Indicator REMOVED as requested */}
+                                    </g>
+                                )}
+
+                                {/* Alignment Guides (Red Crosshair) - Changed from Pink to Red */}
+                                {alignmentLines.map((line, i) => (
+                                    <line 
+                                        key={i}
+                                        x1={line.x1} y1={line.y1}
+                                        x2={line.x2} y2={line.y2}
+                                        stroke="#ef4444" 
+                                        strokeWidth={1 / transform.scale}
+                                        strokeDasharray={`${4 / transform.scale},${4 / transform.scale}`}
+                                        opacity={0.8}
+                                    />
+                                ))}
+                                
+                                {/* Sprinkler Distance Guide (Green Dashed) */}
+                                {sprinklerDistanceGuide && (
+                                    <g>
+                                        <line 
+                                            x1={sprinklerDistanceGuide.start.x} y1={sprinklerDistanceGuide.start.y} 
+                                            x2={sprinklerDistanceGuide.end.x} y2={sprinklerDistanceGuide.end.y} 
+                                            stroke="#10b981" 
+                                            strokeWidth={1 / transform.scale}
+                                            strokeDasharray={`${4 / transform.scale},${2 / transform.scale}`}
+                                            opacity={0.8}
+                                        />
+                                        <text
+                                            x={(sprinklerDistanceGuide.start.x + sprinklerDistanceGuide.end.x) / 2}
+                                            y={(sprinklerDistanceGuide.start.y + sprinklerDistanceGuide.end.y) / 2 - 10 / transform.scale}
+                                            textAnchor="middle"
+                                            fontSize={10 / transform.scale}
+                                            fill="#10b981"
+                                            fontWeight="bold"
+                                            style={{ 
+                                                textShadow: '0px 0px 4px rgba(255,255,255,0.8)',
+                                                pointerEvents: 'none'
+                                            }}
+                                        >
+                                            {sprinklerDistanceGuide.text}
+                                        </text>
+                                    </g>
+                                )}
+
+                                {/* Drawn Pipes - Reverted to Single Line */}
+                                {drawnPipes.map(pipe => {
+                                    const spec = pipeSpecs.find(s => s.nominal === pipe.size) || pipeSpecs[0];
+                                    return (
+                                        <g key={pipe.id}>
+                                            <line 
+                                                x1={pipe.start.x} y1={pipe.start.y} 
+                                                x2={pipe.end.x} y2={pipe.end.y} 
+                                                stroke={spec.color} 
+                                                strokeWidth={3 / transform.scale}
+                                                strokeLinecap="round"
+                                            />
+                                        </g>
+                                    );
+                                })}
+
+                                {/* Nodes (Joints) with IDs - Modified style */}
+                                {/* Removed 'showTags &&' condition here so nodes remain visible */}
+                                {visualNodes.map(node => {
+                                    const isSource = node.id === sourceNodeId;
+                                    return (
+                                        <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
+                                            {/* Connection Dot - Highlight Source with Red/Larger dot */}
+                                            {/* Adjusted radius to match single line pipe width (approx 3px) */}
+                                            <circle 
+                                                r={(isSource ? 3.5 : 1.8) / transform.scale} 
+                                                fill="#ffffff" // White fill
+                                                stroke={isSource ? "#ef4444" : "#94a3b8"} // Colored stroke
+                                                strokeWidth={1.2 / transform.scale}
+                                            />
+                                            {/* Label Offset from center - Show #S if it matches sourceNodeId */}
+                                            <text
+                                                x={(isSource ? 5 : 3) / transform.scale}
+                                                y={(isSource ? -5 : -3) / transform.scale}
+                                                fontSize={(isSource ? 11 : 9) / transform.scale}
+                                                fill={isSource ? "#ef4444" : "#64748b"}
+                                                fontWeight="bold"
+                                                style={{ 
+                                                    textShadow: '1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff',
+                                                    pointerEvents: 'none'
+                                                }}
+                                            >
+                                                {isSource ? `#${node.displayId} (S)` : `#${node.displayId}`}
+                                            </text>
+                                        </g>
+                                    );
+                                })}
+
+                                {/* Sprinklers */}
+                                {placedSprinklers.map(s => (
+                                    <g key={s.id} transform={`translate(${s.x}, ${s.y})`}>
+                                        <circle r={6 / transform.scale} fill="#10b981" fillOpacity="0.2" stroke="#059669" strokeWidth={1/transform.scale} />
+                                        <circle r={2 / transform.scale} fill="#059669" />
+                                    </g>
+                                ))}
+
+                                {/* Results Tags and Arrows - Decoupled in JSX */}
+                                {tagLayout.map(tag => {
+                                    // Prepare classes outside JSX to avoid parser issues
+                                    const containerClass = `border shadow-sm flex flex-col items-center text-center leading-none overflow-hidden rounded-[2px] ${
+                                        tag.res.isSourcePipe ? 'bg-red-50 border-red-600 border-[1.5px]' : 'bg-white border-slate-900'
+                                    }`;
+                                    const headerClass = `w-full border-b ${
+                                        tag.res.isSourcePipe ? 'bg-red-100 border-red-300' : 'bg-slate-100 border-slate-300'
+                                    }`;
+                                    const headerTextClass = `text-[0.85em] font-bold uppercase py-[1px] ${
+                                        tag.res.isSourcePipe ? 'text-red-900' : 'text-slate-900'
+                                    }`;
+
+                                    return (
+                                    <React.Fragment key={tag.id}>
+                                        {/* Tag Group - Show ONLY if showTags is true */}
+                                        {showTags && (
+                                            <g transform={`translate(${tag.tagX}, ${tag.tagY})`}>
+                                                {/* Orthogonal Leader Line */}
+                                                {(() => {
+                                                    const ax = tag.anchorX - tag.tagX;
+                                                    const ay = tag.anchorY - tag.tagY;
+                                                    const isHorzPipe = Math.abs(Math.cos(tag.angle)) > 0.707;
+                                                    let d = "";
+                                                    if (isHorzPipe) {
+                                                        d = `M ${ax} ${ay} L ${ax} 0 L 0 0`;
+                                                    } else {
+                                                        d = `M ${ax} ${ay} L 0 ${ay} L 0 0`;
+                                                    }
+                                                    return (
+                                                        <path 
+                                                            d={d}
+                                                            stroke="#334155" 
+                                                            strokeWidth={1/transform.scale} 
+                                                            strokeDasharray="3,3"
+                                                            fill="none"
+                                                        />
+                                                    );
+                                                })()}
+                                                
+                                                <foreignObject 
+                                                    x={-35 / transform.scale} 
+                                                    y={-26 / transform.scale} 
+                                                    width={70 / transform.scale} 
+                                                    height={52 / transform.scale}
+                                                >
+                                                    <div xmlns="http://www.w3.org/1999/xhtml" 
+                                                         className={containerClass}
+                                                         style={{ fontSize: `${9/transform.scale}px`, height: '100%', width: '100%' }}>
+                                                        
+                                                        {/* Node Info Line (Header) */}
+                                                        <div className={headerClass}>
+                                                            <div className={headerTextClass}>
+                                                                Node {tag.res.nodes}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Data Lines */}
+                                                        <div className="flex flex-col justify-center flex-1 w-full px-0.5 space-y-[1px]">
+                                                            {/* Pipe Info */}
+                                                            <div className="text-[0.75em] text-slate-500 font-semibold border-b border-slate-100 pb-[1px]">
+                                                                {tag.res.size}" - {safeFixed(tag.res.lengthM, 1)}m
+                                                            </div>
+                                                            
+                                                            {/* Flow (Blue) */}
+                                                            <div className="flex justify-between items-baseline px-1">
+                                                                <span className="text-[0.7em] text-slate-400 font-normal">Q:</span>
+                                                                <span className="text-[0.9em] text-blue-800 font-bold">{Math.round(tag.res.flow)}</span>
+                                                            </div>
+
+                                                            {/* Pressure (Red) */}
+                                                            <div className="flex justify-between items-baseline px-1">
+                                                                <span className="text-[0.7em] text-slate-400 font-normal">P:</span>
+                                                                <span className="text-[0.9em] text-red-700 font-bold">{safeFixed(tag.res.pressure, 1)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </foreignObject>
+                                            </g>
+                                        )}
+
+                                        {/* Flow Arrow - Always visible regardless of showTags */}
+                                        <g transform={`translate(${tag.midX}, ${tag.midY}) rotate(${tag.angle * 180 / Math.PI})`}>
+                                            {/* Flow Arrow fixed to Black color with white shadow for visibility */}
+                                            <path 
+                                                d={`M ${-3.5/transform.scale} ${-3.5/transform.scale} L ${3.5/transform.scale} 0 L ${-3.5/transform.scale} ${3.5/transform.scale}`} 
+                                                stroke="#000000" 
+                                                strokeWidth={0.8/transform.scale} 
+                                                fill="none" 
+                                                strokeLinecap="round" 
+                                                strokeLinejoin="round"
+                                                strokeDasharray={`${2/transform.scale},${1.5/transform.scale}`}
+                                                style={{ filter: 'drop-shadow(0px 0px 1px rgba(255,255,255,1))' }} 
+                                            />
+                                        </g>
+                                    </React.Fragment>
+                                    );
+                                })}
+
+                                {/* Temp Pipe (Ghost) */}
+                                {tempPipe && (() => {
+                                    const dx = tempPipe.end.x - tempPipe.start.x;
+                                    const dy = tempPipe.end.y - tempPipe.start.y;
+                                    const lenPx = Math.sqrt(dx * dx + dy * dy);
+                                    // Modified here: changed toFixed(2) to toFixed(1)
+                                    const lenText = pixelsPerMeter 
+                                        ? `${(lenPx / pixelsPerMeter).toFixed(1)} m.` 
+                                        : `${Math.round(lenPx)} px`;
+                                    
+                                    // Standard single line width
+                                    const w = 3 / transform.scale;
+
+                                    return (
+                                        <g>
+                                            <line 
+                                                x1={tempPipe.start.x} y1={tempPipe.start.y} 
+                                                x2={tempPipe.end.x} y2={tempPipe.end.y} 
+                                                stroke={pipeSpecs.find(s => s.nominal === tempPipe.size)?.color || 'black'} 
+                                                strokeWidth={w}
+                                                strokeOpacity="0.5"
+                                                strokeDasharray="5,5"
+                                            />
+                                            {/* Distance Label */}
+                                            <text
+                                                x={(tempPipe.start.x + tempPipe.end.x) / 2}
+                                                y={(tempPipe.start.y + tempPipe.end.y) / 2 - 10 / transform.scale}
+                                                textAnchor="middle"
+                                                fontSize={12 / transform.scale}
+                                                fill="#0f172a"
+                                                fontWeight="bold"
+                                                style={{ 
+                                                    textShadow: '0px 0px 4px rgba(255,255,255,0.8)',
+                                                    pointerEvents: 'none'
+                                                }}
+                                            >
+                                                {lenText}
+                                            </text>
+                                        </g>
+                                    );
+                                })()}
+
+                                {/* Snap Marker */}
+                                {snapPoint && (
+                                    <circle 
+                                        cx={snapPoint.x} cy={snapPoint.y} 
+                                        r={5 / transform.scale} 
+                                        fill="none" stroke="#ef4444" strokeWidth={2 / transform.scale}
+                                    />
+                                )}
+
+                                {/* Scale Line */}
+                                {scalePoints.length === 2 && (
+                                    <line 
+                                        x1={scalePoints[0].x} y1={scalePoints[0].y} 
+                                        x2={scalePoints[1].x} y2={scalePoints[1].y} 
+                                        stroke="#f00" strokeWidth={2 / transform.scale}
+                                    />
+                                )}
+                            </svg>
+                        </div>
+                    </div>
+
+                    {/* Scale Dialog Modal */}
+                    {showScaleDialog && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center print:hidden">
+                            <div className="bg-white p-6 rounded-lg shadow-2xl w-80 animate-in zoom-in-95">
+                                <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                                    <Ruler className="text-indigo-600" /> Calibrate Scale
+                                </h3>
+                                {/* Show measured pixels */}
+                                <div className="mb-4 bg-slate-50 p-2 rounded text-sm text-slate-600">
+                                    <div className="flex justify-between">
+                                        <span>Measured Length:</span>
+                                        <span className="font-mono font-bold">
+                                            {(() => {
+                                                const dx = scalePoints[1].x - scalePoints[0].x;
+                                                const dy = scalePoints[1].y - scalePoints[0].y;
+                                                return Math.sqrt(dx*dx + dy*dy).toFixed(2);
+                                            })()} px
+                                        </span>
+                                    </div>
+                                </div>
+                                <p className="text-sm text-slate-500 mb-2">
+                                    Enter Real-World Distance:
+                                </p>
+                                <div className="flex items-center gap-2 mb-4">
+                                    <input 
+                                        type="number" 
+                                        autoFocus
+                                        placeholder="0.00"
+                                        className="w-full p-2 border rounded text-lg"
+                                        value={realWorldDist}
+                                        onChange={e => setRealWorldDist(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && applyScale()}
+                                        step="0.01"
+                                    />
+                                    <span className="text-slate-500 font-medium">m</span>
+                                </div>
+                                
+                                {/* Show resulting scale factor preview */}
+                                {realWorldDist && !isNaN(parseFloat(realWorldDist)) && parseFloat(realWorldDist) > 0 && (
+                                    <div className="mb-4 text-xs text-center text-emerald-600 font-medium">
+                                        Result: {((Math.sqrt(Math.pow(scalePoints[1].x - scalePoints[0].x, 2) + Math.pow(scalePoints[1].y - scalePoints[0].y, 2))) / parseFloat(realWorldDist)).toFixed(4)} px/m
+                                    </div>
+                                )}
+
+                                <div className="flex justify-end gap-2">
+                                    <button onClick={() => { setShowScaleDialog(false); setScalePoints([]); }} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded">Cancel</button>
+                                    <button onClick={applyScale} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded font-medium">Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Pipe Size Edit Modal */}
+                    {editingPipeId && (
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center print:hidden" onClick={() => setEditingPipeId(null)}>
+                            <div className="bg-white p-4 rounded-lg shadow-xl w-64 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                                <h3 className="font-bold text-sm mb-3 text-slate-700 flex items-center gap-2">
+                                    <Edit3 size={16} /> Select New Pipe Size
+                                </h3>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {pipeSpecs.map(spec => (
+                                        <button
+                                            key={spec.nominal}
+                                            onClick={() => updatePipeSize(spec.nominal)}
+                                            className="text-xs py-2 rounded border hover:bg-slate-50 transition-colors font-medium"
+                                            style={{ borderColor: spec.color, color: spec.color }}
+                                        >
+                                            {spec.nominal}"
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Report Modal */}
+                    {showReport && (
+                        // Changed: Added print:items-start to align content to top during print, removing vertical centering
+                        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:absolute print:inset-0 print:bg-white print:z-[9999] print:block">
+                            <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-in zoom-in-95 print:shadow-none print:w-full print:max-w-none print:h-auto print:max-h-none print:rounded-none">
+                                <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg print:hidden">
+                                    <h3 className="font-bold text-lg text-gray-800 flex items-center gap-2">
+                                        <FileText className="text-blue-600" /> Hydraulic Calculations Sheet
+                                    </h3>
+                                    <button onClick={() => setShowReport(false)} className="p-1 hover:bg-gray-200 rounded-full transition-colors text-gray-500">
+                                        <X size={20} />
+                                    </button>
+                                </div>
+                                <div className="p-6 overflow-auto print:p-0 print:overflow-visible">
+                                    <div className="mb-4 text-center hidden print:block">
+                                        <h2 className="text-xl font-bold uppercase">Hydraulic Calculations Sheet</h2>
+                                        <p className="text-sm text-gray-500">NFPA 13 Standard</p>
+                                    </div>
+                                    <table className="w-full text-sm text-left border-collapse">
+                                        <thead className="bg-gray-100 font-bold text-gray-700 border-b-2 border-gray-300">
+                                            <tr>
+                                                <th className="p-3 border-r border-gray-200">Node</th>
+                                                <th className="p-3 border-r border-gray-200">Flow (gpm)</th>
+                                                <th className="p-3 border-r border-gray-200">Pipe Size (in)</th>
+                                                <th className="p-3 border-r border-gray-200">Length (m)</th>
+                                                <th className="p-3 border-r border-gray-200">Friction Loss (psi)</th>
+                                                <th className="p-3 border-r border-gray-200">Required Pressure (psi)</th>
+                                                <th className="p-3">
+                                                    Velocity (m/s)
+                                                    <span className="block text-[10px] font-normal text-gray-500 text-nowrap">&lt; 9.0 m/s</span>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {results.length > 0 ? (
+                                                results.map((row, i) => (
+                                                    <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                                        <td className="p-3 font-medium text-blue-700 border-r border-gray-200">{row.nodes}</td>
+                                                        <td className="p-3 font-bold text-gray-800 border-r border-gray-200">{safeFixed(row.flow)}</td>
+                                                        <td className="p-3 text-gray-600 border-r border-gray-200">{row.size}"</td>
+                                                        <td className="p-3 text-gray-600 border-r border-gray-200">{safeFixed(row.lengthM)}</td>
+                                                        <td className="p-3 text-gray-600 border-r border-gray-200">{safeFixed(row.loss)}</td>
+                                                        <td className="p-3 font-medium text-red-700 border-r border-gray-200">{safeFixed(row.pressure)}</td>
+                                                        <td className={`p-3 ${row.velocity > 9.0 ? "text-red-600 font-bold" : "text-gray-500"}`}>{safeFixed(row.velocity)}</td>
+                                                    </tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan="7" className="p-8 text-center text-gray-400 italic">
+                                                        No calculation data available. Please draw pipes and calculate first.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                        {results.length > 0 && (
+                                            <tfoot className="bg-gray-50 font-bold border-t-2 border-gray-300">
+                                                <tr>
+                                                    <td className="p-3 border-r border-gray-200">System Total</td>
+                                                    <td className="p-3 text-blue-700 border-r border-gray-200">{safeFixed(totalDemand.flow)}</td>
+                                                    <td colSpan="3" className="border-r border-gray-200"></td>
+                                                    <td className="p-3 text-red-700 border-r border-gray-200">{safeFixed(totalDemand.pressure)} (Max)</td>
+                                                    <td></td>
+                                                </tr>
+                                            </tfoot>
+                                        )}
+                                    </table>
+                                </div>
+                                <div className="p-4 border-t flex justify-end gap-2 bg-gray-50 rounded-b-lg print:hidden">
+                                    <button 
+                                        onClick={() => window.print()} 
+                                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded hover:bg-gray-50 font-medium flex items-center gap-2"
+                                    >
+                                        Print
+                                    </button>
+                                    <button 
+                                        onClick={() => setShowReport(false)} 
+                                        className="px-4 py-2 bg-gray-900 text-white rounded hover:bg-gray-800 font-medium"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
