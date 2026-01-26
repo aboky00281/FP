@@ -196,7 +196,7 @@
                 }
             };
 
-            // Improved re-node logic: DFS Post-Order
+            // Improved re-node logic: DFS Post-Order (Deepest Branch First) - with Loop Prevention
             useEffect(() => {
                 const uniqueNodes = new Map();
                 const adj = {}; 
@@ -241,20 +241,9 @@
 
                 const maxDepthMap = {};
                 
-                const calcMaxDepth = (u, p) => {
-                    let maxD = 0;
-                    if (adj[u]) {
-                        adj[u].forEach(v => {
-                            if (v !== p) {
-                                maxD = Math.max(maxD, calcMaxDepth(v, u) + 1);
-                            }
-                        });
-                    }
-                    maxDepthMap[u] = maxD;
-                    return maxD;
-                };
-                
+                // Use Try/Catch for depth calc to avoid recursion depth issues on loops
                 try {
+                   // Build BFS tree first to avoid infinite recursion
                    const childrenMap = {};
                    const visitedBFS = new Set([sourceNode.id]);
                    const queue = [sourceNode.id];
@@ -273,6 +262,7 @@
                        }
                    }
                    
+                   // Recurse on the BFS tree only
                    const calcDepthSafe = (u) => {
                        let maxD = 0;
                        childrenMap[u].forEach(v => {
@@ -1485,6 +1475,7 @@
                                                 color: selectedPipeSize === spec.nominal ? spec.color : ''
                                             }}
                                         >
+                                            {/* Color Dot */}
                                             <div 
                                                 className="w-2 h-2 rounded-full" 
                                                 style={{ backgroundColor: spec.color }}
@@ -1495,6 +1486,7 @@
                                 </div>
                             </div>
 
+                            {/* Tools */}
                             <div className="flex flex-col gap-1">
                                 <h3 className="font-semibold text-slate-700 text-xs flex items-center gap-1">
                                     <Edit3 size={14} /> Tools
@@ -1513,6 +1505,7 @@
                                         </button>
                                     </div>
 
+                                    {/* Right Column: Editing */}
                                     <div className="flex flex-col gap-1.5">
                                         <button onClick={() => setMode('sprinkler')} className={`flex items-center justify-center gap-2 px-2 py-2 rounded text-[10px] border transition-colors ${mode === 'sprinkler' ? 'bg-emerald-600 text-white' : 'bg-white hover:bg-slate-50'}`}>
                                             <Droplets size={14} /> Add Head
@@ -1526,6 +1519,7 @@
                                     </div>
                                 </div>
 
+                                {/* Undo/Redo Row */}
                                 <div className="grid grid-cols-2 gap-2 mt-1">
                                     <button onClick={handleUndo} disabled={historyIndex <= 0} className="flex items-center justify-center gap-1 px-1 py-1.5 rounded text-[10px] border bg-white hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed" title="Undo">
                                         <RotateCcw size={12} /> Undo
@@ -1535,6 +1529,7 @@
                                     </button>
                                 </div>
 
+                                {/* Calculate & Report Row (Moved here) */}
                                 <div className="flex gap-2 mt-1 pt-2 border-t border-slate-100">
                                     <button 
                                         onClick={handleCalculate}
@@ -1552,6 +1547,7 @@
                                 </div>
                             </div>
 
+                            {/* Results Summary */}
                             {totalDemand.flow > 0 && (
                                 <div className="bg-slate-100 p-2 mt-2 rounded border border-slate-300 space-y-1 animate-in fade-in slide-in-from-bottom-2 shrink-0">
                                     <div className="flex justify-between items-baseline">
@@ -1567,6 +1563,7 @@
                         </div>
                     </div>
 
+                    {/* Main Canvas Area */}
                     <div 
                         className={`flex-1 relative bg-white overflow-hidden canvas-grid print:hidden ${
                             mode === 'pan' 
@@ -1581,17 +1578,20 @@
                         onDoubleClick={handleCanvasDoubleClick}
                         onWheel={(e) => adjustZoom(e.deltaY > 0 ? -1 : 1)}
                     >
+                        {/* Info Overlay */}
                         <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border shadow-sm text-[10px] text-slate-600 pointer-events-none flex items-center gap-2">
                             <span className="flex items-center gap-1"><Info size={12}/> Mode: <span className="font-bold uppercase text-slate-900">{mode}</span></span>
                             <span className="w-px h-3 bg-slate-300"></span>
                             <span>Scale: {pixelsPerMeter ? `${pixelsPerMeter.toFixed(4)} px/m` : 'Not Set'}</span>
                         </div>
 
+                        {/* Zoom Controls */}
                         <div className="absolute bottom-6 right-6 z-10 flex flex-col gap-2">
                             <button onClick={() => adjustZoom(1)} className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-transform active:scale-90"><ZoomIn size={16}/></button>
                             <button onClick={() => adjustZoom(-1)} className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-transform active:scale-90"><ZoomOut size={16}/></button>
                         </div>
 
+                        {/* Transform Container */}
                         <div 
                             style={{ 
                                 transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
@@ -1600,9 +1600,11 @@
                                 pointerEvents: 'none'
                             }}
                         >
+                             {/* Background Image */}
                             {pdfUrl && <img src={pdfUrl} className="absolute top-0 left-0 opacity-80" style={{ maxWidth: 'none', pointerEvents: 'none' }} />}
 
                             <svg className="absolute top-0 left-0 overflow-visible" style={{ width: '1px', height: '1px' }}>
+                                {/* Pipe Alignment Guide (Orange Dashed Line on Pipe) */}
                                 {pipeAlignmentGuide && (
                                     <g>
                                         <line 
@@ -1613,9 +1615,11 @@
                                             strokeDasharray={`${6 / transform.scale},${3 / transform.scale}`}
                                             opacity={0.8}
                                         />
+                                        {/* Midpoint Triangle Indicator REMOVED as requested */}
                                     </g>
                                 )}
 
+                                {/* Alignment Guides (Red Crosshair) - Changed from Pink to Red */}
                                 {alignmentLines.map((line, i) => (
                                     <line 
                                         key={i}
@@ -1628,6 +1632,7 @@
                                     />
                                 ))}
                                 
+                                {/* Sprinkler Distance Guide (Green Dashed) */}
                                 {sprinklerDistanceGuide && (
                                     <g>
                                         <line 
@@ -1655,6 +1660,7 @@
                                     </g>
                                 )}
 
+                                {/* Drawn Pipes - Reverted to Single Line */}
                                 {drawnPipes.map(pipe => {
                                     const spec = pipeSpecs.find(s => s.nominal === pipe.size) || pipeSpecs[0];
                                     return (
@@ -1670,16 +1676,21 @@
                                     );
                                 })}
 
+                                {/* Nodes (Joints) with IDs - Modified style */}
+                                {/* Removed 'showTags &&' condition here so nodes remain visible */}
                                 {visualNodes.map(node => {
                                     const isSource = node.id === sourceNodeId;
                                     return (
                                         <g key={node.id} transform={`translate(${node.x}, ${node.y})`}>
+                                            {/* Connection Dot - Highlight Source with Red/Larger dot */}
+                                            {/* Adjusted radius to match single line pipe width (approx 3px) */}
                                             <circle 
                                                 r={(isSource ? 3.5 : 1.8) / transform.scale} 
-                                                fill="#ffffff" 
-                                                stroke={isSource ? "#ef4444" : "#94a3b8"} 
+                                                fill="#ffffff" // White fill
+                                                stroke={isSource ? "#ef4444" : "#94a3b8"} // Colored stroke
                                                 strokeWidth={1.2 / transform.scale}
                                             />
+                                            {/* Label Offset from center - Show #S if it matches sourceNodeId */}
                                             <text
                                                 x={(isSource ? 5 : 3) / transform.scale}
                                                 y={(isSource ? -5 : -3) / transform.scale}
@@ -1697,6 +1708,7 @@
                                     );
                                 })}
 
+                                {/* Sprinklers */}
                                 {placedSprinklers.map(s => (
                                     <g key={s.id} transform={`translate(${s.x}, ${s.y})`}>
                                         <circle r={6 / transform.scale} fill="#10b981" fillOpacity="0.2" stroke="#059669" strokeWidth={1/transform.scale} />
@@ -1704,7 +1716,9 @@
                                     </g>
                                 ))}
 
+                                {/* Results Tags and Arrows - Decoupled in JSX */}
                                 {tagLayout.map(tag => {
+                                    // Prepare classes outside JSX to avoid parser issues
                                     const containerClass = `border shadow-sm flex flex-col items-center text-center leading-none overflow-hidden rounded-[2px] ${
                                         tag.res.isSourcePipe ? 'bg-red-50 border-red-600 border-[1.5px]' : 'bg-white border-slate-900'
                                     }`;
@@ -1717,8 +1731,10 @@
 
                                     return (
                                     <React.Fragment key={tag.id}>
+                                        {/* Tag Group - Show ONLY if showTags is true */}
                                         {showTags && (
                                             <g transform={`translate(${tag.tagX}, ${tag.tagY})`}>
+                                                {/* Orthogonal Leader Line */}
                                                 {(() => {
                                                     const ax = tag.anchorX - tag.tagX;
                                                     const ay = tag.anchorY - tag.tagY;
@@ -1750,22 +1766,27 @@
                                                          className={containerClass}
                                                          style={{ fontSize: `${9/transform.scale}px`, height: '100%', width: '100%' }}>
                                                         
+                                                        {/* Node Info Line (Header) */}
                                                         <div className={headerClass}>
                                                             <div className={headerTextClass}>
                                                                 Node {tag.res.nodes}
                                                             </div>
                                                         </div>
 
+                                                        {/* Data Lines */}
                                                         <div className="flex flex-col justify-center flex-1 w-full px-0.5 space-y-[1px]">
+                                                            {/* Pipe Info */}
                                                             <div className="text-[0.75em] text-slate-500 font-semibold border-b border-slate-100 pb-[1px]">
                                                                 {tag.res.size}" - {safeFixed(tag.res.lengthM, 1)}m
                                                             </div>
                                                             
+                                                            {/* Flow (Blue) */}
                                                             <div className="flex justify-between items-baseline px-1">
                                                                 <span className="text-[0.7em] text-slate-400 font-normal">Q:</span>
                                                                 <span className="text-[0.9em] text-blue-800 font-bold">{Math.round(tag.res.flow)}</span>
                                                             </div>
 
+                                                            {/* Pressure (Red) */}
                                                             <div className="flex justify-between items-baseline px-1">
                                                                 <span className="text-[0.7em] text-slate-400 font-normal">P:</span>
                                                                 <span className="text-[0.9em] text-red-700 font-bold">{safeFixed(tag.res.pressure, 1)}</span>
@@ -1776,7 +1797,9 @@
                                             </g>
                                         )}
 
+                                        {/* Flow Arrow - Always visible regardless of showTags */}
                                         <g transform={`translate(${tag.midX}, ${tag.midY}) rotate(${tag.angle * 180 / Math.PI})`}>
+                                            {/* Flow Arrow fixed to Black color with white shadow for visibility */}
                                             <path 
                                                 d={`M ${-3.5/transform.scale} ${-3.5/transform.scale} L ${3.5/transform.scale} 0 L ${-3.5/transform.scale} ${3.5/transform.scale}`} 
                                                 stroke="#000000" 
@@ -1784,7 +1807,7 @@
                                                 fill="none" 
                                                 strokeLinecap="round" 
                                                 strokeLinejoin="round"
-                                                strokeDasharray={`${2/transform.scale},${1.5/transform.scale}`}
+                                                // Removed strokeDasharray to make it solid
                                                 style={{ filter: 'drop-shadow(0px 0px 1px rgba(255,255,255,1))' }} 
                                             />
                                         </g>
@@ -1792,14 +1815,17 @@
                                     );
                                 })}
 
+                                {/* Temp Pipe (Ghost) */}
                                 {tempPipe && (() => {
                                     const dx = tempPipe.end.x - tempPipe.start.x;
                                     const dy = tempPipe.end.y - tempPipe.start.y;
                                     const lenPx = Math.sqrt(dx * dx + dy * dy);
+                                    // Modified here: changed toFixed(2) to toFixed(1)
                                     const lenText = pixelsPerMeter 
                                         ? `${(lenPx / pixelsPerMeter).toFixed(1)} m.` 
                                         : `${Math.round(lenPx)} px`;
                                     
+                                    // Standard single line width
                                     const w = 3 / transform.scale;
 
                                     return (
@@ -1812,6 +1838,7 @@
                                                 strokeOpacity="0.5"
                                                 strokeDasharray="5,5"
                                             />
+                                            {/* Distance Label */}
                                             <text
                                                 x={(tempPipe.start.x + tempPipe.end.x) / 2}
                                                 y={(tempPipe.start.y + tempPipe.end.y) / 2 - 10 / transform.scale}
@@ -1830,6 +1857,7 @@
                                     );
                                 })()}
 
+                                {/* Snap Marker */}
                                 {snapPoint && (
                                     <circle 
                                         cx={snapPoint.x} cy={snapPoint.y} 
@@ -1838,6 +1866,7 @@
                                     />
                                 )}
 
+                                {/* Scale Line */}
                                 {scalePoints.length === 2 && (
                                     <line 
                                         x1={scalePoints[0].x} y1={scalePoints[0].y} 
@@ -1849,12 +1878,14 @@
                         </div>
                     </div>
 
+                    {/* Scale Dialog Modal */}
                     {showScaleDialog && (
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center print:hidden">
                             <div className="bg-white p-6 rounded-lg shadow-2xl w-80 animate-in zoom-in-95">
                                 <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
                                     <Ruler className="text-indigo-600" /> Calibrate Scale
                                 </h3>
+                                {/* Show measured pixels */}
                                 <div className="mb-4 bg-slate-50 p-2 rounded text-sm text-slate-600">
                                     <div className="flex justify-between">
                                         <span>Measured Length:</span>
@@ -1884,6 +1915,7 @@
                                     <span className="text-slate-500 font-medium">m</span>
                                 </div>
                                 
+                                {/* Show resulting scale factor preview */}
                                 {realWorldDist && !isNaN(parseFloat(realWorldDist)) && parseFloat(realWorldDist) > 0 && (
                                     <div className="mb-4 text-xs text-center text-emerald-600 font-medium">
                                         Result: {((Math.sqrt(Math.pow(scalePoints[1].x - scalePoints[0].x, 2) + Math.pow(scalePoints[1].y - scalePoints[0].y, 2))) / parseFloat(realWorldDist)).toFixed(4)} px/m
@@ -1898,6 +1930,7 @@
                         </div>
                     )}
                     
+                    {/* Pipe Size Edit Modal */}
                     {editingPipeId && (
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center print:hidden" onClick={() => setEditingPipeId(null)}>
                             <div className="bg-white p-4 rounded-lg shadow-xl w-64 animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
@@ -1920,7 +1953,9 @@
                         </div>
                     )}
 
+                    {/* Report Modal */}
                     {showReport && (
+                        // Changed: Added print:items-start to align content to top during print, removing vertical centering
                         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 print:absolute print:inset-0 print:bg-white print:z-[9999] print:block">
                             <div className="bg-white rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col animate-in zoom-in-95 print:shadow-none print:w-full print:max-w-none print:h-auto print:max-h-none print:rounded-none">
                                 <div className="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg print:hidden">
@@ -1948,6 +1983,7 @@
                                             <tr>
                                                 <th className="p-3 border-r border-gray-200">Node</th>
                                                 <th className="p-3 border-r border-gray-200">Flow (gpm)</th>
+                                                {/* Moved Sprinkler Flow to 3rd Column */}
                                                 <th className="p-3 border-r border-gray-200">Sprinkler Flow (gpm)</th>
                                                 <th className="p-3 border-r border-gray-200">Pipe Size (in)</th>
                                                 <th className="p-3 border-r border-gray-200">Length (m)</th>
@@ -1964,10 +2000,12 @@
                                             {results.length > 0 ? (
                                                 results.map((row, i) => (
                                                     <tr key={i} className="hover:bg-gray-50 transition-colors">
+                                                        {/* Node Color Logic: Green if has headFlow, else Blue */}
                                                         <td className={`p-3 font-medium border-r border-gray-200 ${row.headFlow > 0 ? 'text-green-600' : 'text-blue-700'}`}>
                                                             {row.nodes}
                                                         </td>
                                                         <td className="p-3 font-bold text-gray-800 border-r border-gray-200">{safeFixed(row.flow)}</td>
+                                                        {/* Sprinkler Flow Moved Here */}
                                                         <td className={`p-3 border-r border-gray-200 ${row.headFlow > 0 ? 'text-green-600 font-bold' : 'text-gray-400'}`}>
                                                             {row.headFlow > 0 ? safeFixed(row.headFlow) : '-'}
                                                         </td>
@@ -1999,6 +2037,7 @@
                                                 <tr>
                                                     <td className="p-3 border-r border-gray-200">System Total</td>
                                                     <td className="p-3 text-blue-700 border-r border-gray-200">{safeFixed(totalDemand.flow)}</td>
+                                                    {/* Spanning the middle columns (SprinklerFlow, Size, Length, Loss) */}
                                                     <td colSpan="5" className="border-r border-gray-200"></td>
                                                     <td className="p-3 text-red-700 border-r border-gray-200">{safeFixed(totalDemand.pressure)} (Max)</td>
                                                     <td></td>
