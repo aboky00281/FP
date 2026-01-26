@@ -140,10 +140,12 @@
             const [totalDemand, setTotalDemand] = useState({ flow: 0, pressure: 0 });
             const [visualNodes, setVisualNodes] = useState([]);
             const [sourceNodeId, setSourceNodeId] = useState(null);
+            
             const [showTags, setShowTags] = useState(true);
             const [history, setHistory] = useState([{ pipes: [], sprinklers: [] }]);
             const [historyIndex, setHistoryIndex] = useState(0);
             const [showReport, setShowReport] = useState(false);
+            
             const [editingPipeId, setEditingPipeId] = useState(null);
             const [alignmentLines, setAlignmentLines] = useState([]);
             const [sprinklerDistanceGuide, setSprinklerDistanceGuide] = useState(null);
@@ -154,9 +156,6 @@
                 return isNaN(n) ? fallback : n;
             };
             const safeFixed = (val, dec = 2) => safeNum(val).toFixed(dec);
-
-            // Calculated Min Flow per Head (Display only)
-            const minFlowPerHead = safeFixed(designDensity * areaPerHead, 2);
 
             const getContrastColor = (hexcolor) => {
                 if (!hexcolor) return '#000000';
@@ -872,12 +871,15 @@
 
                     // INCREASED TOLERANCE: Make it easier to snap sprinklers
                     const tolerance = 25 / transform.scale; 
+                    const qPerHead = density * areaFt2;
+
                     placedSprinklers.forEach(s => {
                         for (const key in nodes) {
                             const node = nodes[key];
                             const dist = Math.sqrt(Math.pow(s.x - node.x, 2) + Math.pow(s.y - node.y, 2));
                             if (dist < tolerance) {
-                                node.heads.push(s); // Push to heads array for Backward Pass
+                                node.heads.push(s); 
+                                // node.demandQ += qPerHead; // Fixed Flow not used in 2-Pass Pressure logic
                                 break;
                             }
                         }
@@ -1029,10 +1031,10 @@
 
                         if (uNode.heads.length > 0) {
                             let pMinHead = startPressureReq; 
+                            // Recalculate Q based on actual min head pressure 
                             let qHead = K * Math.sqrt(pMinHead);
                             let lossNip = calculateLoss(qHead, RISER_NIPPLE_FT, NIPPLE_ID, C);
                             let pReqAtNodeForHead = pMinHead + lossNip;
-
                             maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pReqAtNodeForHead);
                             
                             let headFlowSum = 0;
@@ -1125,12 +1127,9 @@
                     const finalResults = Object.values(tempReport).reverse();
                     setResults(finalResults);
                     
-                    // Add Alert if total flow is 0 (Disconnected graph)
                     const finalTotalFlow = nodeTotalQ[sourceId] || 0;
                     const finalPressure = nodeReqP[sourceId] || 0;
                     
-                    // REMOVED "FLOW 0" ALERT to prevent user confusion, now just shows 0 in table silently.
-
                     setTotalDemand({ flow: finalTotalFlow, pressure: finalPressure });
 
                 } catch (err) {
