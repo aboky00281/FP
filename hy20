@@ -65,17 +65,17 @@
           RotateCcw, RotateCw, Eye, EyeOff
         } from 'lucide-react';
 
-        // Adjusted Pipe Colors
+        // Adjusted Pipe Colors: High Contrast for clear distinction
         const pipeSpecs = [
-            { nominal: "1", internal: 1.049, color: "#eab308" },    // Yellow 500
-            { nominal: "1.25", internal: 1.380, color: "#fb923c" }, // Orange 400
-            { nominal: "1.5", internal: 1.610, color: "#b91c1c" },  // Red 700
-            { nominal: "2", internal: 2.067, color: "#ec4899" },    // Pink 500
-            { nominal: "2.5", internal: 2.469, color: "#a855f7" },  // Purple 500
-            { nominal: "3", internal: 3.068, color: "#3b82f6" },    // Blue 500
-            { nominal: "4", internal: 4.026, color: "#06b6d4" },    // Cyan 500
-            { nominal: "6", internal: 6.065, color: "#10b981" },    // Emerald 500
-            { nominal: "8", internal: 7.981, color: "#475569" },    // Slate 600
+            { nominal: "1", internal: 1.049, color: "#facc15" },    // Yellow 400 - Bright
+            { nominal: "1.25", internal: 1.380, color: "#f97316" }, // Orange 500 - Distinct
+            { nominal: "1.5", internal: 1.610, color: "#dc2626" },  // Red 600 - Deep Red
+            { nominal: "2", internal: 2.067, color: "#db2777" },    // Pink 600 - Deep Pink
+            { nominal: "2.5", internal: 2.469, color: "#7c3aed" },  // Violet 600 - Deep Purple
+            { nominal: "3", internal: 3.068, color: "#2563eb" },    // Blue 600 - Royal Blue
+            { nominal: "4", internal: 4.026, color: "#0891b2" },    // Cyan 600 - Dark Cyan
+            { nominal: "6", internal: 6.065, color: "#16a34a" },    // Green 600 - Green
+            { nominal: "8", internal: 7.981, color: "#0f172a" },    // Slate 900 - Almost Black
         ];
 
         // Centralized NFPA Data Source
