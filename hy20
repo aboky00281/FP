@@ -254,37 +254,67 @@
                     return maxD;
                 };
                 
-                calcMaxDepth(sourceNode.id, null);
+                try {
+                   const childrenMap = {};
+                   const visitedBFS = new Set([sourceNode.id]);
+                   const queue = [sourceNode.id];
+                   allNodes.forEach(n => childrenMap[n.id] = []);
+                   
+                   while(queue.length > 0) {
+                       const u = queue.shift();
+                       if(adj[u]) {
+                           adj[u].forEach(v => {
+                               if(!visitedBFS.has(v)) {
+                                   visitedBFS.add(v);
+                                   childrenMap[u].push(v);
+                                   queue.push(v);
+                               }
+                           });
+                       }
+                   }
+                   
+                   const calcDepthSafe = (u) => {
+                       let maxD = 0;
+                       childrenMap[u].forEach(v => {
+                           maxD = Math.max(maxD, calcDepthSafe(v) + 1);
+                       });
+                       maxDepthMap[u] = maxD;
+                       return maxD;
+                   };
+                   calcDepthSafe(sourceNode.id);
+                   
+                   const finalOrder = [];
+                   const dfsNumbering = (u) => {
+                       const children = childrenMap[u];
+                       children.sort((a, b) => {
+                           const depthA = maxDepthMap[a] || 0;
+                           const depthB = maxDepthMap[b] || 0;
+                           if (depthA !== depthB) return depthB - depthA;
+                           const nodeA = uniqueNodes.get(a);
+                           const nodeB = uniqueNodes.get(b);
+                           if (Math.abs(nodeA.y - nodeB.y) > 5) return nodeA.y - nodeB.y;
+                           return nodeA.x - nodeB.x;
+                       });
+                       children.forEach(v => dfsNumbering(v));
+                       finalOrder.push(u);
+                   };
+                   dfsNumbering(sourceNode.id);
 
-                const finalOrder = [];
-                const visitedDFS = new Set();
-
-                const dfsNumbering = (u) => {
-                    visitedDFS.add(u);
-                    const children = adj[u] ? adj[u].filter(v => !visitedDFS.has(v)) : [];
-                    
-                    children.sort((a, b) => {
-                        const depthA = maxDepthMap[a] || 0;
-                        const depthB = maxDepthMap[b] || 0;
-                        if (depthA !== depthB) return depthB - depthA;
-                        
-                        const nodeA = uniqueNodes.get(a);
-                        const nodeB = uniqueNodes.get(b);
-                        if (Math.abs(nodeA.y - nodeB.y) > 5) return nodeA.y - nodeB.y;
-                        return nodeA.x - nodeB.x;
-                    });
-
-                    children.forEach(v => dfsNumbering(v));
-                    finalOrder.push(u);
-                };
-
-                dfsNumbering(sourceNode.id);
-
-                finalOrder.forEach((nodeId, index) => {
-                    if (uniqueNodes.has(nodeId)) {
-                        uniqueNodes.get(nodeId).displayId = index + 1;
-                    }
-                });
+                   let counter = 1;
+                   finalOrder.forEach((nodeId) => {
+                       if (uniqueNodes.has(nodeId)) {
+                           uniqueNodes.get(nodeId).displayId = counter++;
+                       }
+                   });
+                   
+                   // Handle disconnected
+                   allNodes.forEach(n => {
+                       if (!visitedBFS.has(n.id)) {
+                           n.displayId = counter++;
+                       }
+                   });
+                   
+                } catch(e) { console.warn("Node sorting failed", e); }
 
                 setVisualNodes(Array.from(uniqueNodes.values()));
                 setSourceNodeId(sourceNode.id);
@@ -843,11 +873,11 @@
                     // INCREASED TOLERANCE: Make it easier to snap sprinklers
                     const tolerance = 25 / transform.scale; 
                     placedSprinklers.forEach(s => {
-                        for (const nodeId in nodes) {
-                            const node = nodes[nodeId];
+                        for (const key in nodes) {
+                            const node = nodes[key];
                             const dist = Math.sqrt(Math.pow(s.x - node.x, 2) + Math.pow(s.y - node.y, 2));
                             if (dist < tolerance) {
-                                node.heads.push(s);
+                                node.heads.push(s); // Push to heads array for Backward Pass
                                 break;
                             }
                         }
@@ -890,7 +920,10 @@
                             const p2 = conn2.edge.pipe;
 
                             const getVec = (pipe, centerNode) => {
-                                if (pipe.start.x === centerNode.x && pipe.start.y === centerNode.y) {
+                                // Simplified ID check to avoid float issues
+                                const kStart = getKey(pipe.start);
+                                const kEnd = getKey(pipe.end);
+                                if (kStart === centerNode.id) {
                                     return { x: pipe.end.x - pipe.start.x, y: pipe.end.y - pipe.start.y };
                                 } else {
                                     return { x: pipe.start.x - pipe.end.x, y: pipe.start.y - pipe.end.y };
@@ -980,7 +1013,6 @@
 
                         const childConnections = uNode.connections.filter(conn => parentMap[conn.target]?.parentId === uId);
 
-                        // 1. Calculate Required Pressure from Branches
                         childConnections.forEach(child => {
                             const vId = child.target;
                             const edge = child.edge;
@@ -995,20 +1027,14 @@
                             }
                         });
 
-                        // 2. Check Sprinkler Requirement (if any)
                         if (uNode.heads.length > 0) {
                             let pMinHead = startPressureReq; 
                             let qHead = K * Math.sqrt(pMinHead);
                             let lossNip = calculateLoss(qHead, RISER_NIPPLE_FT, NIPPLE_ID, C);
                             let pReqAtNodeForHead = pMinHead + lossNip;
                             maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pReqAtNodeForHead);
-                        }
-                        
-                        // 3. Junction Point Balancing (Balance Flows to Match Max Pressure)
-                        
-                        // Balance Heads
-                        let headFlowSum = 0;
-                        if (uNode.heads.length > 0) {
+                            
+                            let headFlowSum = 0;
                             uNode.heads.forEach(() => {
                                 let pHeadEst = maxP_RequiredAtU;
                                 for(let k=0; k<2; k++) {
@@ -1024,7 +1050,6 @@
                             nodeHeadFlow[uId] = headFlowSum;
                         }
 
-                        // Balance Branches
                         childConnections.forEach(child => {
                             const vId = child.target;
                             const edge = child.edge;
@@ -1035,7 +1060,6 @@
                             const lossBase = calculateLoss(qBranch, totalLen, edge.d_in, C);
                             const pBranchTotalReq = pChildReq + lossBase;
 
-                            // Apply Balancing Formula: Q_adj = Q_old * (P_target / P_old)^0.54
                             if (maxP_RequiredAtU > pBranchTotalReq && pBranchTotalReq > 0.01 && qBranch > 0) {
                                 qBranch = qBranch * Math.pow(maxP_RequiredAtU / pBranchTotalReq, 0.54);
                             }
