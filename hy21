@@ -1806,9 +1806,10 @@
                                         <g transform={`translate(${tag.midX}, ${tag.midY}) rotate(${tag.angle * 180 / Math.PI})`}>
                                             {/* Flow Arrow fixed to Black color with white shadow for visibility */}
                                             <path 
-                                                d={`M ${-3.5/transform.scale} ${-3.5/transform.scale} L ${3.5/transform.scale} 0 L ${-3.5/transform.scale} ${3.5/transform.scale}`} 
+                                                /* Modified arrow path to be wider */
+                                                d={`M ${-4/transform.scale} ${-6/transform.scale} L ${4/transform.scale} 0 L ${-4/transform.scale} ${6/transform.scale}`} 
                                                 stroke="#000000" 
-                                                strokeWidth={0.8/transform.scale} 
+                                                strokeWidth={1/transform.scale} 
                                                 fill="none" 
                                                 strokeLinecap="round" 
                                                 strokeLinejoin="round"
