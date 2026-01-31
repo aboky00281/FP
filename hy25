@@ -617,12 +617,29 @@
 
                 const widthPx = maxX - minX;
                 const heightPx = maxY - minY;
+
+                // Restore missing definitions
                 const widthFt = (widthPx / pixelsPerMeter) * M_TO_FT;
                 const heightFt = (heightPx / pixelsPerMeter) * M_TO_FT;
 
-                const coverAreaLimit = Number(areaPerHead) || 130;
                 const currentHazard = hazardClasses.find(h => h.id === selectedHazard);
-                const maxSpacingLimit = currentHazard ? (currentHazard.maxSpacing || 15) : 15;
+                const isExtraHazard = selectedHazard.startsWith('EH'); // EH1, EH2
+
+                // Define limits based on Hazard Type
+                // Extra Hazard: 9 m² / 3 m
+                // Others: 12.1 m² / 4 m
+                const MAX_AREA_M2 = isExtraHazard ? 9 : 12.1;
+                const MAX_SPACING_M = isExtraHazard ? 3 : 4;
+
+                const maxAreaFt2 = MAX_AREA_M2 * M_TO_FT * M_TO_FT;
+                const maxSpacingFt = MAX_SPACING_M * M_TO_FT;
+
+                // Use the stricter of the Hazard definition or the hard Metric Limits
+                const userAreaLimit = Number(areaPerHead) || 130;
+                const coverAreaLimit = Math.min(userAreaLimit, maxAreaFt2);
+
+                const hazardSpacing = currentHazard ? (currentHazard.maxSpacing || 15) : 15;
+                const maxSpacingLimit = Math.min(hazardSpacing, maxSpacingFt);
 
                 // Grid Logic (Approximate Bounding Box Grid)
                 let numCols = Math.ceil(widthFt / maxSpacingLimit);
@@ -987,7 +1004,7 @@
                 }
             };
 
-            const handleMouseUp = () => {
+            const handleMouseUp = (e) => {
                 if (showScaleDialog || editingPipeId) return;
 
                 if (mode === 'scale' && isDragging) {
@@ -1062,6 +1079,7 @@
                         setTempRect(null);
                     }
                 }
+
 
                 setIsDragging(false);
                 setAlignmentLines([]);
@@ -1988,8 +2006,13 @@
                         onDoubleClick={handleCanvasDoubleClick}
                         onWheel={(e) => adjustZoom(e.deltaY > 0 ? -1 : 1)}
                     >
-                        {/* Info Overlay & Main Actions */}
-                        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+                        <div
+                            className="absolute top-4 left-4 z-10 flex items-center gap-2"
+                            onMouseDown={e => e.stopPropagation()}
+                            onMouseUp={e => e.stopPropagation()}
+                            onClick={e => e.stopPropagation()}
+                            onDoubleClick={e => e.stopPropagation()}
+                        >
                             <div className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-200 shadow-sm text-[10px] text-slate-600 flex items-center gap-2">
                                 <span className="flex items-center gap-1"><Info size={12} /> Mode: <span className="font-bold uppercase text-slate-900">{mode}</span></span>
                                 <span className="w-px h-3 bg-slate-200"></span>
@@ -1998,14 +2021,14 @@
 
                             <button
                                 onClick={handleCalculate}
-                                className="h-7 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-md shadow-indigo-200 text-[10px] flex items-center gap-2 font-bold transition-all active:scale-95 uppercase tracking-wider"
+                                className="h-7 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full text-[10px] flex items-center gap-2 font-bold transition-all active:scale-95 uppercase tracking-wider"
                             >
                                 <Calculator size={13} /> CALCULATE
                             </button>
 
                             <button
                                 onClick={() => setShowReport(true)}
-                                className="h-7 w-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-md shadow-emerald-200 flex items-center justify-center transition-all active:scale-95"
+                                className="h-7 w-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full flex items-center justify-center transition-all active:scale-95"
                                 title="View Report"
                             >
                                 <FileText size={14} />
