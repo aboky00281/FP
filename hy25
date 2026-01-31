@@ -1901,6 +1901,8 @@
                                     </div>
                                 </div>
 
+
+
                                 {/* Draw Section */}
                                 <div className="border-b border-slate-200 pb-2">
                                     <h3 className="font-bold text-slate-800 text-[9px] flex items-center gap-1 mb-1 uppercase tracking-wider">
@@ -1928,6 +1930,8 @@
                                     )}
                                 </div>
 
+
+
                                 {/* Actions Section */}
                                 <div className="pb-1 border-t border-slate-100 pt-2">
                                     <div className="grid grid-cols-2 gap-1.5 mb-2">
@@ -1939,44 +1943,33 @@
                                         </button>
                                     </div>
 
-                                    <div className="flex gap-1.5">
-                                        <button
-                                            onClick={handleCalculate}
-                                            className="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded shadow-sm text-[9px] flex items-center justify-center gap-1.5 font-bold transition-all active:scale-95 uppercase tracking-widest"
-                                        >
-                                            <Calculator size={12} /> CALCULATE
-                                        </button>
-                                        <button
-                                            onClick={() => setShowReport(true)}
-                                            className="flex-none w-8 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow-sm flex items-center justify-center transition-all active:scale-95"
-                                        >
-                                            <FileText size={14} />
-                                        </button>
-                                    </div>
+                                    {/* Hydraulic Results - Moved Below Undo */}
+                                    {totalDemand.flow > 0 && (
+                                        <div className="bg-gradient-to-br from-indigo-50 to-slate-50 p-1.5 mb-2 rounded border border-indigo-100 shadow-sm space-y-1">
+                                            <div className="flex justify-between items-center px-1">
+                                                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total Flow</span>
+                                                <div className="text-right flex items-baseline gap-1">
+                                                    <span className="text-sm font-black text-indigo-700">{safeFixed(totalDemand.flow)}</span>
+                                                    <span className="text-[7px] text-indigo-400 font-bold uppercase">GPM</span>
+                                                </div>
+                                            </div>
+                                            <div className="h-px bg-slate-200/60 mx-1"></div>
+                                            <div className="flex justify-between items-center px-1">
+                                                <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Max Pressure</span>
+                                                <div className="text-right flex items-baseline gap-1">
+                                                    <span className="text-sm font-black text-rose-600">{safeFixed(totalDemand.pressure)}</span>
+                                                    <span className="text-[7px] text-rose-400 font-bold uppercase">PSI</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+
                                 </div>
                             </div>
                         </div>
 
-                        {/* Hydraulic Results Fixed at Bottom */}
-                        {totalDemand.flow > 0 && (
-                            <div className="bg-gradient-to-br from-indigo-50 to-slate-50 p-1.5 m-2 ml-3 mt-0 rounded border border-indigo-100 shadow-sm space-y-1 shrink-0">
-                                <div className="flex justify-between items-center px-1">
-                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Total Flow</span>
-                                    <div className="text-right flex items-baseline gap-1">
-                                        <span className="text-sm font-black text-indigo-700">{safeFixed(totalDemand.flow)}</span>
-                                        <span className="text-[7px] text-indigo-400 font-bold uppercase">GPM</span>
-                                    </div>
-                                </div>
-                                <div className="h-px bg-slate-200/60 mx-1"></div>
-                                <div className="flex justify-between items-center px-1">
-                                    <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Max Pressure</span>
-                                    <div className="text-right flex items-baseline gap-1">
-                                        <span className="text-sm font-black text-rose-600">{safeFixed(totalDemand.pressure)}</span>
-                                        <span className="text-[7px] text-rose-400 font-bold uppercase">PSI</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+
 
 
                     </div>
@@ -1995,11 +1988,28 @@
                         onDoubleClick={handleCanvasDoubleClick}
                         onWheel={(e) => adjustZoom(e.deltaY > 0 ? -1 : 1)}
                     >
-                        {/* Info Overlay */}
-                        <div className="absolute top-4 left-4 z-10 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border shadow-sm text-[10px] text-slate-600 pointer-events-none flex items-center gap-2">
-                            <span className="flex items-center gap-1"><Info size={12} /> Mode: <span className="font-bold uppercase text-slate-900">{mode}</span></span>
-                            <span className="w-px h-3 bg-slate-300"></span>
-                            <span>Scale: {pixelsPerMeter ? `${pixelsPerMeter.toFixed(4)} px/m` : 'Not Set'}</span>
+                        {/* Info Overlay & Main Actions */}
+                        <div className="absolute top-4 left-4 z-10 flex items-center gap-2">
+                            <div className="bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full border border-slate-200 shadow-sm text-[10px] text-slate-600 flex items-center gap-2">
+                                <span className="flex items-center gap-1"><Info size={12} /> Mode: <span className="font-bold uppercase text-slate-900">{mode}</span></span>
+                                <span className="w-px h-3 bg-slate-200"></span>
+                                <span className="font-medium">Scale: {pixelsPerMeter ? `${pixelsPerMeter.toFixed(2)} px/m` : 'Not Set'}</span>
+                            </div>
+
+                            <button
+                                onClick={handleCalculate}
+                                className="h-7 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full shadow-md shadow-indigo-200 text-[10px] flex items-center gap-2 font-bold transition-all active:scale-95 uppercase tracking-wider"
+                            >
+                                <Calculator size={13} /> CALCULATE
+                            </button>
+
+                            <button
+                                onClick={() => setShowReport(true)}
+                                className="h-7 w-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-md shadow-emerald-200 flex items-center justify-center transition-all active:scale-95"
+                                title="View Report"
+                            >
+                                <FileText size={14} />
+                            </button>
                         </div>
 
                         {/* Zoom Controls */}
@@ -2212,13 +2222,13 @@
                                                                 {/* Flow (Blue) */}
                                                                 <div className="flex justify-between items-baseline px-1">
                                                                     <span className="text-[0.7em] text-slate-400 font-normal">Q:</span>
-                                                                    <span className="text-[0.9em] text-blue-800 font-bold">{Math.round(tag.res.flow)}</span>
+                                                                    <span className="text-[0.9em] text-blue-800 font-bold">{safeFixed(tag.res.flow, 2)}</span>
                                                                 </div>
 
                                                                 {/* Pressure (Red) */}
                                                                 <div className="flex justify-between items-baseline px-1">
                                                                     <span className="text-[0.7em] text-slate-400 font-normal">P:</span>
-                                                                    <span className="text-[0.9em] text-red-700 font-bold">{safeFixed(tag.res.pressure, 1)}</span>
+                                                                    <span className="text-[0.9em] text-red-700 font-bold">{safeFixed(tag.res.pressure, 2)}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
