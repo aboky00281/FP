@@ -10,7 +10,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
 
     <!-- React & ReactDOM & Babel -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- FIX: Pinned Babel version to 7.23.6 to prevent "targets.esmodules" error -->
+    <script src="https://unpkg.com/@babel/standalone@7.23.6/babel.min.js"></script>
 
     <!-- Import Map for Modules -->
     <script type="importmap">
