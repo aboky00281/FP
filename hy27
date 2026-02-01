@@ -118,16 +118,17 @@
 
         // Centralized NFPA Data Source
         const nfpaData = {
-            displaySizes: ["0.5", "0.75", "1", "1.25", "1.5", "2", "2.5", "3", "3.5", "4", "5", "6", "8", "10", "12"],
+            displaySizes: ["0.75", "1", "1.25", "1.5", "2", "2.5", "3", "3.5", "4", "5", "6", "8", "10", "12"],
             calcSizes: ["0.5", "0.75", "1", "1.25", "1.5", "2", "2.5", "3", "3.5", "4", "5", "6", "8", "10", "12"],
             fittings: [
-                { name: "Elbows, 90° Standard", code: "SE", type: "elbow", values: { "0.5": 1, "0.75": 2, "1": 2, "1.25": 3, "1.5": 4, "2": 5, "2.5": 6, "3": 7, "3.5": 8, "4": 10, "5": 12, "6": 14, "8": 18, "10": 22, "12": 27 } },
-                { name: "Elbows, 45° Standard", code: "HE", type: "45elbow", values: { "0.5": 1, "0.75": 1, "1": 1, "1.25": 1, "1.5": 2, "2": 2, "2.5": 3, "3": 3, "3.5": 3, "4": 4, "5": 5, "6": 7, "8": 9, "10": 11, "12": 13 } },
-                { name: "Elbows, 90° Long Turn", code: "LE", type: "lrelbow", values: { "0.5": 0.5, "0.75": 1, "1": 2, "1.25": 2, "1.5": 2, "2": 3, "2.5": 4, "3": 5, "3.5": 5, "4": 6, "5": 8, "6": 9, "8": 13, "10": 16, "12": 18 } },
-                { name: "Tees or Crosses (Flow Turned 90°)", code: "TT", type: "tee", values: { "0.5": 3, "0.75": 4, "1": 5, "1.25": 6, "1.5": 8, "2": 10, "2.5": 12, "3": 15, "3.5": 17, "4": 20, "5": 25, "6": 30, "8": 35, "10": 50, "12": 60 } },
-                { name: "Butterfly Valve", code: "BV", type: "valve", values: { "0.5": "-", "0.75": "-", "1": "-", "1.25": "-", "1.5": "-", "2": 6, "2.5": 7, "3": 10, "3.5": "-", "4": 12, "5": 9, "6": 10, "8": 12, "10": 19, "12": 21 } },
-                { name: "Gate Valve", code: "GV", type: "valve", values: { "0.5": "-", "0.75": "-", "1": "-", "1.25": "-", "1.5": "-", "2": 1, "2.5": 1, "3": 1, "3.5": 1, "4": 2, "5": 2, "6": 3, "8": 4, "10": 5, "12": 6 } },
-                { name: "Swing Check*", code: "CV", type: "check", values: { "0.5": "-", "0.75": "-", "1": 5, "1.25": 7, "1.5": 9, "2": 11, "2.5": 14, "3": 16, "3.5": 19, "4": 22, "5": 27, "6": 32, "8": 45, "10": 55, "12": 65 } }
+                { name: "45° Elbow", code: "HE", type: "45elbow", values: { "0.75": 1, "1": 1, "1.25": 1, "1.5": 2, "2": 2, "2.5": 3, "3": 3, "3.5": 3, "4": 4, "5": 5, "6": 7, "8": 9, "10": 11, "12": 13 } },
+                { name: "90° Standard Elbow", code: "SE", type: "elbow", values: { "0.75": 2, "1": 2, "1.25": 3, "1.5": 4, "2": 5, "2.5": 6, "3": 7, "3.5": 8, "4": 10, "5": 12, "6": 14, "8": 18, "10": 22, "12": 27 } },
+                { name: "90° Long Turn Elbow", code: "LE", type: "lrelbow", values: { "0.75": 1, "1": 2, "1.25": 2, "1.5": 2, "2": 3, "2.5": 4, "3": 5, "3.5": 5, "4": 6, "5": 8, "6": 9, "8": 13, "10": 16, "12": 18 } },
+                { name: "Tee or Cross (Flow Turned 90°)", code: "TT", type: "tee", values: { "0.75": 3, "1": 5, "1.25": 6, "1.5": 8, "2": 10, "2.5": 12, "3": 15, "3.5": 17, "4": 20, "5": 25, "6": 30, "8": 35, "10": 50, "12": 60 } },
+                { name: "Butterfly Valve", code: "BV", type: "valve", values: { "0.75": "-", "1": "-", "1.25": "-", "1.5": "-", "2": 6, "2.5": 7, "3": 10, "3.5": "-", "4": 12, "5": 9, "6": 10, "8": 12, "10": 19, "12": 21 } },
+                { name: "Gate Valve", code: "GV", type: "valve", values: { "0.75": "-", "1": "-", "1.25": "-", "1.5": "-", "2": 1, "2.5": 1, "3": 1, "3.5": 1, "4": 2, "5": 2, "6": 3, "8": 4, "10": 5, "12": 6 } },
+                { name: "Vane type flow switch", code: "FS", type: "valve", values: { "0.75": "-", "1": 6, "1.25": 9, "1.5": 10, "2": 14, "2.5": 17, "3": 22, "3.5": "-", "4": 30, "5": "-", "6": 16, "8": 22, "10": 29, "12": 36 } },
+                { name: "Swing Check*", code: "CV", type: "check", values: { "0.75": "-", "1": 5, "1.25": 7, "1.5": 9, "2": 11, "2.5": 14, "3": 16, "3.5": 19, "4": 22, "5": "-", "6": 32, "8": 45, "10": 55, "12": 65 } }
             ]
         };
 
@@ -198,76 +199,23 @@
             const projectHandle = useRef(null);
             const projectInputRef = useRef(null);
 
-            // --- TIMER LOGIC (LocalStorage Persistent 3 Minutes) ---
-            const EXPIRATION_LIMIT_SEC = 180; // 3 minutes
-            const STORAGE_KEY = 'hydraulic_app_first_launch_v1';
-
-            const getRemainingTime = () => {
-                const now = Math.floor(Date.now() / 1000); // Current time in seconds
-                let firstLaunch = localStorage.getItem(STORAGE_KEY);
-
-                if (!firstLaunch) {
-                    return EXPIRATION_LIMIT_SEC;
-                }
-
-                const elapsed = now - parseInt(firstLaunch, 10);
-                const remaining = EXPIRATION_LIMIT_SEC - elapsed;
-                return remaining > 0 ? remaining : 0;
-            };
-
-            const [timeLeft, setTimeLeft] = useState(getRemainingTime());
-            const [isExpired, setIsExpired] = useState(timeLeft <= 0);
-
-            // Unlock State
-            const [isFullVersion, setIsFullVersion] = useState(() => {
-                return localStorage.getItem('hydraulic_app_full_version') === 'true';
-            });
-            const [isTrialStarted, setIsTrialStarted] = useState(() => {
-                return !!localStorage.getItem(STORAGE_KEY);
-            });
+            // Access Control State
+            const [accessLevel, setAccessLevel] = useState(() => sessionStorage.getItem('hydraulic_auth_level')); // null = locked
             const [unlockCode, setUnlockCode] = useState('');
 
-            useEffect(() => {
-                if (isFullVersion) return;
-                if (!isTrialStarted) return;
-
-                // Initial check
-                if (timeLeft <= 0) setIsExpired(true);
-
-                const interval = setInterval(() => {
-                    const remaining = getRemainingTime();
-                    setTimeLeft(remaining);
-                    if (remaining <= 0) {
-                        setIsExpired(true);
-                        clearInterval(interval);
-                    }
-                }, 1000);
-                return () => clearInterval(interval);
-            }, [isFullVersion, isTrialStarted]);
-
-            const handleStartTrial = () => {
-                const now = Math.floor(Date.now() / 1000);
-                localStorage.setItem(STORAGE_KEY, now.toString());
-                setIsTrialStarted(true);
-            };
-
             const handleUnlock = () => {
-                if (unlockCode === '2017') {
-                    setIsFullVersion(true);
-                    setIsExpired(false);
-                    localStorage.setItem('hydraulic_app_full_version', 'true');
-                    alert("Full Version Unlocked! Timer removed.");
+                if (unlockCode === '1234') {
+                    setAccessLevel('restricted');
+                    sessionStorage.setItem('hydraulic_auth_level', 'restricted');
+                    alert("Logged in as Restricted User (No Save/Save As)");
+                } else if (btoa(unlockCode) === 'MjAxNw==') { // Full Version Check
+                    setAccessLevel('full');
+                    sessionStorage.setItem('hydraulic_auth_level', 'full');
+                    alert("Full Version Unlocked!");
                 } else {
                     alert("Invalid Code");
                 }
             };
-
-            const formatTime = (s) => {
-                const m = Math.floor(s / 60);
-                const sec = s % 60;
-                return `${m}:${sec.toString().padStart(2, '0')}`;
-            };
-            // -------------------
 
 
             const safeNum = (val, fallback = 0) => {
@@ -1690,13 +1638,13 @@
                 const checkCollision = (rect, ignorePipes = false) => {
                     for (const r of occupiedRects) {
                         if (rect.x < r.x + r.w + padding && rect.x + rect.w + padding > r.x &&
-                            rect.y < r.y + r.h + padding && rect.y + rect.h + padding > r.y) {
+                            rect.y < r.y + r.h + padding && rect.y + r.h + padding > r.y) {
                             return true;
                         }
                     }
                     for (const r of obstacles) {
                         if (rect.x < r.x + r.w && rect.x + rect.w > r.x &&
-                            rect.y < r.y + r.h && rect.y + rect.h > r.y) {
+                            rect.y < r.y + r.h && rect.y + r.h > r.y) {
                             return true;
                         }
                     }
@@ -1871,8 +1819,8 @@
 
             const tagLayout = getTagLayout();
 
-            // 1. Welcome / Start Trial Overlay
-            if (!isFullVersion && !isTrialStarted) {
+            // Login Overlay
+            if (!accessLevel) {
                 return (
                     <div style={{
                         position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
@@ -1881,24 +1829,13 @@
                         color: '#64748b', fontFamily: 'monospace', gap: '20px'
                     }}>
                         <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b' }}>HYDRAULIC CALCULATOR</div>
-                        <div style={{ fontSize: '14px' }}>Please activate to continue</div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>V.1.2 By วัยรุ่นเซินเจิ้น</div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center', marginTop: '20px', padding: '20px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                            {/* Trial Button */}
-                            <button
-                                onClick={handleStartTrial}
-                                style={{ backgroundColor: '#0ea5e9', color: 'white', border: 'none', padding: '10px 30px', borderRadius: '6px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}
-                            >
-                                Start 3-Minute Trial
-                            </button>
-
-                            <div style={{ fontSize: '12px', color: '#94a3b8' }}>- OR -</div>
-
-                            {/* Unlock Code */}
                             <div style={{ display: 'flex', gap: '10px' }}>
                                 <input
                                     type="password"
-                                    placeholder="Activation Code"
+                                    placeholder="Access Code"
                                     value={unlockCode}
                                     onChange={(e) => setUnlockCode(e.target.value)}
                                     style={{ border: '1px solid #cbd5e1', padding: '5px 10px', borderRadius: '4px', fontSize: '14px' }}
@@ -1907,82 +1844,9 @@
                                     onClick={handleUnlock}
                                     style={{ backgroundColor: '#4f46e5', color: 'white', border: 'none', padding: '5px 15px', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}
                                 >
-                                    Activate
+                                    Login
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            // 1. Welcome / Start Trial Overlay
-            if (!isFullVersion && !isTrialStarted) {
-                return (
-                    <div style={{
-                        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-                        backgroundColor: 'white', zIndex: 2147483647,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        color: '#64748b', fontFamily: 'monospace', gap: '20px'
-                    }}>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b' }}>HYDRAULIC CALCULATOR</div>
-                        <div style={{ fontSize: '14px' }}>Please activate to continue</div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center', marginTop: '20px', padding: '20px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
-                            {/* Trial Button */}
-                            <button
-                                onClick={handleStartTrial}
-                                style={{ backgroundColor: '#0ea5e9', color: 'white', border: 'none', padding: '10px 30px', borderRadius: '6px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' }}
-                            >
-                                Start 3-Minute Trial
-                            </button>
-
-                            <div style={{ fontSize: '12px', color: '#94a3b8' }}>- OR -</div>
-
-                            {/* Unlock Code */}
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <input
-                                    type="password"
-                                    placeholder="Activation Code"
-                                    value={unlockCode}
-                                    onChange={(e) => setUnlockCode(e.target.value)}
-                                    style={{ border: '1px solid #cbd5e1', padding: '5px 10px', borderRadius: '4px', fontSize: '14px' }}
-                                />
-                                <button
-                                    onClick={handleUnlock}
-                                    style={{ backgroundColor: '#4f46e5', color: 'white', border: 'none', padding: '5px 15px', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}
-                                >
-                                    Activate
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                );
-            }
-
-            // 2. Expired Overlay
-            if (isExpired && !isFullVersion) {
-                return (
-                    <div style={{
-                        position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
-                        backgroundColor: 'white', zIndex: 2147483647,
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                        color: '#cbd5e1', fontSize: '24px', fontFamily: 'monospace', gap: '20px'
-                    }}>
-                        <div>SESSION EXPIRED</div>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <input
-                                type="password"
-                                placeholder="Enter Unlock Code"
-                                value={unlockCode}
-                                onChange={(e) => setUnlockCode(e.target.value)}
-                                style={{ border: '1px solid #cbd5e1', padding: '5px 10px', borderRadius: '4px', fontSize: '14px' }}
-                            />
-                            <button
-                                onClick={handleUnlock}
-                                style={{ backgroundColor: '#4f46e5', color: 'white', border: 'none', padding: '5px 15px', borderRadius: '4px', cursor: 'pointer', fontSize: '14px' }}
-                            >
-                                Unlock
-                            </button>
                         </div>
                     </div>
                 );
@@ -2005,12 +1869,18 @@
                                 <button onClick={() => loadProject()} className="p-1.5 bg-indigo-800 hover:bg-indigo-700 text-white rounded transition-colors" title="Open Project">
                                     <FolderOpen size={14} />
                                 </button>
-                                <button onClick={() => saveProject(false)} className="p-1.5 bg-indigo-800 hover:bg-indigo-700 text-white rounded transition-colors" title="Save">
-                                    <Save size={14} />
-                                </button>
-                                <button onClick={() => saveProject(true)} className="p-1.5 bg-indigo-800 hover:bg-indigo-700 text-white rounded transition-colors" title="Save As">
-                                    <FilePlus size={14} />
-                                </button>
+
+                                {accessLevel === 'full' && (
+                                    <>
+                                        <button onClick={() => saveProject(false)} className="p-1.5 bg-indigo-800 hover:bg-indigo-700 text-white rounded transition-colors" title="Save">
+                                            <Save size={14} />
+                                        </button>
+                                        <button onClick={() => saveProject(true)} className="p-1.5 bg-indigo-800 hover:bg-indigo-700 text-white rounded transition-colors" title="Save As">
+                                            <FilePlus size={14} />
+                                        </button>
+                                    </>
+                                )}
+
                                 {/* Hidden Inputs */}
                                 <input type="file" ref={projectInputRef} className="hidden" onChange={handleProjectFileUpload} accept=".json,application/json" />
                             </div>
@@ -2095,7 +1965,7 @@
                                     <div className="grid grid-cols-2 gap-1.5">
                                         <label className="flex items-center justify-center gap-1.5 px-1 py-1.5 rounded border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer shadow-sm active:scale-95 transition-all text-[9px]">
                                             <input type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
-                                            <ImageIcon size={11} className="text-slate-500" /> Bg Image
+                                            <ImageIcon size={11} className="text-slate-500" /> Floor Plan
                                         </label>
                                         <button onClick={() => setMode('scale')} className={`flex items-center justify-center gap-1.5 px-1 py-1.5 rounded border transition-all shadow-sm active:scale-95 text-[9px] ${mode === 'scale' ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                                             <Ruler size={11} className={mode === 'scale' ? 'text-white' : 'text-slate-500'} /> Scale
@@ -2182,29 +2052,7 @@
 
                     </div>
 
-                    {/* Timer Display Overlay */}
-                    {!isFullVersion && (
-                        <div className="fixed top-4 right-4 z-50 bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-slate-200 shadow-lg text-xs font-mono font-bold text-slate-700 flex items-center gap-2 print:hidden">
-                            <span>Time Left:</span>
-                            <span className={timeLeft < 60 ? "text-red-600 animate-pulse" : "text-indigo-600"}>
-                                {formatTime(timeLeft)}
-                            </span>
-                            <div className="h-4 w-px bg-slate-300 mx-1"></div>
-                            <input
-                                type="text"
-                                placeholder="Code"
-                                className="w-12 px-1 border border-slate-300 rounded text-[10px] focus:outline-none focus:border-indigo-500"
-                                value={unlockCode}
-                                onChange={(e) => setUnlockCode(e.target.value)}
-                            />
-                            <button
-                                onClick={handleUnlock}
-                                className="bg-indigo-600 text-white px-2 py-0.5 rounded text-[10px] hover:bg-indigo-700 transition-colors"
-                            >
-                                Unlock
-                            </button>
-                        </div>
-                    )}
+
 
 
 
@@ -2734,10 +2582,10 @@
                                         {/* Equivalent Lengths Table Section - USING CENTRALIZED DATA */}
                                         <div className="mt-8 mb-4 break-inside-avoid print:mt-8">
                                             <h3 className="font-bold text-lg text-gray-800 mb-2 border-b pb-2 print:text-base">
-                                                Equivalent Lengths (feet) Used by Program for NFPA Commercial (NFPA13 & 13R)
+                                                Equivalent Schedule 40 Steel Pipe Length Chart
                                             </h3>
                                             <p className="text-xs text-gray-500 mb-2 italic print:text-[10px]">
-                                                *Screwed Fittings based on Schedule 40 steel pipe to ASTM A-153, A-795 (HWCoef 120)
+                                                *Due to the variations in design of swing check valves, the pipe equivalents indicated in the above chart are considered average.
                                             </p>
                                             <div className="overflow-x-auto print:overflow-visible">
                                                 <table className="w-full text-xs text-center border-collapse border border-gray-300 print:text-[9px] print:w-full">
