@@ -21,7 +21,7 @@
         body {
             font-family: 'Sarabun', sans-serif;
             background-color: #0c0a18; /* สีพื้นหลังโทนน้ำเงินเข้ม-ดำ */
-            overflow: hidden; /* ป้องกัน scrollbar ที่ไม่จำเป็น */
+            overflow-x: hidden; /* ป้องกัน scrollbar แนวนอน แต่ยอมให้เลื่อนแนวตั้งได้ */
         }
         
         /* สไตล์สำหรับ Canvas ที่เป็นพื้นหลัง */
@@ -34,6 +34,16 @@
             z-index: -1; /* ทำให้ Canvas อยู่ด้านหลังสุด */
         }
 
+        /* ซ่อน Scrollbar สำหรับ Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* ซ่อน Scrollbar สำหรับ IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
         /* สไตล์สำหรับกล่องข้อความแบบกระจกฝ้า */
         .glass-card {
             background: rgba(10, 10, 20, 0.7); /* เพิ่มความเข้มเล็กน้อย */
@@ -44,85 +54,86 @@
         }
     </style>
 </head>
-<body class="text-gray-200 flex flex-col min-h-screen">
+<body class="text-gray-200 flex flex-col h-screen overflow-hidden">
 
     <!-- Canvas สำหรับพื้นหลังแอนิเมชัน -->
     <canvas id="bg-canvas"></canvas>
 
     <!-- ส่วนคอนเทนเนอร์หลัก (อยู่เหนือ Canvas) -->
-    <main class="flex-grow z-10 relative">
-        <div class="container mx-auto px-4 py-12 sm:px-6 lg:px-8">
+    <!-- ใช้ h-full และ overflow-y-auto เพื่อให้เนื้อหาเลื่อนได้ภายในกรอบหากจำเป็น แต่ซ่อน scrollbar ไว้ -->
+    <main class="flex-grow z-10 relative h-full overflow-y-auto no-scrollbar">
+        <div class="min-h-full flex flex-col items-center justify-center py-6 px-4 sm:px-6 lg:px-8 w-full">
 
-            <div class="text-center mb-12">
-                <!-- ไอคอนหัวเรื่อง -->
-                <i class="ph-fill ph-fire text-6xl text-orange-400 mb-4 inline-block"></i>
+            <div class="text-center mb-6 md:mb-8 max-w-2xl mx-auto w-full">
+                <!-- ไอคอนหัวเรื่อง (ลดขนาดลง) -->
+                <i class="ph-fill ph-fire text-4xl md:text-5xl text-orange-400 mb-2 inline-block"></i>
                 
-                <!-- หัวข้อหลัก -->
-                <h1 class="text-4xl md:text-5xl font-bold text-white">
+                <!-- หัวข้อหลัก (ลดขนาดลง) -->
+                <h1 class="text-2xl md:text-4xl font-bold text-white leading-tight">
                     Fire Protection Engineering Hub
                 </h1>
 
                 <!-- คำอธิบาย -->
-                <p class="text-lg md:text-xl mt-4 text-gray-300">
+                <p class="text-base md:text-lg mt-2 text-gray-300">
                     ยินดีต้อนรับสู่หน้า HUB
                 </p>
             </div>
 
             <!-- ส่วนของเครื่องมือและลิงก์ -->
-            <div class="max-w-2xl mx-auto">
-                <h2 class="text-2xl font-semibold text-orange-400 mb-6 border-b-2 border-gray-700 pb-2">เครื่องมือคำนวณ</h2>
+            <div class="w-full max-w-xl mx-auto">
+                <h2 class="text-xl font-semibold text-orange-400 mb-4 border-b-2 border-gray-700 pb-2">เครื่องมือคำนวณ</h2>
                 
-                <div class="space-y-4">
+                <div class="space-y-3">
                     <!-- ลิงก์ 1: เครื่องคำนวณปั๊มดับเพลิง -->
-                    <a href="https://fireprotectionengineeringhub1.on.drv.tw/%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99/water%20tank/Fire%20Pump%20and%20Water%20Tank%20Calculator%20V.3.5.html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
+                    <a href="https://fireprotectionengineeringhub1.on.drv.tw/%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99/water%20tank/Fire%20Pump%20and%20Water%20Tank%20Calculator%20V.3.5.html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-4 rounded-xl transition-all duration-300">
                         <div class="flex items-center">
-                            <div class="bg-orange-600/30 p-3 rounded-lg mr-5">
-                                <i class="ph-bold ph-calculator text-3xl text-orange-300"></i>
+                            <div class="bg-orange-600/30 p-2 rounded-lg mr-4 shrink-0">
+                                <i class="ph-bold ph-calculator text-2xl text-orange-300"></i>
                             </div>
-                            <div>
-                                <h3 class="text-xl font-bold text-white">เครื่องคำนวณปั๊มดับเพลิงและถังเก็บน้ำ</h3>
-                                <p class="text-gray-300 mt-1">คำนวณขนาดปั๊มและถังเก็บน้ำสำหรับระบบดับเพลิง</p>
+                            <div class="flex-grow">
+                                <h3 class="text-lg font-bold text-white leading-tight">เครื่องคำนวณปั๊มและถังน้ำ</h3>
+                                <p class="text-gray-400 text-xs mt-0.5 truncate">คำนวณขนาดปั๊มและถังเก็บน้ำ</p>
                             </div>
-                            <div class="ml-auto">
-                                <i class="ph-bold ph-caret-right text-2xl text-gray-500 group-hover:text-orange-400 transition-colors"></i>
+                            <div class="ml-2 shrink-0">
+                                <i class="ph-bold ph-caret-right text-xl text-gray-500 group-hover:text-orange-400 transition-colors"></i>
                             </div>
                         </div>
                     </a>
 
-                    <!-- ลิงก์ 2: เครื่องคำนวณ Hydraulic (อัปเดตแล้ว) -->
-                    <a href="https://fireprotectionengineeringhub1.on.drv.tw/%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99/Hazen/%E0%B9%80%E0%B8%84%E0%B8%A3%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%87%E0%B8%84%E0%B8%B3%E0%B8%99%E0%B8%A7%E0%B8%93%20Hydraulic%20(Hazen-Williams)%20V.1.4.html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
+                    <!-- ลิงก์ 2: เครื่องคำนวณ Hydraulic (Hazen-Williams) -->
+                    <a href="https://fireprotectionengineeringhub1.on.drv.tw/%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99/Hazen/%E0%B9%80%E0%B8%84%E0%B8%A3%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%87%E0%B8%84%E0%B8%B3%E0%B8%99%E0%B8%A7%E0%B8%93%20Hydraulic%20(Hazen-Williams)%20V.1.4.html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-4 rounded-xl transition-all duration-300">
                         <div class="flex items-center">
-                            <div class="bg-blue-600/30 p-3 rounded-lg mr-5">
-                                <i class="ph-bold ph-function text-3xl text-blue-300"></i>
+                            <div class="bg-blue-600/30 p-2 rounded-lg mr-4 shrink-0">
+                                <i class="ph-bold ph-function text-2xl text-blue-300"></i>
                             </div>
-                            <div>
-                                <h3 class="text-xl font-bold text-white">เครื่องคำนวณ Hydraulic (Hazen-Williams)</h3>
-                                <p class="text-gray-300 mt-1">คำนวณการสูญเสียแรงดันในท่อด้วยสมการ Hazen-Williams</p>
+                            <div class="flex-grow">
+                                <h3 class="text-lg font-bold text-white leading-tight">Hydraulic (Hazen-Williams)</h3>
+                                <p class="text-gray-400 text-xs mt-0.5 truncate">คำนวณการสูญเสียแรงดันในท่อ</p>
                             </div>
-                             <div class="ml-auto">
-                                <i class="ph-bold ph-caret-right text-2xl text-gray-500 group-hover:text-blue-400 transition-colors"></i>
+                             <div class="ml-2 shrink-0">
+                                <i class="ph-bold ph-caret-right text-xl text-gray-500 group-hover:text-blue-400 transition-colors"></i>
                             </div>
                         </div>
                     </a>
 
                     <!-- ลิงก์ 3: เครื่องคำนวณ Hydraulic (NFPA 13) -->
-                    <a href="https://fireprotectionengineeringhub1.on.drv.tw/%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99/Hydraulic%20Calculation%20Tools%20(NFPA%2013)/Hydraulic%20Calculation%20Tools%20(NFPA%2013).html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-6 rounded-xl transition-all duration-300">
+                    <a href="https://fireprotectionengineeringhub1.on.drv.tw/%E0%B8%A7%E0%B8%B1%E0%B8%A2%E0%B8%A3%E0%B8%B8%E0%B9%88%E0%B8%99%E0%B9%80%E0%B8%8B%E0%B8%B4%E0%B8%99%E0%B9%80%E0%B8%88%E0%B8%B4%E0%B9%89%E0%B8%99/Hydraulic%20Calculation%20Tools%20(NFPA%2013)/Hydraulic%20Calculation%20Tools%20(NFPA%2013).html" target="_blank" rel="noopener noreferrer" class="group block glass-card hover:bg-black/70 p-4 rounded-xl transition-all duration-300">
                         <div class="flex items-center">
-                            <div class="bg-green-600/30 p-3 rounded-lg mr-5">
-                                <i class="ph-bold ph-calculator text-3xl text-green-300"></i>
+                            <div class="bg-green-600/30 p-2 rounded-lg mr-4 shrink-0">
+                                <i class="ph-bold ph-calculator text-2xl text-green-300"></i>
                             </div>
-                            <div>
-                                <h3 class="text-xl font-bold text-white">Hydraulic Calculation Tools (NFPA 13)</h3>
-                                <p class="text-gray-300 mt-1">เครื่องมือคำนวณไฮดรอลิกสำหรับระบบสปริงเกอร์ตามมาตรฐาน NFPA 13</p>
+                            <div class="flex-grow">
+                                <h3 class="text-lg font-bold text-white leading-tight">Hydraulic Tools (NFPA 13)</h3>
+                                <p class="text-gray-400 text-xs mt-0.5 truncate">คำนวณไฮดรอลิกสำหรับสปริงเกอร์</p>
                             </div>
-                             <div class="ml-auto">
-                                <i class="ph-bold ph-caret-right text-2xl text-gray-500 group-hover:text-green-400 transition-colors"></i>
+                             <div class="ml-2 shrink-0">
+                                <i class="ph-bold ph-caret-right text-xl text-gray-500 group-hover:text-green-400 transition-colors"></i>
                             </div>
                         </div>
                     </a>
                 </div>
                 
-                <p class="text-center text-gray-400 text-sm mt-8">By วัยรุ่นเซินเจิ้น</p>
+                <p class="text-center text-gray-500 text-xs mt-6">By วัยรุ่นเซินเจิ้น</p>
             </div>
 
         </div>
