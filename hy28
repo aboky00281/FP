@@ -133,7 +133,7 @@
         };
 
         const hazardClasses = [
-            { id: "LH", label: "Light Hazard", density: 0.10, defaultArea: 130, maxSpacing: 13.12 },
+            { id: "LH", label: "Light Hazard", density: 0.10, defaultArea: 170, maxSpacing: 13.12 },
             { id: "OH1", label: "Ordinary Hazard Group 1", density: 0.15, defaultArea: 130, maxSpacing: 13.12 },
             { id: "OH2", label: "Ordinary Hazard Group 2", density: 0.20, defaultArea: 130, maxSpacing: 13.12 },
             { id: "EH1", label: "Extra Hazard Group 1", density: 0.30, defaultArea: 100, maxSpacing: 9.84 },
@@ -158,7 +158,7 @@
             const [cFactor, setCFactor] = useState(120);
             const [selectedHazard, setSelectedHazard] = useState("LH");
             const [designDensity, setDesignDensity] = useState(0.10);
-            const [areaPerHead, setAreaPerHead] = useState(130);
+            const [areaPerHead, setAreaPerHead] = useState(170);
             const [pdfUrl, setPdfUrl] = useState(null);
             const [mode, setMode] = useState('pan');
             const [selectedPipeSize, setSelectedPipeSize] = useState("1");
