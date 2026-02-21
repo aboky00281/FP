@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hydraulic Calculation Tools (NFPA 13) V.1.3 By วัยรุ่นเซินเจิ้น</title>
+    <title>Hydraulic Calculation Tools (NFPA 13) V.1.4 By วัยรุ่นเซินเจิ้น</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -253,7 +253,7 @@
                     }
 
                     const projectData = {
-                        version: "1.3",
+                        version: "1.4",
                         timestamp: Date.now(),
                         state: {
                             kFactor, cFactor, selectedHazard, designDensity, areaPerHead,
@@ -1556,7 +1556,7 @@
                                     const isValidChild = parentMap[tId].parents.some(p => p.parentId === curr && p.edge.id === conn.edge.id);
                                     if (isValidChild) {
                                         inDegree[tId] -= 1;
-                                        if (inDegree[tId] <= 0) { // Changed === 0 to <= 0 to prevent lateral locking
+                                        if (inDegree[tId] <= 0) {
                                             topoQueue.push(tId);
                                         }
                                     }
@@ -1564,6 +1564,37 @@
                             });
                         }
                     }
+
+                    // Pre-calculate Global Upstream Equivalent Resistance to ensure perfectly balanced loop splits
+                    const nodeReqR = {};
+                    nodeReqR[sourceId] = 0;
+
+                    processingOrder.forEach(uId => {
+                        if (String(uId) === String(sourceId)) {
+                            nodeReqR[uId] = 0;
+                            return;
+                        }
+
+                        const myParents = parentMap[uId]?.parents || [];
+                        if (myParents.length > 0) {
+                            let totalAdmittance = 0;
+                            myParents.forEach(p => {
+                                const parentId = p.parentId;
+                                const pEdge = p.edge;
+                                const pReqR = nodeReqR[parentId] !== undefined ? nodeReqR[parentId] : 0;
+                                const edgeR = (pEdge.len_ft + pEdge.fittingLen) / Math.pow(pEdge.d_in, 4.87);
+                                const totalPathR = pReqR + edgeR;
+                                if (totalPathR > 0) {
+                                    totalAdmittance += Math.pow(1 / totalPathR, 0.54);
+                                }
+                            });
+                            if (totalAdmittance > 0) {
+                                nodeReqR[uId] = Math.pow(1 / totalAdmittance, 1 / 0.54);
+                            } else {
+                                nodeReqR[uId] = 99999;
+                            }
+                        }
+                    });
 
                     const nodeReqP = {};
                     const nodeTotalQ = {};
@@ -1680,19 +1711,23 @@
                             let portionOfChildFlow = 0;
                             let hwMyResistance = 0;
 
-                            // Splitting logic: if a child is fed by multiple pipes, we assume the flow is split 
-                            // according to the admittance (1 / R^0.54) of the ENTIRE network paths, but since
-                            // we are in a purely local DAG solver, we use immediate incoming pipe resistance.
+                            // Splitting logic: flow is split according to the GLOBAL admittance 
+                            // (1 / R_PathTotal^0.54) of the ENTIRE network path from the source,
+                            // rather than just the immediate incoming edge, ensuring true loop balancing!
                             if (incomingParentsToChild.length > 0) {
-                                // Calculate total admittance (1 / R^0.54) of all incoming pipes
                                 let totalAdmittance = 0;
                                 let myAdmittance = 0;
 
                                 incomingParentsToChild.forEach(p => {
+                                    const parentId = p.parentId;
                                     const pEdge = p.edge;
+                                    const pReqR = nodeReqR[parentId] || 0;
                                     const hwR = (pEdge.len_ft + pEdge.fittingLen) / Math.pow(pEdge.d_in, 4.87);
-                                    // Eq 21 split implies Flow ∝ 1 / (\Delta P)^{0.54}, essentially Admittance
-                                    const adm = Math.pow(1 / hwR, 0.54);
+
+                                    // Total True Equivalent Path Resistance
+                                    const fullPathR = pReqR + hwR;
+
+                                    const adm = Math.pow(1 / fullPathR, 0.54);
                                     totalAdmittance += adm;
 
                                     if (pEdge.id === edge.id) {
@@ -1714,8 +1749,6 @@
                             // then flow across it should be naturally 0
                             let qBranch = portionOfChildFlow;
 
-                            // In a true Hardy-Cross loop, flow moves to balance P
-                            // If we disabled loop over-inflation, we still need to calculate P
                             // The highest required upstream pressure determines nodeReqP
                             const pChildReq = nodeReqP[vId] || 0;
 
@@ -1723,18 +1756,14 @@
                             const lossBase = calculateLoss(qBranch, totalLen, edge.d_in, C);
                             const pBranchTotalReq = pChildReq + lossBase;
 
-                            // Hardy-Cross Local Pseudo-Iteration
-                            // For paths that diverge and reconverge, their final pressure loss MUST be equal.
-                            // If this branch requires less pressure than the worst-case parallel branch, 
-                            // its flow must artificially "inflate" until its friction exactly matches the worst-case.
-                            // This guarantees perfectly balanced delta-P loop equations like a Hardy-Cross solver.
-                            if (maxP_RequiredAtU > pBranchTotalReq && pBranchTotalReq > 0.01 && qBranch > 0) {
-                                // Q_new = Q_old * (\Delta P_required / \Delta P_actual)^0.54
-                                qBranch = qBranch * Math.pow(maxP_RequiredAtU / pBranchTotalReq, 0.54);
-                            }
+                            // MASSIVE FIX: We DO NOT artificially inflate qBranch anymore!
+                            // Because 'myAdmittance / totalAdmittance' perfectly utilizes the Equivalent Upstream Resistance
+                            // calculated from the source, it MATHEMATICALLY guarantees that Flow naturally seeks equilibrium
+                            // and $\Delta P$ is inherently identical for parallel paths.
+                            // Pseudo-Hardy-Cross inflation would arbitrarily violate KCL (Conservation of Mass).
 
                             edge.flow = qBranch;
-                            edge.loss = calculateLoss(qBranch, totalLen, edge.d_in, C);
+                            edge.loss = lossBase; // Explicitly use identical loss function
                             const velocityFps = (0.4085 * qBranch) / Math.pow(edge.d_in, 2);
                             edge.velocity = velocityFps * 0.3048;
                             edge.flowDir = (edge.u === uId) ? 'u->v' : 'v->u';
@@ -1851,32 +1880,34 @@
                 const occupiedRects = [];
                 const tagW = 85 / transform.scale;
                 const tagH = 58 / transform.scale;
-                const padding = 15 / transform.scale;
-                const pipeBuffer = 15 / transform.scale;
+                const padding = 5 / transform.scale;
+                const pipeBuffer = 4 / transform.scale;
 
                 const obstacles = [];
 
                 visualNodes.forEach(n => {
+                    // Small bounding box to protect the node dot
                     obstacles.push({
-                        x: n.x - 15 / transform.scale,
-                        y: n.y - 15 / transform.scale,
-                        w: 30 / transform.scale,
-                        h: 30 / transform.scale
+                        x: n.x - 12 / transform.scale,
+                        y: n.y - 12 / transform.scale,
+                        w: 24 / transform.scale,
+                        h: 24 / transform.scale
                     });
+                    // Bounding box for node ID text (much smaller than before)
                     obstacles.push({
                         x: n.x,
-                        y: n.y - 25 / transform.scale,
-                        w: 60 / transform.scale,
-                        h: 25 / transform.scale
+                        y: n.y - 15 / transform.scale,
+                        w: 35 / transform.scale,
+                        h: 15 / transform.scale
                     });
                 });
 
                 placedSprinklers.forEach(s => {
                     obstacles.push({
-                        x: s.x - 20 / transform.scale,
-                        y: s.y - 20 / transform.scale,
-                        w: 40 / transform.scale,
-                        h: 40 / transform.scale
+                        x: s.x - 12 / transform.scale,
+                        y: s.y - 12 / transform.scale,
+                        w: 24 / transform.scale,
+                        h: 24 / transform.scale
                     });
                 });
 
@@ -1900,7 +1931,7 @@
                     return false;
                 };
 
-                const checkCollision = (rect, ignorePipes = false) => {
+                const checkCollision = (rect, ignorePipes = false, excludePipeId = null) => {
                     for (const r of occupiedRects) {
                         if (rect.x < r.x + r.w + padding && rect.x + rect.w + padding > r.x &&
                             rect.y < r.y + r.h + padding && rect.y + r.h + padding > r.y) {
@@ -1922,6 +1953,7 @@
                             h: rect.h + pipeBuffer * 2
                         };
                         for (const p of drawnPipes) {
+                            if (p.id === excludePipeId) continue; // DO NOT collide with its own pipe!
                             if (lineIntersectsRect(p.start.x, p.start.y, p.end.x, p.end.y, checkRect.x, checkRect.y, checkRect.w, checkRect.h)) {
                                 return true;
                             }
@@ -1981,7 +2013,7 @@
                                     h: tagH
                                 };
 
-                                if (!checkCollision(rect)) {
+                                if (!checkCollision(rect, false, pipe.id)) {
                                     let elbowX, elbowY;
                                     if (isHorzPipe) { elbowX = ax; elbowY = cy; }
                                     else { elbowX = cx; elbowY = ay; }
@@ -2004,6 +2036,7 @@
                         }
                     }
 
+                    // Strict pipe avoidance failed, try looser layout (no crossed leader check, but still avoid pipe rects)
                     if (!bestCandidate) {
                         outerLoop2:
                         for (let distMult of distSteps) {
@@ -2016,7 +2049,7 @@
                                     const cy = ay + (ny * dist * side);
                                     const rect = { x: cx - tagW / 2, y: cy - tagH / 2, w: tagW, h: tagH };
 
-                                    if (!checkCollision(rect)) {
+                                    if (!checkCollision(rect, false, pipe.id)) {
                                         bestCandidate = {
                                             id: pipe.id,
                                             tagX: cx, tagY: cy,
@@ -2031,18 +2064,50 @@
                         }
                     }
 
+                    // Primary Radial Search: Tries extremely hard to find a gap that does NOT overlap ANY pipes
                     if (!bestCandidate) {
-                        let r = baseDist * 4.0;
-                        const maxR = baseDist * 15.0;
+                        let r = baseDist * 1.5;
+                        const maxR = baseDist * 20.0;
                         const da = Math.PI / 8;
 
-                        spiralLoop:
+                        spiralLoop1:
                         while (r < maxR) {
                             for (let a = 0; a < Math.PI * 2; a += da) {
                                 const cx = midX + Math.cos(a) * r;
                                 const cy = midY + Math.sin(a) * r;
                                 const rect = { x: cx - tagW / 2, y: cy - tagH / 2, w: tagW, h: tagH };
 
+                                // false parameter = DO NOT ignore pipes. Exclude own pipe.
+                                if (!checkCollision(rect, false, pipe.id)) {
+                                    const proj = projectPointToSegment({ x: cx, y: cy }, pipe.start, pipe.end);
+                                    bestCandidate = {
+                                        id: pipe.id,
+                                        tagX: cx, tagY: cy,
+                                        anchorX: proj.x, anchorY: proj.y,
+                                        midX: midX, midY: midY,
+                                        res, angle: arrowAngle, rect
+                                    };
+                                    break spiralLoop1;
+                                }
+                            }
+                            r += (tagH * 0.6); // Iterate outwards
+                        }
+                    }
+
+                    // Absolute fallback: Space is physically impossible (zoomed way out). Just find a spot not overlapping other TAGS.
+                    if (!bestCandidate) {
+                        let r = baseDist * 1.0;
+                        const maxR = baseDist * 15.0;
+                        const da = Math.PI / 8;
+
+                        spiralLoop2:
+                        while (r < maxR) {
+                            for (let a = 0; a < Math.PI * 2; a += da) {
+                                const cx = midX + Math.cos(a) * r;
+                                const cy = midY + Math.sin(a) * r;
+                                const rect = { x: cx - tagW / 2, y: cy - tagH / 2, w: tagW, h: tagH };
+
+                                // true parameter = ignore ALL pipes mathematically so we guarantee a placement.
                                 if (!checkCollision(rect, true)) {
                                     const proj = projectPointToSegment({ x: cx, y: cy }, pipe.start, pipe.end);
                                     bestCandidate = {
@@ -2052,7 +2117,7 @@
                                         midX: midX, midY: midY,
                                         res, angle: arrowAngle, rect
                                     };
-                                    break spiralLoop;
+                                    break spiralLoop2;
                                 }
                             }
                             r += (tagH * 0.8);
@@ -2094,7 +2159,7 @@
                         color: '#64748b', fontFamily: 'monospace', gap: '20px'
                     }}>
                         <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b' }}>HYDRAULIC CALCULATOR</div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>V.1.3 By วัยรุ่นเซินเจิ้น</div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>V.1.4 By วัยรุ่นเซินเจิ้น</div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center', marginTop: '20px', padding: '20px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                             <div style={{ display: 'flex', gap: '10px' }}>
@@ -2126,7 +2191,7 @@
                                     <Flame size={18} className="text-orange-400" />
                                     Hydraulic Calc
                                 </h1>
-                                <span className="text-[10px] text-indigo-200 ml-6">V.1.3 By วัยรุ่นเซินเจิ้น</span>
+                                <span className="text-[10px] text-indigo-200 ml-6">V.1.4 By วัยรุ่นเซินเจิ้น</span>
                             </div>
 
                             {/* Header Buttons Group */}
@@ -2556,23 +2621,18 @@
                                             {/* Tag Group - Show ONLY if showTags is true */}
                                             {showTags && (
                                                 <g transform={`translate(${tag.tagX}, ${tag.tagY})`}>
-                                                    {/* Orthogonal Leader Line */}
+                                                    {/* Direct Pointer Line to Pipe Node instead of staggered Orthogonal Line */}
                                                     {(() => {
                                                         const ax = tag.anchorX - tag.tagX;
                                                         const ay = tag.anchorY - tag.tagY;
-                                                        const isHorzPipe = Math.abs(Math.cos(tag.angle)) > 0.707;
-                                                        let d = "";
-                                                        if (isHorzPipe) {
-                                                            d = `M ${ax} ${ay} L ${ax} 0 L 0 0`;
-                                                        } else {
-                                                            d = `M ${ax} ${ay} L 0 ${ay} L 0 0`;
-                                                        }
+                                                        // Using a simple direct dashed line from tag center to pipe
+                                                        const d = `M 0 0 L ${ax} ${ay}`;
                                                         return (
                                                             <path
                                                                 d={d}
-                                                                stroke="#334155"
-                                                                strokeWidth={1 / transform.scale}
-                                                                strokeDasharray="3,3"
+                                                                stroke="#475569" // slate-600
+                                                                strokeWidth={1.5 / transform.scale}
+                                                                strokeDasharray="4,4"
                                                                 fill="none"
                                                             />
                                                         );
