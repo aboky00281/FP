@@ -1723,13 +1723,15 @@
                             const lossBase = calculateLoss(qBranch, totalLen, edge.d_in, C);
                             const pBranchTotalReq = pChildReq + lossBase;
 
-                            // To maintain strict visual Mass Conservation (Qin = Qout) on the graph, 
-                            // we disable NFPA 13 artificial pressure-balancing flow inflation here.
-                            // In a true Hardy-Cross solver, flows shift. In our DAG approximation, 
-                            // inflating qBranch makes the pipe tags sum incorrectly, confusing users.
-                            // if (maxP_RequiredAtU > pBranchTotalReq && pBranchTotalReq > 0.01 && qBranch > 0) {
-                            //     qBranch = qBranch * Math.pow(maxP_RequiredAtU / pBranchTotalReq, 0.54);
-                            // }
+                            // Hardy-Cross Local Pseudo-Iteration
+                            // For paths that diverge and reconverge, their final pressure loss MUST be equal.
+                            // If this branch requires less pressure than the worst-case parallel branch, 
+                            // its flow must artificially "inflate" until its friction exactly matches the worst-case.
+                            // This guarantees perfectly balanced delta-P loop equations like a Hardy-Cross solver.
+                            if (maxP_RequiredAtU > pBranchTotalReq && pBranchTotalReq > 0.01 && qBranch > 0) {
+                                // Q_new = Q_old * (\Delta P_required / \Delta P_actual)^0.54
+                                qBranch = qBranch * Math.pow(maxP_RequiredAtU / pBranchTotalReq, 0.54);
+                            }
 
                             edge.flow = qBranch;
                             edge.loss = calculateLoss(qBranch, totalLen, edge.d_in, C);
