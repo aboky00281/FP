@@ -1094,19 +1094,17 @@
                     if (mode === 'pan' || (e.buttons & 4)) {
                         setTransform(prev => ({ ...prev, x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }));
                     } else if (mode === 'scale') {
-                        // Free drawing for perfect scale precision, unless holding shift for orthogonal snap
                         const start = scalePoints[0];
                         const current = rawCoords;
                         let nextPoint = current;
 
-                        if (e.shiftKey) {
-                            const dx = Math.abs(current.x - start.x);
-                            const dy = Math.abs(current.y - start.y);
-                            if (dx > dy) {
-                                nextPoint = { x: current.x, y: start.y };
-                            } else {
-                                nextPoint = { x: start.x, y: current.y };
-                            }
+                        // Lock to straight line automatically (horizontal or vertical)
+                        const dx = Math.abs(current.x - start.x);
+                        const dy = Math.abs(current.y - start.y);
+                        if (dx > dy) {
+                            nextPoint = { x: current.x, y: start.y };
+                        } else {
+                            nextPoint = { x: start.x, y: current.y };
                         }
 
                         setScalePoints(prev => [prev[0], nextPoint]);
