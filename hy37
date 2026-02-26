@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hydraulic Calculation Tools (NFPA 13) V.1.4 By วัยรุ่นเซินเจิ้น</title>
+    <title>Hydraulic Calculation Tools (NFPA 13) V.1.5 By วัยรุ่นเซินเจิ้น</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -1599,7 +1599,8 @@
                         };
 
                         placedEquipments.forEach(eq => {
-                            if (distanceToSegment(eq, p.start, p.end) < 15 / transform.scale) {
+                            const eqTolerance = Math.max(15, 0.5 * pixelsPerMeter);
+                            if (distanceToSegment(eq, p.start, p.end) < eqTolerance) {
                                 const fitData = nfpaData.fittings.find(f => f.code === eq.type);
                                 if (fitData) {
                                     const eqValStr = fitData.values[p.size];
@@ -1618,8 +1619,8 @@
                         n2.connections.push({ target: n1.id, edge });
                     });
 
-                    // INCREASED TOLERANCE: Make it easier to snap sprinklers
-                    const tolerance = 25 / transform.scale;
+                    // INCREASED TOLERANCE: Fixed world-distance to ensure zoom level doesn't affect results
+                    const tolerance = Math.max(25, 1.0 * pixelsPerMeter);
                     const qPerHead = density * areaFt2;
 
                     placedSprinklers.forEach(s => {
@@ -1926,96 +1927,7 @@
                         // we use the precomputed `childConnectionsMap`
                         const childConnections = childConnectionsMap[uId] || [];
 
-                        // We group child connections by the target node they lead into.
-                        // Wait, what if the node connects to the SAME target via multiple parallel edges? handled here.
-                        // What if the node splits into two paths that RECONVERGE later? 
-                        // Those paths will have DIFFERENT target node IDs from uId's perspective.
-                        // e.g. uId=16 connects to target 15 and target 11.
-                        // The loop formula should apply if flows converge at a common sink (e.g. Node 12 or Node 8).
-                        const groupedChildren = {};
-                        childConnections.forEach(child => {
-                            if (!groupedChildren[child.targetId]) groupedChildren[child.targetId] = [];
-                            groupedChildren[child.targetId].push(child.edge);
-                        });
-
-                        Object.keys(groupedChildren).forEach(vId => {
-                            const edges = groupedChildren[vId];
-                            const qChild = nodeTotalQ[vId] || 0;
-                            const pChild = nodeReqP[vId] || 0;
-
-                            if (qChild > 0 || pChild > 0) {
-                                if (edges.length === 1) {
-                                    const edge = edges[0];
-                                    const totalLen = edge.len_ft + edge.fittingLen;
-                                    let loss = calculateLoss(qChild, totalLen, edge.d_in, C);
-                                    if (edge.isVertical) {
-                                        const elevDiff = (vId === edge.v) ? parseFloat(edge.verticalHeight) : -parseFloat(edge.verticalHeight);
-                                        loss += elevDiff * M_TO_FT * 0.433; // Add Elevation Pressure
-                                    }
-                                    const pReqUpstream = pChild + loss;
-                                    maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pReqUpstream);
-                                } else if (edges.length === 2) {
-                                    const edge1 = edges[0];
-                                    const edge2 = edges[1];
-                                    const totalLen1 = edge1.len_ft + edge1.fittingLen;
-                                    const totalLen2 = edge2.len_ft + edge2.fittingLen;
-
-                                    const eqL1 = totalLen1 / Math.pow(edge1.d_in, 4.87);
-                                    const eqL2 = totalLen2 / Math.pow(edge2.d_in, 4.87);
-
-                                    const q1 = qChild * (1 / (Math.pow(eqL1 / eqL2, 0.54) + 1));
-
-                                    let loss1 = calculateLoss(q1, totalLen1, edge1.d_in, C);
-                                    if (edge1.isVertical) {
-                                        const elevDiff = (vId === edge1.v) ? parseFloat(edge1.verticalHeight) : -parseFloat(edge1.verticalHeight);
-                                        loss1 += elevDiff * M_TO_FT * 0.433; // Add Elevation Pressure
-                                    }
-                                    maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pChild + loss1);
-                                } else {
-                                    const splitQ = qChild / edges.length;
-                                    edges.forEach(edge => {
-                                        const totalLen = edge.len_ft + edge.fittingLen;
-                                        let loss = calculateLoss(splitQ, totalLen, edge.d_in, C);
-                                        if (edge.isVertical) {
-                                            const elevDiff = (vId === edge.v) ? parseFloat(edge.verticalHeight) : -parseFloat(edge.verticalHeight);
-                                            loss += elevDiff * M_TO_FT * 0.433; // Add Elevation Pressure
-                                        }
-                                        maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pChild + loss);
-                                    });
-                                }
-                            }
-                        });
-
-                        if (uNode.heads.length > 0) {
-                            let pMinHead = startPressureReq;
-                            let qHead = K * Math.sqrt(pMinHead);
-                            let lossNip = calculateLoss(qHead, RISER_NIPPLE_FT, NIPPLE_ID, C);
-                            let pReqAtNodeForHead = pMinHead + lossNip;
-                            maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pReqAtNodeForHead);
-
-                            let headFlowSum = 0;
-                            uNode.heads.forEach(() => {
-                                let pHeadEst = maxP_RequiredAtU;
-                                for (let k = 0; k < 2; k++) {
-                                    let q = K * Math.sqrt(pHeadEst > lossNip ? pHeadEst - lossNip : 0);
-                                    let loss = calculateLoss(q, RISER_NIPPLE_FT, NIPPLE_ID, C);
-                                    pHeadEst = maxP_RequiredAtU - loss;
-                                }
-                                if (pHeadEst < 0) pHeadEst = 0;
-                                const q = K * Math.sqrt(pHeadEst);
-                                totalQ_AtU += q;
-                                headFlowSum += q;
-                            });
-                            nodeHeadFlow[uId] = headFlowSum;
-                        }
-
-                        // Distribute flow to children properly.
-                        // Pass 1 traverses from END (sprinklers) to SOURCE. 
-                        // It must ask: "How much Flow each child node asks from ME across this edge?"
-                        // A child node (e.g. Node 12) might have multiple parents. 
-                        // Since multiple parents feed it, the required flow (nodeTotalQ[vId]) must be SPLIT 
-                        // among its parents. This guarantees that total water reaching Node 12 is correct.
-
+                        // Process downstream connections first to properly accumulate required pressure and flow before heads
                         childConnections.forEach(child => {
                             const vId = child.targetId;
                             const edge = child.edge;
@@ -2024,11 +1936,9 @@
                             const incomingParentsToChild = parentMap[vId]?.parents || [];
 
                             let portionOfChildFlow = 0;
-                            let hwMyResistance = 0;
 
                             // Splitting logic: flow is split according to the GLOBAL admittance 
-                            // (1 / R_PathTotal^0.54) of the ENTIRE network path from the source,
-                            // rather than just the immediate incoming edge, ensuring true loop balancing!
+                            // (1 / R_PathTotal^0.54) of the ENTIRE network path from the source.
                             if (incomingParentsToChild.length > 0) {
                                 let totalAdmittance = 0;
                                 let myAdmittance = 0;
@@ -2039,15 +1949,14 @@
                                     const pReqR = nodeReqR[parentId] || 0;
                                     const hwR = (pEdge.len_ft + pEdge.fittingLen) / Math.pow(pEdge.d_in, 4.87);
 
-                                    // Total True Equivalent Path Resistance
-                                    const fullPathR = pReqR + hwR;
+                                    // Total True Equivalent Path Resistance (avoid division by zero)
+                                    const fullPathR = Math.max(1e-6, pReqR + hwR);
 
                                     const adm = Math.pow(1 / fullPathR, 0.54);
                                     totalAdmittance += adm;
 
                                     if (pEdge.id === edge.id) {
                                         myAdmittance = adm;
-                                        hwMyResistance = hwR;
                                     }
                                 });
 
@@ -2060,8 +1969,6 @@
                                 portionOfChildFlow = fullChildReqQ;
                             }
 
-                            // If this pipe is purely a lateral tie line and both sides have 0 downstream demand
-                            // then flow across it should be naturally 0
                             let qBranch = portionOfChildFlow;
 
                             // The highest required upstream pressure determines nodeReqP
@@ -2073,16 +1980,13 @@
                                 const elevDiff = (vId === edge.v) ? parseFloat(edge.verticalHeight) : -parseFloat(edge.verticalHeight);
                                 lossBase += elevDiff * M_TO_FT * 0.433; // Add Elevation Pressure
                             }
-                            const pBranchTotalReq = pChildReq + lossBase;
 
-                            // MASSIVE FIX: We DO NOT artificially inflate qBranch anymore!
-                            // Because 'myAdmittance / totalAdmittance' perfectly utilizes the Equivalent Upstream Resistance
-                            // calculated from the source, it MATHEMATICALLY guarantees that Flow naturally seeks equilibrium
-                            // and $\Delta P$ is inherently identical for parallel paths.
-                            // Pseudo-Hardy-Cross inflation would arbitrarily violate KCL (Conservation of Mass).
+                            // *** CRITICAL FIX: Base internal pipe pressure properly accumulates downstream path reqs ***
+                            const pBranchTotalReq = pChildReq + lossBase;
+                            maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pBranchTotalReq);
 
                             edge.flow = qBranch;
-                            edge.loss = lossBase; // Explicitly use identical loss function
+                            edge.loss = lossBase;
                             const velocityFps = (0.4085 * qBranch) / Math.pow(edge.d_in, 2);
                             edge.velocity = velocityFps * 0.3048;
                             edge.flowDir = (edge.u === uId) ? 'u->v' : 'v->u';
@@ -2108,6 +2012,30 @@
                                 eqLen: edge.fittingLen / M_TO_FT
                             };
                         });
+
+                        // Head logic requires we know the required upstream pressure (maxP_RequiredAtU) FIRST!
+                        if (uNode.heads.length > 0) {
+                            let pMinHead = startPressureReq;
+                            let qHead = K * Math.sqrt(pMinHead);
+                            let lossNip = calculateLoss(qHead, RISER_NIPPLE_FT, NIPPLE_ID, C);
+                            let pReqAtNodeForHead = pMinHead + lossNip;
+                            maxP_RequiredAtU = Math.max(maxP_RequiredAtU, pReqAtNodeForHead);
+
+                            let headFlowSum = 0;
+                            uNode.heads.forEach(() => {
+                                let pHeadEst = maxP_RequiredAtU;
+                                for (let k = 0; k < 2; k++) {
+                                    let q = K * Math.sqrt(pHeadEst > lossNip ? pHeadEst - lossNip : 0);
+                                    let loss = calculateLoss(q, RISER_NIPPLE_FT, NIPPLE_ID, C);
+                                    pHeadEst = maxP_RequiredAtU - loss;
+                                }
+                                if (pHeadEst < 0) pHeadEst = 0;
+                                const q = K * Math.sqrt(pHeadEst);
+                                totalQ_AtU += q;
+                                headFlowSum += q;
+                            });
+                            nodeHeadFlow[uId] = headFlowSum;
+                        }
 
                         nodeReqP[uId] = maxP_RequiredAtU;
                         nodeTotalQ[uId] = totalQ_AtU;
@@ -2335,7 +2263,7 @@
                         color: '#64748b', fontFamily: 'monospace', gap: '20px'
                     }}>
                         <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b' }}>HYDRAULIC CALCULATOR</div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>V.1.4 By วัยรุ่นเซินเจิ้น</div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>V.1.5 By วัยรุ่นเซินเจิ้น</div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center', marginTop: '20px', padding: '20px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                             <div style={{ display: 'flex', gap: '10px' }}>
