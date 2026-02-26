@@ -154,6 +154,8 @@
         const kFactors = [5.6, 8.0, 11.2, 14.0, 16.8, 19.6, 22.4, 25.2, 28.0, 33.6];
 
         const App = () => {
+            const [projectName, setProjectName] = useState("");
+            const [samplingArea, setSamplingArea] = useState("");
             const [kFactor, setKFactor] = useState(5.6);
             const [cFactor, setCFactor] = useState(120);
             const [selectedHazard, setSelectedHazard] = useState("LH");
@@ -264,6 +266,7 @@
                         version: "1.4",
                         timestamp: Date.now(),
                         state: {
+                            projectName, samplingArea,
                             kFactor, cFactor, selectedHazard, designDensity, areaPerHead,
                             pixelsPerMeter, scalePoints,
                             drawnPipes, placedSprinklers,
@@ -385,6 +388,8 @@
             const restoreState = (data) => {
                 if (data.state) {
                     const s = data.state;
+                    setProjectName(s.projectName || "");
+                    setSamplingArea(s.samplingArea || "");
                     setKFactor(s.kFactor);
                     setCFactor(s.cFactor);
                     setSelectedHazard(s.selectedHazard);
@@ -2260,7 +2265,7 @@
                                 ady = -ady;
                             }
                             const angleDeg = Math.atan2(ady, adx) * 180 / Math.PI;
-                            
+
                             if (angleDeg > -75 && angleDeg < -15) {
                                 nx = -0.707; ny = -0.707; // Up-Right pipe -> Push Top-Left
                             } else if (angleDeg < -105 && angleDeg > -165) {
@@ -2274,7 +2279,7 @@
                             const len = Math.sqrt(dx * dx + dy * dy);
                             const ux = len > 0 ? dx / len : 0;
                             const uy = len > 0 ? dy / len : 0;
-                            
+
                             // Normal vector (perpendicular)
                             nx = -uy;
                             ny = ux;
@@ -2610,6 +2615,14 @@
                                 <span className="flex items-center gap-1"><Info size={12} /> Mode: <span className="font-bold uppercase text-slate-900">{mode}</span></span>
                                 <span className="w-px h-3 bg-slate-200"></span>
                                 <span className="font-medium">Scale: {pixelsPerMeter ? `${pixelsPerMeter.toFixed(2)} px/m` : 'Not Set'}</span>
+                            </div>
+
+                            <div className="bg-white/95 backdrop-blur-sm px-3 py-1 rounded-full border border-slate-200 shadow-sm text-[10px] text-slate-600 flex items-center gap-2">
+                                <span className="font-bold uppercase text-slate-700">Project Name:</span>
+                                <input type="text" value={projectName} onChange={e => setProjectName(e.target.value)} className="bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none w-32 focus:border-indigo-400 focus:bg-white transition-colors" placeholder="ระบุชื่อโครงการ" />
+                                <span className="w-px h-3 bg-slate-200 mx-1"></span>
+                                <span className="font-bold uppercase text-slate-700">Sampling Area:</span>
+                                <input type="text" value={samplingArea} onChange={e => setSamplingArea(e.target.value)} className="bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none w-32 focus:border-indigo-400 focus:bg-white transition-colors" placeholder="ระบุ Sampling Area" />
                             </div>
 
                             <button
@@ -3129,14 +3142,19 @@
                                     </div>
                                     <div className="p-6 overflow-auto print:p-0 print:overflow-visible">
                                         <div className="mb-4 text-center hidden print:block">
-                                            <h2 className="text-xl font-bold uppercase">Hydraulic Calculations Sheet</h2>
-                                            <p className="text-sm text-gray-500">NFPA 13 Standard</p>
+                                            <h2 className="text-xl font-bold uppercase pt-2 mb-2">Hydraulic Calculations Sheet</h2>
                                             {/* Added Parameter Display */}
-                                            <div className="flex justify-center flex-wrap gap-x-6 gap-y-2 text-xs mt-2 font-mono border-t border-b border-gray-200 py-2">
-                                                <span><strong>Density:</strong> {designDensity} gpm/ft²</span>
-                                                <span><strong>Area/head:</strong> {areaPerHead} ft²</span>
-                                                <span><strong>K-Factor:</strong> {kFactor}</span>
-                                                <span><strong>Hazard:</strong> {hazardClasses.find(h => h.id === selectedHazard)?.label}</span>
+                                            <div className="flex flex-col gap-y-2 text-xs text-black mt-2 font-mono border-t border-b border-gray-200 py-2">
+                                                <div className="flex justify-center flex-wrap gap-x-6 gap-y-2">
+                                                    <span><strong>Project Name :</strong> {projectName || "-"}</span>
+                                                    <span><strong>Sampling Area :</strong> {samplingArea || "-"}</span>
+                                                </div>
+                                                <div className="flex justify-center flex-wrap gap-x-6 gap-y-2">
+                                                    <span><strong>Density:</strong> {designDensity} gpm/ft²</span>
+                                                    <span><strong>Area/head:</strong> {areaPerHead} ft²</span>
+                                                    <span><strong>K-Factor:</strong> {kFactor}</span>
+                                                    <span><strong>Hazard:</strong> {hazardClasses.find(h => h.id === selectedHazard)?.label}</span>
+                                                </div>
                                             </div>
                                         </div>
                                         <table className="w-full text-sm text-left border-collapse">
@@ -3151,7 +3169,7 @@
                                                     <th className="p-3 border-r border-gray-200">Fittings / Eq. Len</th>
                                                     <th className="p-3 border-r border-gray-200">Friction Loss (psi)</th>
                                                     <th className="p-3 border-r border-gray-200">Required Pressure (psi)</th>
-                                                    <th className="p-3">
+                                                    <th className="p-3 print:hidden">
                                                         Velocity (m/s)
                                                         <span className="block text-[10px] font-normal text-gray-500 text-nowrap">&lt; 9.0 m/s</span>
                                                     </th>
@@ -3182,7 +3200,7 @@
                                                             </td>
                                                             <td className="p-3 text-gray-600 border-r border-gray-200">{safeFixed(row.loss)}</td>
                                                             <td className="p-3 font-medium text-red-700 border-r border-gray-200">{safeFixed(row.pressure, 1)}</td>
-                                                            <td className={`p-3 ${row.velocity > 9.0 ? "text-red-600 font-bold" : "text-gray-500"}`}>{safeFixed(row.velocity)}</td>
+                                                            <td className={`p-3 print:hidden ${row.velocity > 9.0 ? "text-red-600 font-bold" : "text-gray-500"}`}>{safeFixed(row.velocity)}</td>
                                                         </tr>
                                                     ))
                                                 ) : (
@@ -3201,7 +3219,7 @@
                                                         {/* Spanning the middle columns (SprinklerFlow, Size, Length, Loss) */}
                                                         <td colSpan="5" className="border-r border-gray-200"></td>
                                                         <td className="p-3 text-red-700 border-r border-gray-200">{safeFixed(totalDemand.pressure, 1)}</td>
-                                                        <td></td>
+                                                        <td className="print:hidden"></td>
                                                     </tr>
                                                 </tfoot>
                                             )}
