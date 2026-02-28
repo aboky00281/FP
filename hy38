@@ -1555,9 +1555,10 @@
                     const RES = 2; // Output resolution multiplier
                     const containerW = container.clientWidth;
                     const containerH = container.clientHeight;
+                    const TITLE_H = 60 * RES; // Title bar height
 
                     const canvasW = containerW * RES;
-                    const canvasH = containerH * RES;
+                    const canvasH = containerH * RES + TITLE_H;
 
                     const canvas = document.createElement('canvas');
                     canvas.width = canvasW;
@@ -1567,6 +1568,10 @@
                     // --- White background ---
                     ctx.fillStyle = '#ffffff';
                     ctx.fillRect(0, 0, canvasW, canvasH);
+
+                    // --- Offset all drawing below title ---
+                    ctx.save();
+                    ctx.translate(0, TITLE_H);
 
                     // --- Helper: Convert world coords to iso-screen coords ---
                     const toScreen = (x, y) => {
@@ -1820,6 +1825,49 @@
                         }
 
                         // --- Download ---
+                        ctx.restore(); // End title offset
+
+                        // --- Draw Title Header (on top of everything) ---
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0, 0, canvasW, TITLE_H);
+
+                        const viewLabel = viewMode === 'iso' ? 'ISOMETRIC' : '2D';
+                        const titleMain = `HYDRAULIC CALCULATION ${viewLabel}`;
+
+                        const activeLabels = [];
+                        if (showTags && results && results.length > 0) {
+                            if (tagPrefs.showSize) activeLabels.push('PIPE SIZE');
+                            if (tagPrefs.showLength) activeLabels.push('LENGTH');
+                            if (tagPrefs.showFlow) activeLabels.push('FLOW RATE');
+                            if (tagPrefs.showPressure) activeLabels.push('PRESSURE');
+                        }
+                        const tagSuffix = activeLabels.length > 0 ? '  -  ' + activeLabels.join(' / ') : '';
+
+                        // Top black line
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(RES * 20, RES * 10, canvasW - RES * 40, RES * 2);
+
+                        // Title text
+                        const titleFontSize = 18 * RES;
+                        ctx.font = `bold ${titleFontSize}px 'Segoe UI', Arial, sans-serif`;
+
+                        // Main title (black)
+                        ctx.fillStyle = '#000000';
+                        ctx.textAlign = 'left';
+                        ctx.textBaseline = 'top';
+                        const mainWidth = ctx.measureText(titleMain).width;
+                        ctx.fillText(titleMain, RES * 20, RES * 18);
+
+                        // Tag suffix (red)
+                        if (tagSuffix) {
+                            ctx.fillStyle = '#dc2626';
+                            ctx.fillText(tagSuffix, RES * 20 + mainWidth, RES * 18);
+                        }
+
+                        // Bottom black line
+                        ctx.fillStyle = '#000000';
+                        ctx.fillRect(RES * 20, TITLE_H - RES * 10, canvasW - RES * 40, RES * 2);
+
                         const link = document.createElement('a');
                         link.download = `hydraulic_capture_${Date.now()}.png`;
                         link.href = canvas.toDataURL('image/png', 1.0);
