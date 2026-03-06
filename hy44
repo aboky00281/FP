@@ -1481,19 +1481,50 @@
                 }
             };
 
-            const adjustZoom = (delta) => {
+            const adjustZoom = (delta, mouseX = null, mouseY = null) => {
                 if (!containerRef.current) return;
-                const zoomStep = 0.15;
                 const oldScale = transform.scale;
-                const newScale = Math.min(Math.max(oldScale + (delta > 0 ? zoomStep : -zoomStep), 0.1), 10);
+                const newScale = Math.min(Math.max(oldScale + delta, 0.1), 10);
                 const rect = containerRef.current.getBoundingClientRect();
-                const centerX = rect.width / 2;
-                const centerY = rect.height / 2;
+                const centerX = mouseX !== null ? mouseX - rect.left : rect.width / 2;
+                const centerY = mouseY !== null ? mouseY - rect.top : rect.height / 2;
                 const worldX = (centerX - transform.x) / oldScale;
                 const worldY = (centerY - transform.y) / oldScale;
                 const newX = centerX - worldX * newScale;
                 const newY = centerY - worldY * newScale;
                 setTransform({ x: newX, y: newY, scale: newScale });
+            };
+
+            const handleWheel = (e) => {
+                // Prevent default scrolling to avoid bounce effects
+                // However React active wheel listeners are passive by default, 
+                // so we don't call e.preventDefault() here unless we change listener type.
+
+                const isTrackpad = Math.abs(e.deltaY) < 50 && e.deltaMode === 0;
+                let scaleChange = 0;
+
+                if (e.ctrlKey) {
+                    // Pinch zoom
+                    scaleChange = -e.deltaY * 0.01;
+                } else {
+                    // Normal wheel or trackpad scroll
+                    if (isTrackpad) {
+                        // Trackpad panning is often confused with mousewheel.
+                        // We will allow trackpad panning if ctrlKey is not pressed.
+                        setTransform(prev => ({
+                            ...prev,
+                            // Invert delta slightly for natural scroll panning
+                            x: prev.x - e.deltaX,
+                            y: prev.y - e.deltaY
+                        }));
+                        return; // return early to prevent scaling
+                    } else {
+                        // Normal mouse wheel
+                        scaleChange = e.deltaY > 0 ? -0.15 : 0.15;
+                    }
+                }
+
+                adjustZoom(scaleChange, e.clientX, e.clientY);
             };
 
             const handleZoomAllCenter = () => {
@@ -3278,7 +3309,7 @@
                         onMouseUp={handleMouseUp}
                         onClick={handleCanvasClick}
                         onDoubleClick={handleCanvasDoubleClick}
-                        onWheel={(e) => adjustZoom(e.deltaY > 0 ? -1 : 1)}
+                        onWheel={handleWheel}
                     >
                         <div
                             id="top-controls-overlay"
@@ -3351,8 +3382,8 @@
                             <button onClick={handleCaptureImage} title="Capture Image" className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-emerald-700 transition-transform active:scale-90 flex items-center justify-center border border-slate-100"><ImageIcon size={16} /></button>
                             <button onClick={handleCaptureToReport} title="Capture to Report" className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-orange-600 transition-transform active:scale-90 flex items-center justify-center border border-slate-100"><FileText size={16} /></button>
                             <div className="w-full h-px bg-slate-200 my-0.5"></div>
-                            <button onClick={() => adjustZoom(1)} title="Zoom In" className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-transform active:scale-90 border border-slate-100"><ZoomIn size={16} /></button>
-                            <button onClick={() => adjustZoom(-1)} title="Zoom Out" className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-transform active:scale-90 border border-slate-100"><ZoomOut size={16} /></button>
+                            <button onClick={() => adjustZoom(0.15)} title="Zoom In" className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-transform active:scale-90 border border-slate-100"><ZoomIn size={16} /></button>
+                            <button onClick={() => adjustZoom(-0.15)} title="Zoom Out" className="p-2 bg-white rounded-full shadow-lg hover:bg-slate-50 text-slate-700 transition-transform active:scale-90 border border-slate-100"><ZoomOut size={16} /></button>
                         </div>
 
                         {/* Transform Container */}
