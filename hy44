@@ -1691,7 +1691,7 @@
 
                     // --- Draw content function ---
                     const drawContent = () => {
-                        const LINE_W = sp(3); // 3 screen pixels
+                        const LINE_W = sp(2.5); // 2.5 screen pixels
 
                         // --- Draw Pipes ---
                         drawnPipes.forEach(pipe => {
@@ -1832,7 +1832,7 @@
                                 ctx.lineTo(cs.x, cs.y - sp(18));
                                 ctx.lineTo(cs.x + sp(7), cs.y - sp(12));
                                 ctx.strokeStyle = '#7f1d1d';
-                                ctx.lineWidth = sp(1.5);
+                                ctx.lineWidth = sp(1.0);
                                 ctx.lineCap = 'round';
                                 ctx.lineJoin = 'round';
                                 ctx.stroke();
@@ -2066,7 +2066,7 @@
 
                     const finishCapture = () => {
                         // Draw pipes
-                        const LINE_W = sp(3);
+                        const LINE_W = sp(2.5);
                         drawnPipes.forEach(pipe => {
                             const spec = pipeSpecs.find(s => s.nominal === pipe.size) || pipeSpecs[0];
                             let px1 = pipe.start.x, py1 = pipe.start.y;
@@ -2177,7 +2177,7 @@
                                 ctx.lineTo(cs.x, cs.y - sp(18));
                                 ctx.lineTo(cs.x + sp(7), cs.y - sp(12));
                                 ctx.strokeStyle = '#7f1d1d';
-                                ctx.lineWidth = sp(1.5);
+                                ctx.lineWidth = sp(1.0);
                                 ctx.lineCap = 'round';
                                 ctx.lineJoin = 'round';
                                 ctx.stroke();
@@ -3549,7 +3549,7 @@
                                                     <path
                                                         d={pathD}
                                                         stroke={spec.color}
-                                                        strokeWidth={3 / transform.scale}
+                                                        strokeWidth={2.5 / transform.scale}
                                                         strokeLinecap="round"
                                                         strokeLinejoin="round"
                                                         fill="none"
@@ -3763,7 +3763,7 @@
                                             <path
                                                 d={`M 0 0 L 0 ${-16 / transform.scale} M ${-6 / transform.scale} ${-10.5 / transform.scale} L 0 ${-16 / transform.scale} L ${6 / transform.scale} ${-10.5 / transform.scale}`}
                                                 stroke="#7f1d1d"
-                                                strokeWidth={1.5 / transform.scale}
+                                                strokeWidth={1.0 / transform.scale}
                                                 strokeLinecap="round"
                                                 strokeLinejoin="round"
                                                 fill="none"
