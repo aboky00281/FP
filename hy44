@@ -159,6 +159,7 @@
             const [areaPerHead, setAreaPerHead] = useState(170);
             const [areaOfOperation, setAreaOfOperation] = useState(1500);
             const [pdfUrl, setPdfUrl] = useState(null);
+            const [showFloorPlan, setShowFloorPlan] = useState(true);
             const [mode, setMode] = useState('pan');
             const [selectedPipeSize, setSelectedPipeSize] = useState("1");
             const [scalePoints, setScalePoints] = useState([]);
@@ -219,7 +220,7 @@
                 if (unlockCode === '1234') {
                     setAccessLevel('restricted');
                     sessionStorage.setItem('hydraulic_auth_level', 'restricted');
-                    alert("Logged in as Restricted User (No Save/Save As)");
+                    alert("Logged in (Standard Access)");
                 } else if (btoa(unlockCode) === 'MjAxNw==') { // Full Version Check
                     setAccessLevel('full');
                     sessionStorage.setItem('hydraulic_auth_level', 'full');
@@ -703,6 +704,10 @@
                 // setHistoryIndex(0);
                 // Resetting project handle as the context changed
                 projectHandle.current = null;
+            };
+
+            const toggleFloorPlan = () => {
+                setShowFloorPlan(prev => !prev);
             };
 
 
@@ -1986,7 +1991,7 @@
                     };
 
                     // If 2D and background image exists, load it first
-                    if (pdfUrl && viewMode !== 'iso') {
+                    if (pdfUrl && viewMode !== 'iso' && showFloorPlan) {
                         const img = new window.Image();
                         img.crossOrigin = 'anonymous';
                         img.onload = () => {
@@ -2288,7 +2293,7 @@
                         alert('Captured to Report successfully!');
                     };
 
-                    if (pdfUrl && viewMode !== 'iso') {
+                    if (pdfUrl && viewMode !== 'iso' && showFloorPlan) {
                         const img = new window.Image();
                         img.crossOrigin = 'anonymous';
                         img.onload = () => {
@@ -3089,16 +3094,12 @@
                                     <FolderOpen size={14} />
                                 </button>
 
-                                {accessLevel === 'full' && (
-                                    <>
-                                        <button onClick={() => saveProject(false)} className="p-1.5 bg-indigo-800 hover:bg-indigo-700 text-white rounded transition-colors" title="Save">
-                                            <Save size={14} />
-                                        </button>
-                                        <button onClick={() => saveProject(true)} className="p-1.5 bg-indigo-800 hover:bg-indigo-700 text-white rounded transition-colors" title="Save As">
-                                            <FilePlus size={14} />
-                                        </button>
-                                    </>
-                                )}
+                                <button onClick={() => saveProject(false)} className="p-1.5 bg-indigo-800 hover:bg-indigo-700 text-white rounded transition-colors" title="Save">
+                                    <Save size={14} />
+                                </button>
+                                <button onClick={() => saveProject(true)} className="p-1.5 bg-indigo-800 hover:bg-indigo-700 text-white rounded transition-colors" title="Save As">
+                                    <FilePlus size={14} />
+                                </button>
 
                                 {/* Hidden Inputs */}
                                 <input type="file" ref={projectInputRef} className="hidden" onChange={handleProjectFileUpload} accept=".json,application/json" />
@@ -3199,6 +3200,11 @@
                                         <button onClick={toggleIsoView} className={`flex items-center justify-center gap-1.5 px-1 py-1.5 rounded border transition-all shadow-sm active:scale-95 text-[9px] ${viewMode === 'iso' ? 'bg-fuchsia-600 border-fuchsia-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                                             <Box size={11} className={viewMode === 'iso' ? 'text-white' : 'text-fuchsia-600'} /> Iso
                                         </button>
+                                        {accessLevel === 'full' && (
+                                            <button onClick={toggleFloorPlan} className={`flex items-center justify-center gap-1.5 px-1 py-1.5 rounded border transition-all shadow-sm active:scale-95 text-[9px] ${!showFloorPlan ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                                                {showFloorPlan ? <Eye size={11} className="text-slate-500" /> : <EyeOff size={11} className="text-rose-500" />} BG
+                                            </button>
+                                        )}
                                     </div>
 
                                 </div>
@@ -3395,8 +3401,7 @@
                                 pointerEvents: 'none'
                             }}
                         >
-                            {/* Background Image */}
-                            {pdfUrl && viewMode !== 'iso' && <img src={pdfUrl} className="absolute top-0 left-0 opacity-80" style={{ maxWidth: 'none', pointerEvents: 'none' }} />}
+                            {pdfUrl && viewMode !== 'iso' && showFloorPlan && <img src={pdfUrl} className="absolute top-0 left-0 opacity-80" style={{ maxWidth: 'none', pointerEvents: 'none' }} />}
 
                             <svg className="absolute top-0 left-0 overflow-visible" style={{ width: '1px', height: '1px' }}>
                                 {/* Pipe Alignment Guide (Orange Dashed Line on Pipe) */}
