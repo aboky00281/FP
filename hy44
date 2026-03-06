@@ -1840,7 +1840,7 @@
                                     ctx.lineTo(cm.x + tipX, cm.y + tipY);
                                     ctx.lineTo(cm.x + backX - wx, cm.y + backY - wy);
                                     ctx.strokeStyle = '#475569';
-                                    ctx.lineWidth = sp(1.5);
+                                    ctx.lineWidth = sp(0.8);
                                     ctx.lineCap = 'round';
                                     ctx.lineJoin = 'round';
                                     ctx.stroke();
@@ -1853,7 +1853,7 @@
                                     ctx.lineTo(sp(4), 0);
                                     ctx.lineTo(sp(-3), sp(4.5));
                                     ctx.strokeStyle = '#475569';
-                                    ctx.lineWidth = sp(1.5);
+                                    ctx.lineWidth = sp(0.8);
                                     ctx.lineCap = 'round';
                                     ctx.lineJoin = 'round';
                                     ctx.stroke();
@@ -2176,7 +2176,7 @@
                                     ctx.lineTo(cm.x + tipX, cm.y + tipY);
                                     ctx.lineTo(cm.x + backX - wx, cm.y + backY - wy);
                                     ctx.strokeStyle = '#475569';
-                                    ctx.lineWidth = sp(1.5);
+                                    ctx.lineWidth = sp(0.8);
                                     ctx.lineCap = 'round';
                                     ctx.lineJoin = 'round';
                                     ctx.stroke();
@@ -2189,7 +2189,7 @@
                                     ctx.lineTo(sp(4), 0);
                                     ctx.lineTo(sp(-3), sp(4.5));
                                     ctx.strokeStyle = '#475569';
-                                    ctx.lineWidth = sp(1.5);
+                                    ctx.lineWidth = sp(0.8);
                                     ctx.lineCap = 'round';
                                     ctx.lineJoin = 'round';
                                     ctx.stroke();
@@ -3756,13 +3756,13 @@
                                                 const d = `M ${backX + wx} ${backY + wy} L ${tipX} ${tipY} L ${backX - wx} ${backY - wy}`;
                                                 return (
                                                     <g transform={`translate(${tag.midX}, ${tag.midY})`}>
-                                                        <path d={d} stroke="#475569" strokeWidth={1.5 / transform.scale} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0px 0px 1px rgba(255,255,255,1))' }} />
+                                                        <path d={d} stroke="#475569" strokeWidth={0.8 / transform.scale} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0px 0px 1px rgba(255,255,255,1))' }} />
                                                     </g>
                                                 );
                                             }
                                             return (
                                                 <g transform={`translate(${tag.midX}, ${tag.midY}) rotate(${tag.angle * 180 / Math.PI})`}>
-                                                    <path d={`M ${-3 / transform.scale} ${-4.5 / transform.scale} L ${4 / transform.scale} 0 L ${-3 / transform.scale} ${4.5 / transform.scale}`} stroke="#475569" strokeWidth={1.5 / transform.scale} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0px 0px 1px rgba(255,255,255,1))' }} />
+                                                    <path d={`M ${-3 / transform.scale} ${-4.5 / transform.scale} L ${4 / transform.scale} 0 L ${-3 / transform.scale} ${4.5 / transform.scale}`} stroke="#475569" strokeWidth={0.8 / transform.scale} fill="none" strokeLinecap="round" strokeLinejoin="round" style={{ filter: 'drop-shadow(0px 0px 1px rgba(255,255,255,1))' }} />
                                                 </g>
                                             );
                                         })()}
