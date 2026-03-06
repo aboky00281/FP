@@ -1772,7 +1772,7 @@
                             ctx.stroke();
 
                             // Node label
-                            ctx.font = `bold ${sp(isSource ? 11 : 9)}px 'Segoe UI', sans-serif`;
+                            ctx.font = `${sp(isSource ? 11 : 9)}px 'Segoe UI', sans-serif`;
                             ctx.fillStyle = isSource ? '#ef4444' : '#64748b';
                             ctx.textAlign = 'left';
                             ctx.textBaseline = 'bottom';
@@ -2119,7 +2119,7 @@
                             ctx.beginPath(); ctx.arc(cn.x, cn.y, r, 0, Math.PI * 2);
                             ctx.fillStyle = '#ffffff'; ctx.fill();
                             ctx.strokeStyle = isSource ? '#ef4444' : '#94a3b8'; ctx.lineWidth = sp(1.2); ctx.stroke();
-                            ctx.font = `bold ${sp(isSource ? 11 : 9)}px 'Segoe UI', sans-serif`;
+                            ctx.font = `${sp(isSource ? 11 : 9)}px 'Segoe UI', sans-serif`;
                             ctx.fillStyle = isSource ? '#ef4444' : '#64748b';
                             ctx.textAlign = 'left'; ctx.textBaseline = 'bottom';
                             const labelText = isSource ? `#${node.displayId} (S)` : `#${node.displayId}`;
@@ -3698,7 +3698,7 @@
                                             y={sy + (isSource ? -5 : -3) / transform.scale}
                                             fontSize={(isSource ? 11 : 9) / transform.scale}
                                             fill={isSource ? "#ef4444" : "#64748b"}
-                                            fontWeight="bold"
+                                            fontWeight="normal"
                                             style={{
                                                 textShadow: '1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff',
                                                 pointerEvents: 'none'
