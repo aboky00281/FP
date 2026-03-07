@@ -2000,7 +2000,7 @@
                                     texts.push({ text: `${tag.res.size}"`, color: '#1e293b', fontSize: 11 });
                                 }
                                 if (tagPrefs.showLength) {
-                                    texts.push({ text: `${safeFixed(tag.res.lengthM, 1)}m`, color: '#1e293b', fontSize: 11 });
+                                    texts.push({ text: `${safeFixed(tag.res.lengthM / 3.28084, 1)}m`, color: '#1e293b', fontSize: 11 });
                                 }
                                 if (tagPrefs.showFlow) {
                                     texts.push({ text: `${safeFixed(tag.res.flow, 1)}`, color: '#4338ca', fontSize: 11 });
@@ -2013,11 +2013,11 @@
                                 const startYTag = ct.y - ((texts.length - 1) * lineH) / 2;
 
                                 texts.forEach((t, idx) => {
-                                    const textX = ct.x;
+                                    const textX = ct.x - sp(12);
                                     const textY = startYTag + idx * lineH;
 
                                     ctx.font = `${sp(t.fontSize)}px 'Segoe UI', sans-serif`;
-                                    ctx.textAlign = 'center';
+                                    ctx.textAlign = 'left';
                                     ctx.textBaseline = 'middle';
 
                                     // White outline for readability
@@ -2331,16 +2331,16 @@
                                 const ct = s2c(tag.tagX, tag.tagY);
                                 const texts = [];
                                 if (tagPrefs.showSize) texts.push({ text: `${tag.res.size}"`, color: '#1e293b', fontSize: 11 });
-                                if (tagPrefs.showLength) texts.push({ text: `${safeFixed(tag.res.lengthM, 1)}m`, color: '#1e293b', fontSize: 11 });
+                                if (tagPrefs.showLength) texts.push({ text: `${safeFixed(tag.res.lengthM / 3.28084, 1)}m`, color: '#1e293b', fontSize: 11 });
                                 if (tagPrefs.showFlow) texts.push({ text: `${safeFixed(tag.res.flow, 1)}`, color: '#4338ca', fontSize: 11 });
                                 if (tagPrefs.showPressure) texts.push({ text: `${safeFixed(tag.res.pressure, 1)}`, color: '#dc2626', fontSize: 11 });
                                 const lineH = sp(12);
                                 const startYTag = ct.y - ((texts.length - 1) * lineH) / 2;
                                 texts.forEach((t, idx) => {
-                                    const textX = ct.x;
+                                    const textX = ct.x - sp(12);
                                     const textY = startYTag + idx * lineH;
                                     ctx.font = `${sp(t.fontSize)}px 'Segoe UI', sans-serif`;
-                                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                                    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
                                     ctx.strokeStyle = '#ffffff'; ctx.lineWidth = sp(3);
                                     ctx.strokeText(t.text, textX, textY);
                                     ctx.fillStyle = t.color; ctx.fillText(t.text, textX, textY);
