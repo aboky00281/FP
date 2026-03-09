@@ -4349,7 +4349,10 @@
                                                                             <td className={`p-3 border-r border-gray-200 ${row.headFlow > 0 ? 'text-gray-800 font-bold' : 'text-gray-400'}`}>
                                                                                 {row.headFlow > 0 ? safeFixed(row.headFlow, 1) : '-'}
                                                                             </td>
-                                                                            <td className="p-3 text-gray-600 border-r border-gray-200">{row.size}"</td>
+                                                                            <td className="p-3 text-gray-600 border-r border-gray-200">
+                                                                                <div>{row.size}"</div>
+                                                                                <div className="text-gray-400">({pipeSpecs.find(p => p.nominal === row.size)?.internal?.toFixed(3) || "N/A"})</div>
+                                                                            </td>
                                                                             <td className="p-3 text-gray-600 border-r border-gray-200">{safeFixed(row.lengthM, 1)} <span className="text-gray-400">({safeFixed(row.lengthM / 3.28084, 1)})</span></td>
                                                                             <td className="p-3 text-gray-500 border-r border-gray-200">
                                                                                 {row.fittings ? (
@@ -4423,7 +4426,7 @@
                                                         <div className="hidden print:block print-page-break"></div>
 
                                                         {/* Steel Pipe Dimensions Table Section */}
-                                                        <div className="mt-8 mb-4 break-inside-avoid print:mt-8">
+                                                        <div className="mt-8 mb-4 break-inside-avoid print:mt-2">
                                                             <h3 className="font-bold text-lg text-gray-800 mb-2 print:text-base text-center">
                                                                 Steel Pipe Dimensions
                                                             </h3>
