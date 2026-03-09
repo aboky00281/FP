@@ -4123,20 +4123,23 @@
                                         <table className="w-full text-left">
                                             <thead className="block print:table-header-group w-full">
                                                 <tr>
-                                                    <td className="w-full pb-6 print:pb-8">
+                                                    <td className="w-full pb-4 print:pb-2">
                                                         <div className="block font-sans text-sm print:text-xs text-gray-800">
-                                                            <div className="grid grid-cols-[100px_20px_1fr] gap-2">
+                                                            <div className="grid grid-cols-[100px_20px_1fr] gap-1 pb-2 mb-2 border-b-2 border-black print:border-b-[3px]">
                                                                 <div className="font-bold">Project</div><div>:</div>
                                                                 <div>
-                                                                    <input type="text" className="w-full text-red-600 print:text-black font-bold bg-transparent border-b outline-none print:border-none print:p-0" placeholder="พิมพ์ชื่อโครงการ..." value={projectName} onChange={e => setProjectName(e.target.value)} />
+                                                                    <input type="text" className="w-full text-red-600 print:hidden font-bold bg-transparent border-b outline-none" placeholder="พิมพ์ชื่อโครงการ..." value={projectName} onChange={e => setProjectName(e.target.value)} />
+                                                                    <span className="hidden print:block font-bold text-black">{projectName}</span>
                                                                 </div>
                                                                 <div className="font-bold">Subject</div><div>:</div>
                                                                 <div>
-                                                                    <input type="text" className="w-full text-red-500 print:text-black bg-transparent border-b outline-none print:border-none print:p-0" placeholder="พิมพ์ชื่อเรื่องที่นี่..." value={reportData.subject} onChange={e => setReportData({ ...reportData, subject: e.target.value })} />
+                                                                    <input type="text" className="w-full text-red-500 print:hidden bg-transparent border-b outline-none" placeholder="พิมพ์ชื่อเรื่องที่นี่..." value={reportData.subject} onChange={e => setReportData({ ...reportData, subject: e.target.value })} />
+                                                                    <span className="hidden print:block text-black">{reportData.subject}</span>
                                                                 </div>
                                                                 <div className="font-bold">Date</div><div>:</div>
                                                                 <div>
-                                                                    <input type="text" className="w-full text-red-500 print:text-black bg-transparent border-b outline-none print:border-none print:p-0" placeholder="พิมพ์วันที่ที่นี่..." value={reportData.date} onChange={e => setReportData({ ...reportData, date: e.target.value })} />
+                                                                    <input type="text" className="w-full text-red-500 print:hidden bg-transparent border-b outline-none" placeholder="พิมพ์วันที่ที่นี่..." value={reportData.date} onChange={e => setReportData({ ...reportData, date: e.target.value })} />
+                                                                    <span className="hidden print:block text-black">{reportData.date}</span>
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -4149,11 +4152,11 @@
                                                         {/* New Calculation Data Cover Page */}
                                                         <div className="mb-8 print:mb-0 break-after-page block font-sans text-sm print:text-xs text-gray-800" style={{ pageBreakAfter: 'always' }}>
 
-                                                            <div className="border-t-2 border-black border-b-2 py-4 mb-4 text-center">
+                                                            <div className="mb-2 text-center">
                                                                 <div className="font-semibold mb-2">Hydraulic Calculation Method</div>
                                                                 <div>
                                                                     (Most Remote Sprinkler -
-                                                                    <input type="text" className="text-red-500 print:text-black bg-transparent border-b outline-none print:border-none print:p-0 inline-block text-center w-64 ml-2 mr-2" placeholder="พิมพ์ Sampling area..." value={samplingArea} onChange={e => setSamplingArea(e.target.value)} />
+                                                                    <input type="text" className="text-red-500 print:text-black print:placeholder-transparent bg-transparent border-b outline-none print:border-none print:p-0 inline-block text-center w-64 ml-2 mr-2" placeholder="พิมพ์ Sampling area..." value={samplingArea} onChange={e => setSamplingArea(e.target.value)} />
                                                                     )
                                                                 </div>
                                                             </div>
@@ -4555,9 +4558,9 @@
                                                             return reportImages.map((img, idx) => (
                                                                 <React.Fragment key={img.id}>
                                                                     {idx % 2 === 0 && <div className="hidden print:block print-page-break"></div>}
-                                                                    <div className={`break-inside-avoid ${idx % 2 === 0 ? 'mt-6 print:mt-2' : 'mt-4 print:mt-2'}`}>
-                                                                        <div className="relative group">
-                                                                            <img src={img.dataUrl} alt={img.label} className="w-full border border-gray-200 rounded print:border-0 print:rounded-none" style={{ maxHeight: '48vh' }} />
+                                                                    <div className={`break-inside-avoid ${idx % 2 === 0 ? 'mt-6 print:mt-2' : 'mt-2 print:mt-2'}`}>
+                                                                        <div className="relative group flex justify-center w-full">
+                                                                            <img src={img.dataUrl} alt={img.label} className="w-full object-contain bg-white border border-gray-200 rounded print:border-0 print:rounded-none" style={{ maxHeight: '40vh', maxWidth: '100%' }} />
                                                                             {/* Control bar */}
                                                                             <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity print:hidden">
                                                                                 <button
