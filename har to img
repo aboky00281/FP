@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>HAR Extractor - Fix Base64 Error</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        body { font-family: 'Tahoma', sans-serif; background: #f4f7f6; display: flex; justify-content: center; padding: 50px; }
+        .box { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 5px 15px rgba(0,0,0,0.1); width: 100%; max-width: 500px; text-align: center; border: 1px solid #ddd; }
+        #drop-zone { border: 3px dashed #007bff; padding: 40px; border-radius: 10px; color: #007bff; cursor: pointer; transition: 0.3s; background: #fcfdfe; }
+        #drop-zone.dragover { background: #e7f3ff; border-color: #0056b3; }
+        .btn { display: none; width: 100%; padding: 15px; margin-top: 20px; background: #28a745; color: white; border: none; border-radius: 6px; font-size: 16px; cursor: pointer; font-weight: bold; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .progress-container { display: none; margin-top: 20px; background: #eee; border-radius: 10px; height: 20px; overflow: hidden; }
+        #progress-bar { width: 0%; height: 100%; background: #28a745; transition: width 0.1s; }
+        #status { margin-top: 20px; font-size: 14px; color: #555; font-weight: bold; }
+        .error { color: #dc3545 !important; }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>🛠️ HAR Extractor (แสดง %)</h2>
+    <p>รวมรูปภาพและข้ามไฟล์ที่พังอัตโนมัติ</p>
+    
+    <div id="drop-zone">ลากไฟล์ .har มาวางที่นี่</div>
+    <input type="file" id="file-input" style="display:none" accept=".har,.json">
+    
+    <div class="progress-container" id="p-container">
+        <div id="progress-bar"></div>
+    </div>
+
+    <button id="download-zip" class="btn">🎁 ดาวน์โหลดรูปทั้งหมด (.ZIP)</button>
+    <div id="status">รอรับไฟล์...</div>
+</div>
+
+<script>
+    const dropZone = document.getElementById('drop-zone');
+    const fileInput = document.getElementById('file-input');
+    const downloadBtn = document.getElementById('download-zip');
+    const status = document.getElementById('status');
+    const pContainer = document.getElementById('p-container');
+    const progressBar = document.getElementById('progress-bar');
+    let zip = new JSZip();
+
+    dropZone.onclick = () => fileInput.click();
+    fileInput.onchange = e => handleFile(e.target.files[0]);
+    dropZone.ondragover = e => { e.preventDefault(); dropZone.classList.add('dragover'); };
+    dropZone.ondragleave = () => dropZone.classList.remove('dragover');
+    dropZone.ondrop = e => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFile(e.dataTransfer.files[0]); };
+
+    function handleFile(file) {
+        if (!file) return;
+        status.innerHTML = "⌛ กำลังวิเคราะห์และคัดกรองไฟล์...";
+        downloadBtn.style.display = "none";
+        pContainer.style.display = "none";
+        zip = new JSZip();
+
+        const reader = new FileReader();
+        reader.readAsText(file);
+        reader.onload = e => {
+            try {
+                const harData = JSON.parse(e.target.result);
+                processEntries(harData.log.entries);
+            } catch (err) {
+                status.innerHTML = `<span class="error">❌ อ่านไฟล์ไม่ได้: ${err.message}</span>`;
+            }
+        };
+    }
+
+    function processEntries(entries) {
+        let count = 0;
+        let skipCount = 0;
+
+        entries.forEach((entry, index) => {
+            const content = entry.response.content;
+            
+            // เช็คว่าเป็นไฟล์รูป และมีข้อมูล Text อยู่ข้างใน
+            if (content && content.text && content.mimeType && content.mimeType.includes('image')) {
+                const mime = content.mimeType;
+                const ext = mime.split('/')[1].split('+')[0].replace('jpeg', 'jpg') || 'png';
+                const date = new Date(entry.startedDateTime);
+                const timePrefix = date.toISOString().replace(/[:.]/g, '-').replace('T', '_').split('.')[0];
+                const filename = `img_${timePrefix}_idx${String(index).padStart(3, '0')}.${ext}`;
+
+                let rawText = content.text.trim();
+
+                // 1. ถ้าเข้ารหัสเป็น Base64
+                if (content.encoding === 'base64') {
+                    // ซ่อมแซม Base64: ลบช่องว่างที่ผิดปกติ
+                    rawText = rawText.replace(/\s/g, '');
+                    // เติมเครื่องหมาย '=' ให้ครบตามหลัก Base64 (ความยาวต้องหาร 4 ลงตัว)
+                    while (rawText.length % 4 !== 0) {
+                        rawText += '=';
+                    }
+
+                    if (rawText.length > 0) {
+                        zip.file(filename, rawText, {base64: true});
+                        count++;
+                    } else {
+                        skipCount++;
+                    }
+                } 
+                // 2. ถ้าเป็นไฟล์ SVG (มักจะเป็น Plain Text ไม่ใช่ Base64)
+                else if (mime.includes('svg')) {
+                    zip.file(filename, rawText);
+                    count++;
+                } 
+                // ข้ามไฟล์ที่ข้อมูลผิดปกติ
+                else {
+                    skipCount++;
+                }
+            }
+        });
+
+        if (count > 0) {
+            let msg = `✅ ดึงข้อมูลสำเร็จ <b>${count}</b> รูป`;
+            if (skipCount > 0) msg += `<br><small style="color:#f39c12;">(ข้ามไฟล์ที่โหลดไม่สมบูรณ์ ${skipCount} ไฟล์)</small>`;
+            status.innerHTML = msg;
+            downloadBtn.style.display = "block";
+        } else {
+            status.innerHTML = `<span class="error">❌ ไม่พบรูปภาพที่สมบูรณ์ในไฟล์นี้</span>`;
+        }
+    }
+
+    downloadBtn.onclick = () => {
+        downloadBtn.disabled = true;
+        pContainer.style.display = "block";
+        progressBar.style.width = "0%";
+        status.innerHTML = `🏗️ เริ่มต้นการบีบอัด...`;
+        
+        zip.generateAsync({type: "blob"}, function updateCallback(metadata) {
+            const percent = metadata.percent.toFixed(2);
+            progressBar.style.width = percent + "%";
+            status.innerHTML = `🏗️ กำลังบีบอัด: <b>${percent}%</b>`;
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = "extracted_images_fixed.zip";
+            a.click();
+            status.innerHTML = "✅ ดาวน์โหลดสำเร็จ! ไฟล์พร้อมใช้งาน";
+            downloadBtn.disabled = false;
+        })
+        .catch(err => {
+            status.innerHTML = `<span class="error">❌ บีบอัดล้มเหลว: ${err.message}</span>`;
+            downloadBtn.disabled = false;
+        });
+    };
+</script>
+
+</body>
+</html>
