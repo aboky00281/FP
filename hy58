@@ -554,17 +554,25 @@
                     return;
                 }
 
-                // Identify Source: largest-pipe dead-end = supply connection point
-                // Tiebreak: rightmost then bottommost (supply main typically at right/bottom)
-                allNodes.sort((a, b) => {
-                    if (b.maxPipeSize !== a.maxPipeSize) return b.maxPipeSize - a.maxPipeSize;
-                    const degA = a.degree === 1 ? 1 : 0;
-                    const degB = b.degree === 1 ? 1 : 0;
-                    if (degA !== degB) return degB - degA;
-                    if (Math.abs(a.x - b.x) > 1) return b.x - a.x;
-                    return b.y - a.y;
-                });
-                let sourceNode = allNodes[0];
+                // Identify Source:
+                // 1. Prefer existing sourceNodeId IF it is still a dead-end (degree 1)
+                // 2. Otherwise, re-calculate the best candidate (largest pipe dead-end)
+                let sourceNode = null;
+                const prevSourceNode = sourceNodeId ? uniqueNodes.get(sourceNodeId) : null;
+
+                if (prevSourceNode && prevSourceNode.degree === 1) {
+                    sourceNode = prevSourceNode;
+                } else {
+                    allNodes.sort((a, b) => {
+                        if (b.maxPipeSize !== a.maxPipeSize) return b.maxPipeSize - a.maxPipeSize;
+                        const degA = a.degree === 1 ? 1 : 0;
+                        const degB = b.degree === 1 ? 1 : 0;
+                        if (degA !== degB) return degB - degA;
+                        if (Math.abs(a.x - b.x) > 1) return b.x - a.x;
+                        return b.y - a.y;
+                    });
+                    sourceNode = allNodes[0];
+                }
 
                 const maxDepthMap = {};
 
@@ -709,7 +717,7 @@
                 // flipping direction. handleCalculate() always re-derives the correct source anyway.
                 setSourceNodeId(prev => (prev && uniqueNodes.has(prev)) ? prev : sourceNode.id);
 
-            }, [drawnPipes, pixelsPerMeter, isoAngle]);
+            }, [drawnPipes, pixelsPerMeter, isoAngle, sourceNodeId]);
 
             // After visualNodes updates with new isoAngle, zoom-fit if pending
             useEffect(() => {
@@ -1631,7 +1639,7 @@
                 const clickedPipe = findClickedPipe(rawCoords, clickThreshold);
                 if (clickedPipe) {
                     const currentLengthM = clickedPipe.isVertical
-                        ? Math.abs(parseFloat(clickedPipe.verticalHeight) || 0)
+                        ? (parseFloat(clickedPipe.verticalHeight) || 0)
                         : (pixelsPerMeter > 0 ? clickedPipe.pixelLength / pixelsPerMeter : 0);
                     setEditingPipeLength(currentLengthM.toFixed(1));
                     setEditingPipeId(clickedPipe.id);
@@ -1649,7 +1657,7 @@
                 const pass1 = drawnPipes.map(p => {
                     if (p.id !== editingPipeId) return p;
                     const updated = { ...p, size: newSize };
-                    if (!isNaN(lenM) && lenM > 0 && pixelsPerMeter > 0) {
+                    if (!isNaN(lenM) && pixelsPerMeter > 0 && (p.isVertical ? lenM !== 0 : lenM > 0)) {
                         if (p.isVertical) {
                             updated.verticalHeight = lenM;
                         } else {
@@ -3131,7 +3139,7 @@
                                     const L = e.len_ft + e.fittingLen;
                                     let hl = getHLoss(e.q_val, L, e.d_in);
                                     if (e.isVertical) {
-                                        const elevDiff = (String(e.q_u) === String(e.v)) ? parseFloat(e.verticalHeight) : -parseFloat(e.verticalHeight);
+                                        const elevDiff = (String(e.q_v) === String(e.v)) ? parseFloat(e.verticalHeight) : -parseFloat(e.verticalHeight);
                                         hl += elevDiff * M_TO_FT * 0.433;
                                     }
                                     nodeRelP[String(e.q_u)] = nodeRelP[cur] + hl;
@@ -4035,7 +4043,7 @@
                                                             fontWeight="bold"
                                                             style={{ textShadow: '1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff' }}
                                                         >
-                                                            (V) {pipe.verticalHeight} m.
+                                                            (V) {parseFloat(pipe.verticalHeight).toFixed(1)} m.
                                                         </text>
                                                     )}
 
@@ -4482,15 +4490,34 @@
                                     </h3>
                                     <div className="mb-3">
                                         <label className="text-xs text-slate-500 font-medium block mb-1">
-                                            {drawnPipes.find(p => p.id === editingPipeId)?.isVertical ? 'ความสูง (ม.)' : 'ระยะท่อ (ม.)'}
+                                        {(() => {
+                                            const p = drawnPipes.find(pipe => pipe.id === editingPipeId);
+                                            if (p?.isVertical) {
+                                                return (
+                                                    <>
+                                                        ความสูง (ม.) 
+                                                        <span className="text-[10px] ml-1 text-slate-400 font-normal">
+                                                            (+ ชี้ขึ้น, - ชี้ลง)
+                                                        </span>
+                                                    </>
+                                                );
+                                            }
+                                            return 'ระยะท่อ (ม.)';
+                                        })()}
                                         </label>
                                         <input
                                             type="number"
-                                            min="0.01"
                                             step="0.01"
                                             value={editingPipeLength}
                                             onChange={e => setEditingPipeLength(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') {
+                                                    const currentPipe = drawnPipes.find(p => p.id === editingPipeId);
+                                                    if (currentPipe) updatePipe(currentPipe.size);
+                                                }
+                                            }}
                                             className="w-full border border-slate-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
+                                            autoFocus
                                         />
                                     </div>
                                     <div className="text-xs text-slate-500 font-medium mb-2">ขนาดท่อ</div>
