@@ -5263,6 +5263,16 @@
                                                                 });
                                                                 printWindow.document.write('<' + 'script src="https://cdn.tailwindcss.com"><' + '/script>');
                                                                 printWindow.document.write('<' + '/head><' + 'body class="bg-white p-6 font-sans">');
+                                                                if (accessLevel === 'free') {
+                                                                    printWindow.document.write('<div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 999999; overflow: hidden; opacity: 0.025; display: flex; flex-wrap: wrap; justify-content: space-around; align-content: space-around; user-select: none;">');
+                                                                    for (let i = 0; i < 8; i++) {
+                                                                        printWindow.document.write('<div style="transform: rotate(-30deg); font-size: 32px; font-weight: bold; color: #000; font-family: sans-serif; margin: 150px; white-space: nowrap;">HYDCAL - FREE VERSION</div>');
+                                                                    }
+                                                                    printWindow.document.write('</div>');
+                                                                }
+                                                                if (reportData.isForInformation) {
+                                                                    printWindow.document.write('<div style="position: fixed; inset: 0; z-index: 10000; pointer-events: none; display: flex; align-items: center; justify-content: center; opacity: 0.15; overflow: hidden;"><div style="text-align: center; color: #ef4444; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; transform: rotate(-45deg); font-size: 55px; line-height: 1.2; max-width: 100%; word-wrap: break-word; margin-top: auto; margin-bottom: auto;">' + (reportData.watermarkText || 'FOR INFORMATION') + '</div></div>');
+                                                                }
                                                                 const modalBody = document.querySelector('.p-6.overflow-auto');
                                                                 if (modalBody) {
                                                                     printWindow.document.write(modalBody.innerHTML);
