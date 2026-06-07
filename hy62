@@ -3637,7 +3637,7 @@
                                     transform: 'rotate(-30deg)',
                                     fontSize: '32px',
                                     fontWeight: 'bold',
-                                    color: 'rgba(15, 23, 42, 0.04)',
+                                    color: 'rgba(15, 23, 42, 0.015)',
                                     fontFamily: 'sans-serif',
                                     margin: '150px',
                                     whiteSpace: 'nowrap'
@@ -5224,7 +5224,7 @@
                                     {/* Watermark layer for ALL print pages if checked */}
                                     {reportData.isForInformation && (
                                         <div className="hidden print:flex fixed inset-0 z-[10000] pointer-events-none items-center justify-center overflow-hidden">
-                                            <div className="font-black tracking-widest uppercase transform -rotate-45" style={{ fontSize: '55px', textAlign: 'center', lineHeight: '1.2', maxWidth: '100%', wordWrap: 'break-word', color: 'rgba(239, 68, 68, 0.04)' }}>
+                                            <div className="font-black tracking-widest uppercase transform -rotate-45" style={{ fontSize: '55px', textAlign: 'center', lineHeight: '1.2', maxWidth: '100%', wordWrap: 'break-word', color: 'rgba(239, 68, 68, 0.02)' }}>
                                                 {reportData.watermarkText || 'FOR INFORMATION'}
                                             </div>
                                         </div>
@@ -5267,12 +5267,12 @@
                                                                 if (accessLevel === 'free') {
                                                                     printWindow.document.write('<div style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 999999; overflow: hidden; display: flex; flex-wrap: wrap; justify-content: space-around; align-content: space-around; user-select: none; mix-blend-mode: multiply;">');
                                                                     for (let i = 0; i < 8; i++) {
-                                                                        printWindow.document.write('<div style="transform: rotate(-30deg); font-size: 32px; font-weight: bold; color: rgba(15, 23, 42, 0.04); font-family: sans-serif; margin: 150px; white-space: nowrap;">HYDCAL - FREE VERSION</div>');
+                                                                        printWindow.document.write('<div style="transform: rotate(-30deg); font-size: 32px; font-weight: bold; color: rgba(15, 23, 42, 0.015); font-family: sans-serif; margin: 150px; white-space: nowrap;">HYDCAL - FREE VERSION</div>');
                                                                     }
                                                                     printWindow.document.write('</div>');
                                                                 }
                                                                 if (reportData.isForInformation) {
-                                                                    printWindow.document.write('<div style="position: fixed; inset: 0; z-index: 10000; pointer-events: none; display: flex; align-items: center; justify-content: center; overflow: hidden; mix-blend-mode: multiply;"><div style="text-align: center; color: rgba(239, 68, 68, 0.04); font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; transform: rotate(-45deg); font-size: 55px; line-height: 1.2; max-width: 100%; word-wrap: break-word; margin-top: auto; margin-bottom: auto;">' + (reportData.watermarkText || 'FOR INFORMATION') + '</div></div>');
+                                                                    printWindow.document.write('<div style="position: fixed; inset: 0; z-index: 10000; pointer-events: none; display: flex; align-items: center; justify-content: center; overflow: hidden; mix-blend-mode: multiply;"><div style="text-align: center; color: rgba(239, 68, 68, 0.01); font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; transform: rotate(-45deg); font-size: 55px; line-height: 1.2; max-width: 100%; word-wrap: break-word; margin-top: auto; margin-bottom: auto;">' + (reportData.watermarkText || 'FOR INFORMATION') + '</div></div>');
                                                                 }
                                                                 const modalBody = document.querySelector('.p-6.overflow-auto');
                                                                 if (modalBody) {
