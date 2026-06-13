@@ -3796,8 +3796,8 @@
                                         <button onClick={() => setMode('scale')} className={`flex items-center justify-start gap-1.5 px-2 py-1.5 rounded border transition-all shadow-sm active:scale-95 text-[9px] ${mode === 'scale' ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                                             <Ruler size={11} className={mode === 'scale' ? 'text-white' : 'text-slate-500'} /> Set Scale
                                         </button>
-                                        <button onClick={toggleFloorPlan} className={`flex items-center justify-between gap-1 px-1.5 py-1 rounded border transition-all shadow-sm active:scale-95 text-[9px] ${showFloorPlan ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-                                            <span className="flex items-center gap-1"><Eye size={11} className={showFloorPlan ? "text-slate-500" : "text-rose-500"} /> Floor Plan</span>
+                                        <button onClick={toggleFloorPlan} className={`flex items-center justify-between gap-1 px-1.5 py-1 rounded border transition-all shadow-sm active:scale-95 text-[9px] ${showFloorPlan ? 'bg-slate-100 border-slate-300 text-slate-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                                            <span className="flex items-center gap-1"><ImageIcon size={11} className={showFloorPlan ? "text-slate-600" : "text-slate-400"} /> Floor Plan</span>
                                             <div className="flex items-center w-[40px] h-[20px] bg-black rounded-full p-0.5 flex-shrink-0">
                                                 {showFloorPlan ? (
                                                     <div className="flex items-center w-full justify-start">
