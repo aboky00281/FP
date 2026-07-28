@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hydraulic Calculation Software (NFPA 13) V.2.5 By วัยรุ่นเซินเจิ้น</title>
+    <title>Hydraulic Calculation Software (NFPA 13) V.2.6 By วัยรุ่นเซินเจิ้น</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -197,6 +197,7 @@
             const [showFloorPlan, setShowFloorPlan] = useState(true);
             const [mode, setMode] = useState('pan');
             const [matchSourceSize, setMatchSourceSize] = useState(null);
+            const [matchSourceCValue, setMatchSourceCValue] = useState(null);
             const [selectedPipeSize, setSelectedPipeSize] = useState("1");
             const [scalePoints, setScalePoints] = useState([]);
             const [pixelsPerMeter, setPixelsPerMeter] = useState(null);
@@ -283,6 +284,7 @@
 
             const [editingPipeId, setEditingPipeId] = useState(null);
             const [editingPipeLength, setEditingPipeLength] = useState('');
+            const [editingPipeCValue, setEditingPipeCValue] = useState('');
             const [alignmentLines, setAlignmentLines] = useState([]);
             const [sprinklerDistanceGuide, setSprinklerDistanceGuide] = useState(null);
             const [pipeAlignmentGuide, setPipeAlignmentGuide] = useState(null);
@@ -307,6 +309,7 @@
                 const handleKeyDown = (e) => {
                     if (e.key === 'Escape') {
                         setMatchSourceSize(null);
+                        setMatchSourceCValue(null);
                         setIsDragging(false);
                         setTempRect(null);
                         setTempPipe(null);
@@ -1161,9 +1164,16 @@
                     if (clickedPipe) {
                         if (!matchSourceSize) {
                             setMatchSourceSize(clickedPipe.size);
+                            setMatchSourceCValue(clickedPipe.cValue);
                             setSelectedPipeSize(clickedPipe.size);
                         } else {
-                            const newPipes = drawnPipes.map(p => p.id === clickedPipe.id ? { ...p, size: matchSourceSize } : p);
+                            const newPipes = drawnPipes.map(p => {
+                                if (p.id !== clickedPipe.id) return p;
+                                const np = { ...p, size: matchSourceSize };
+                                if (matchSourceCValue !== undefined && matchSourceCValue !== null) np.cValue = matchSourceCValue;
+                                else delete np.cValue;
+                                return np;
+                            });
                             setDrawnPipes(newPipes);
                             commitToHistory(newPipes, placedSprinklers, placedEquipments);
                         }
@@ -1524,7 +1534,10 @@
                                     }
                                     if (lineIntersectsRect(sx, sy, ex, ey, minX, minY, maxX - minX, maxY - minY)) {
                                         changed = true;
-                                        return { ...p, size: matchSourceSize };
+                                        const np = { ...p, size: matchSourceSize };
+                                        if (matchSourceCValue !== undefined && matchSourceCValue !== null) np.cValue = matchSourceCValue;
+                                        else delete np.cValue;
+                                        return np;
                                     }
                                     return p;
                                 });
@@ -1806,12 +1819,14 @@
                         ? (parseFloat(clickedPipe.verticalHeight) || 0)
                         : (pixelsPerMeter > 0 ? clickedPipe.pixelLength / pixelsPerMeter : 0);
                     setEditingPipeLength(currentLengthM.toFixed(1));
+                    setEditingPipeCValue(clickedPipe.cValue || '');
                     setEditingPipeId(clickedPipe.id);
                 }
             };
 
             const updatePipe = (newSize) => {
                 const lenM = parseFloat(editingPipeLength);
+                const cVal = editingPipeCValue !== '' ? Number(editingPipeCValue) : undefined;
                 const SNAP_TOL = 8.0; // Tolerance to heal loose head symbols
 
                 let oldEndPoint = null;
@@ -1820,6 +1835,9 @@
                 const pass1 = drawnPipes.map(p => {
                     if (p.id !== editingPipeId) return p;
                     const updated = { ...p, size: newSize };
+                    if (cVal !== undefined) updated.cValue = cVal;
+                    else delete updated.cValue;
+
                     if (!isNaN(lenM) && pixelsPerMeter > 0 && (p.isVertical ? true : lenM > 0)) {
                         if (p.isVertical) {
                             updated.verticalHeight = lenM;
@@ -2119,7 +2137,7 @@
                     const container = containerRef.current;
                     if (!container) return;
 
-                    const RES = 4; // Output resolution multiplier
+                    const RES = 8; // Output resolution multiplier
                     const containerW = container.clientWidth;
                     const containerH = container.clientHeight;
                     const TITLE_H = 60 * RES; // Title bar height
@@ -2543,7 +2561,7 @@
                     const container = containerRef.current;
                     if (!container) return;
 
-                    const RES = 4;
+                    const RES = 8;
                     const containerW = container.clientWidth;
                     const containerH = container.clientHeight;
                     const TITLE_H = 60 * RES;
@@ -3001,7 +3019,8 @@
                             isVertical: p.isVertical,
                             verticalHeight: p.verticalHeight,
                             fittingLen: 0,
-                            fittings: []
+                            fittings: [],
+                            cValue: p.cValue || C
                         };
 
                         placedEquipments.forEach(eq => {
@@ -3249,9 +3268,9 @@
                     });
 
                     // 4. Exact Iterative Solver (Canute FHC equivalence)
-                    const getHLoss = (Q, L, D) => {
+                    const getHLoss = (Q, L, D, edgeC = C) => {
                         if (Math.abs(Q) < 1e-6) return 0;
-                        return (4.52 * L * Math.pow(Math.abs(Q), 1.85)) / (Math.pow(C, 1.85) * Math.pow(D, 4.87));
+                        return (4.52 * L * Math.pow(Math.abs(Q), 1.85)) / (Math.pow(edgeC, 1.85) * Math.pow(D, 4.87));
                     };
 
                     const reqBaseP = Math.max(7, Math.pow((density * areaFt2) / K, 2));
@@ -3340,7 +3359,7 @@
                                         const e = le.edge;
                                         let effectiveQ = String(e.q_u) === String(le.dir_from) ? e.q_val : -e.q_val;
                                         const L = e.len_ft + e.fittingLen;
-                                        const hl = getHLoss(effectiveQ, L, e.d_in);
+                                        const hl = getHLoss(effectiveQ, L, e.d_in, e.cValue);
                                         const sign = effectiveQ >= 0 ? 1 : -1;
                                         sumH[i] += sign * hl;
 
@@ -3402,7 +3421,7 @@
                                 // Traverse in flow direction: cur → q_v
                                 if (String(e.q_u) === String(cur) && !vp.has(String(e.q_v))) {
                                     const L = e.len_ft + e.fittingLen;
-                                    let hl = getHLoss(e.q_val, L, e.d_in);
+                                    let hl = getHLoss(e.q_val, L, e.d_in, e.cValue || C);
                                     if (e.isVertical) {
                                         const elevDiff = (String(e.q_v) === String(e.v)) ? parseFloat(e.verticalHeight) : -parseFloat(e.verticalHeight);
                                         hl += elevDiff * M_TO_FT * 0.433;
@@ -3414,7 +3433,7 @@
                                 // Also traverse reverse direction: q_u ← cur (for zero-flow or reverse edges)
                                 else if (String(e.q_v) === String(cur) && !vp.has(String(e.q_u))) {
                                     const L = e.len_ft + e.fittingLen;
-                                    let hl = getHLoss(e.q_val, L, e.d_in);
+                                    let hl = getHLoss(e.q_val, L, e.d_in, e.cValue || C);
                                     if (e.isVertical) {
                                         const elevDiff = (String(e.q_v) === String(e.v)) ? parseFloat(e.verticalHeight) : -parseFloat(e.verticalHeight);
                                         hl += elevDiff * M_TO_FT * 0.433;
@@ -3490,7 +3509,7 @@
                         if (scaledFlow < 0.1) scaledFlow = 0; // hide tiny rounding errors
                         const L = edge.len_ft + edge.fittingLen;
 
-                        let hlBase = getHLoss(scaledFlow, L, edge.d_in);
+                        let hlBase = getHLoss(scaledFlow, L, edge.d_in, edge.cValue);
                         if (edge.isVertical) {
                             const elevDiff = (String(edge.q_v) === String(edge.v)) ? parseFloat(edge.verticalHeight) : -parseFloat(edge.verticalHeight);
                             hlBase += elevDiff * M_TO_FT * 0.433;
@@ -3510,7 +3529,8 @@
                             isSourcePipe: (String(edge.u) === String(sourceId) || String(edge.v) === String(sourceId)),
                             headFlow: headFlowSumMap[String(edge.q_u)] || 0,
                             fittings: edge.fittings.join(", "),
-                            eqLen: edge.fittingLen
+                            eqLen: edge.fittingLen,
+                            cValue: edge.cValue
                         };
                     });
 
@@ -3718,7 +3738,7 @@
                         color: '#64748b', fontFamily: 'monospace', gap: '20px'
                     }}>
                         <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1e293b' }}>HYDRAULIC CALCULATION SOFTWARE</div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>V.2.5 By วัยรุ่นเซินเจิ้น</div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>V.2.6 By วัยรุ่นเซินเจิ้น</div>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', alignItems: 'center', marginTop: '20px', padding: '20px', border: '1px solid #e2e8f0', borderRadius: '8px' }}>
                             <div style={{ display: 'flex', gap: '10px' }}>
@@ -3796,7 +3816,7 @@
                                     <Flame size={18} className="text-orange-400" />
                                     Hydraulic Calculation
                                 </h1>
-                                <span className="text-[10px] text-indigo-200 ml-6">V.2.5 By วัยรุ่นเซินเจิ้น</span>
+                                <span className="text-[10px] text-indigo-200 ml-6">V.2.6 By วัยรุ่นเซินเจิ้น</span>
                             </div>
 
                             {/* Header Buttons Group */}
@@ -3944,7 +3964,7 @@
                                         <button onClick={() => setMode('auto_sprinkler')} className={`flex items-center justify-start gap-1.5 px-2 py-1.5 rounded border transition-all shadow-sm active:scale-95 text-[9px] ${mode === 'auto_sprinkler' ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                                             <LayoutGrid size={11} className={mode === 'auto_sprinkler' ? 'text-white' : 'text-violet-600'} /> Auto Spk
                                         </button>
-                                        <button onClick={() => { setMode('match_pipe'); setMatchSourceSize(null); }} className={`flex items-center justify-start gap-1.5 px-2 py-1.5 rounded border transition-all shadow-sm active:scale-95 text-[9px] ${mode === 'match_pipe' ? 'bg-cyan-600 border-cyan-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+                                        <button onClick={() => { setMode('match_pipe'); setMatchSourceSize(null); setMatchSourceCValue(null); }} className={`flex items-center justify-start gap-1.5 px-2 py-1.5 rounded border transition-all shadow-sm active:scale-95 text-[9px] ${mode === 'match_pipe' ? 'bg-cyan-600 border-cyan-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                                             <Pipette size={11} className={mode === 'match_pipe' ? 'text-white' : 'text-cyan-600'} /> Match Size
                                         </button>
                                         <button onClick={() => setMode('toggle_spk')} className={`flex items-center justify-start gap-1.5 px-2 py-1.5 rounded border transition-all shadow-sm active:scale-95 text-[9px] ${mode === 'toggle_spk' ? 'bg-fuchsia-600 border-fuchsia-600 text-white' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
@@ -4924,6 +4944,24 @@
                                             autoFocus
                                         />
                                     </div>
+                                    <div className="mb-3">
+                                        <label className="text-xs text-slate-500 font-medium block mb-1">
+                                            C-Value (ค่าเริ่มต้น: {cFactor})
+                                        </label>
+                                        <input
+                                            type="number"
+                                            value={editingPipeCValue}
+                                            onChange={e => setEditingPipeCValue(e.target.value)}
+                                            onKeyDown={e => {
+                                                if (e.key === 'Enter') {
+                                                    const currentPipe = drawnPipes.find(p => p.id === editingPipeId);
+                                                    if (currentPipe) updatePipe(currentPipe.size);
+                                                }
+                                            }}
+                                            placeholder={`Default (${cFactor})`}
+                                            className="w-full border border-slate-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-indigo-400"
+                                        />
+                                    </div>
                                     <div className="text-xs text-slate-500 font-medium mb-2">ขนาดท่อ</div>
                                     <div className="grid grid-cols-3 gap-2">
                                         {pipeSpecs.map(spec => (
@@ -5208,7 +5246,7 @@
                                                                             </td>
                                                                             <td className="p-3 text-gray-600 border-r border-gray-200">
                                                                                 <div className="flex flex-col">
-                                                                                    <div className="border-b border-gray-300 text-gray-600 pb-0.5 w-full uppercase text-center mb-1">C={cFactor}</div>
+                                                                                    <div className="border-b border-gray-300 text-gray-600 pb-0.5 w-full uppercase text-center mb-1">C={row.cValue || cFactor}</div>
                                                                                     <div className="text-center">{safeFixed(row.loss, 2) === "0.00" || safeFixed(row.loss, 2) === "0.0" ? safeFixed(row.loss) : safeFixed(row.loss, 2)}</div>
                                                                                 </div>
                                                                             </td>
